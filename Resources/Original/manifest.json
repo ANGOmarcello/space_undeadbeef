@@ -1,0 +1,1684 @@
+{
+  "archive": {
+    "name": "MyFirstBundleIdentifier-iOS2.1-(Clutch-2.0.4).ipa",
+    "sha256": "4000d45e21f69cab6c271c6aa917989674615a51f2bddc295115dc2eab8b36de"
+  },
+  "assets": [
+    {
+      "bytes": 107270,
+      "name": "Beep003_16St.wav",
+      "originalSHA256": "13e370caa6fa387dda0d32cab5c8239dcd2985573d5612b0934b592bcb446af2",
+      "preparedSHA256": "13e370caa6fa387dda0d32cab5c8239dcd2985573d5612b0934b592bcb446af2"
+    },
+    {
+      "bytes": 27106,
+      "name": "Beep004_16St.wav",
+      "originalSHA256": "957e3f92ea5f8133b63d3093b00245af460c4b22610057492fd5c449f35a340b",
+      "preparedSHA256": "957e3f92ea5f8133b63d3093b00245af460c4b22610057492fd5c449f35a340b"
+    },
+    {
+      "bytes": 6016,
+      "name": "Beep010-22.wav",
+      "originalSHA256": "6547aa2c2dc695db99eddf1f37407ca1001e999f63f59eec27482bbe800c120b",
+      "preparedSHA256": "6547aa2c2dc695db99eddf1f37407ca1001e999f63f59eec27482bbe800c120b"
+    },
+    {
+      "bytes": 20556,
+      "name": "Beep019_16.wav",
+      "originalSHA256": "8553d73691b36959b37bcda639f51ccfbfb69eb97b7c0d120674838ee272bd88",
+      "preparedSHA256": "8553d73691b36959b37bcda639f51ccfbfb69eb97b7c0d120674838ee272bd88"
+    },
+    {
+      "bytes": 19198,
+      "name": "BurnerA_11.wav",
+      "originalSHA256": "5f4a8338fe86e92b913eae9d502e0230c8c5a1efa159802e4b4063c8a63c85bd",
+      "preparedSHA256": "5f4a8338fe86e92b913eae9d502e0230c8c5a1efa159802e4b4063c8a63c85bd"
+    },
+    {
+      "bytes": 91154,
+      "convertedCgBI": true,
+      "height": 480,
+      "name": "Default.png",
+      "originalSHA256": "312099fd330d39382a83bf374ceabf6d96aa2cc4d199b4733316a3d366dee889",
+      "preparedSHA256": "1484b35db453c5ac2a8043314c981eeac42ff39181836d052897470a5633a200",
+      "width": 320
+    },
+    {
+      "bytes": 227,
+      "convertedCgBI": true,
+      "height": 150,
+      "name": "EmptyFuelBar.png",
+      "originalSHA256": "d62621c0b179c4cb1b08ea59e1b601eaf6d9530e64cc62a7ec154b2658239521",
+      "preparedSHA256": "9c4df5d60c888ed50e33e9479615789af3a0f5adffb88ce0b46353e37e1b67ef",
+      "width": 14
+    },
+    {
+      "bytes": 20888,
+      "convertedCgBI": true,
+      "height": 114,
+      "name": "Explosion.png",
+      "originalSHA256": "574f78a8baf7bd6c52c406064c18ff834d948af0a033db91b463e4506865e8f4",
+      "preparedSHA256": "9a859bf868b281db2a92225d1df430fa65a781c1bb5e6e50af6bad7d233ec1b4",
+      "width": 99
+    },
+    {
+      "bytes": 66196,
+      "name": "ExplosionF-11.wav",
+      "originalSHA256": "c1abb4866128d779a88d54f65b588432b0ccb37db7e3f351438464756723001c",
+      "preparedSHA256": "c1abb4866128d779a88d54f65b588432b0ccb37db7e3f351438464756723001c"
+    },
+    {
+      "bytes": 15633,
+      "convertedCgBI": true,
+      "height": 256,
+      "name": "ExplosionPattern.png",
+      "originalSHA256": "3223abec036dc7c6de589431fbc84ed7e348b50eb0a476f373b7d7f761e1fdf0",
+      "preparedSHA256": "5bda5df0a04c46ed084e626ee6dd797cf0713460c259e896c6d9f4e1bdded60d",
+      "width": 256
+    },
+    {
+      "bytes": 63090,
+      "name": "FlashD-22.wav",
+      "originalSHA256": "68551e8ab7ca580e6d62b7b57a3a874ef76b65d3dd91ae74808b99a3373ab29e",
+      "preparedSHA256": "68551e8ab7ca580e6d62b7b57a3a874ef76b65d3dd91ae74808b99a3373ab29e"
+    },
+    {
+      "bytes": 143,
+      "convertedCgBI": true,
+      "height": 8,
+      "name": "FuelBar.png",
+      "originalSHA256": "2b999796b416a98cf2cef12a5ac0fba543d059f772f6a851c318195ad7e359d0",
+      "preparedSHA256": "201812414841d4cceef12c51aba303b4d2e5a39e5f7ed1fd689904ad495e6e0c",
+      "width": 12
+    },
+    {
+      "bytes": 38356,
+      "name": "GunD1-11.wav",
+      "originalSHA256": "2910407eb6f1bc8dc6e8d4a0257960b492c1643833e03b3c009c935372c98481",
+      "preparedSHA256": "2910407eb6f1bc8dc6e8d4a0257960b492c1643833e03b3c009c935372c98481"
+    },
+    {
+      "bytes": 11146,
+      "name": "HitD1-22.wav",
+      "originalSHA256": "1b76aa16ac02f68bda3d96a337c30e66c654e11e82bc1c54868f827eaac7e9fb",
+      "preparedSHA256": "1b76aa16ac02f68bda3d96a337c30e66c654e11e82bc1c54868f827eaac7e9fb"
+    },
+    {
+      "bytes": 11146,
+      "name": "HitD2-22.wav",
+      "originalSHA256": "32c46b0d86b0dcb1f339897e187399f1877cd9b7c3713d1405adaad9b32422b7",
+      "preparedSHA256": "32c46b0d86b0dcb1f339897e187399f1877cd9b7c3713d1405adaad9b32422b7"
+    },
+    {
+      "bytes": 719,
+      "convertedCgBI": true,
+      "height": 16,
+      "name": "LightGreen.png",
+      "originalSHA256": "c853283ada5220572301bf75f2da6402602551a4b69641fe670cbefb315bba82",
+      "preparedSHA256": "aa8718ee7b4eeb7ef5b6f8f7e1d9310789ce0d560b3217761bb732b61a01eda1",
+      "width": 16
+    },
+    {
+      "bytes": 716,
+      "convertedCgBI": true,
+      "height": 16,
+      "name": "LightRed.png",
+      "originalSHA256": "2ab0d3097831135537cd3059428ea3cf009a8218739313e1314845ed1e2b7e7e",
+      "preparedSHA256": "7278689bafb83eae13b89023b2d3e0a59a2355edf4c8e5d42ae787c885475638",
+      "width": 16
+    },
+    {
+      "bytes": 59332,
+      "name": "MDoorA_16.wav",
+      "originalSHA256": "73b0e7075fd699e75e160f213bcf80bdd87defc0fa523a19a68449aae19223d4",
+      "preparedSHA256": "73b0e7075fd699e75e160f213bcf80bdd87defc0fa523a19a68449aae19223d4"
+    },
+    {
+      "bytes": 19108,
+      "name": "MetalB-22.wav",
+      "originalSHA256": "5a23db82e5744b544e2d88c854e295b05a6129331137bec43443846386403951",
+      "preparedSHA256": "5a23db82e5744b544e2d88c854e295b05a6129331137bec43443846386403951"
+    },
+    {
+      "bytes": 619,
+      "convertedCgBI": true,
+      "height": 32,
+      "name": "Platform.png",
+      "originalSHA256": "cc41cb236eba7949ba14b198e830c06fe5682d32461f84f6a13975f1c5d29fd7",
+      "preparedSHA256": "e396a3370bf17e2d5e500eb1fdca2b870e48879c80d82f5a6e86566938c9e7df",
+      "width": 128
+    },
+    {
+      "bytes": 10972,
+      "name": "ShotA_11.wav",
+      "originalSHA256": "7aa2420e5977faf8dba1abc1f61cb2ccfb1c44838fb71941dde55ed19c99f569",
+      "preparedSHA256": "7aa2420e5977faf8dba1abc1f61cb2ccfb1c44838fb71941dde55ed19c99f569"
+    },
+    {
+      "bytes": 524,
+      "convertedCgBI": true,
+      "height": 16,
+      "name": "ThrustLeft.png",
+      "originalSHA256": "79d86da800d6ead9b59d60f9f593dc05cf7f8f9b58d86f04610cc2c5cc3ad98d",
+      "preparedSHA256": "1f8192b7e0b0dfb7ebd69d36813c4216b8d84324218c2b6b68dd13d2e8156cf1",
+      "width": 10
+    },
+    {
+      "bytes": 3262,
+      "convertedCgBI": true,
+      "height": 42,
+      "name": "ThrustMiddle.png",
+      "originalSHA256": "ac8647264ae2147f1bbc018eb5ab54cfac16ba37b86784fa5e220e2b899ac1ee",
+      "preparedSHA256": "8b0809ac21248f09b0d3ba3319205d6995f7517e7b9fe58c732fde7baae50e9f",
+      "width": 40
+    },
+    {
+      "bytes": 524,
+      "convertedCgBI": true,
+      "height": 16,
+      "name": "ThrustRight.png",
+      "originalSHA256": "79d86da800d6ead9b59d60f9f593dc05cf7f8f9b58d86f04610cc2c5cc3ad98d",
+      "preparedSHA256": "1f8192b7e0b0dfb7ebd69d36813c4216b8d84324218c2b6b68dd13d2e8156cf1",
+      "width": 10
+    },
+    {
+      "bytes": 3688,
+      "name": "TypewriterA_08.wav",
+      "originalSHA256": "a597609eae2b8658a048b9c5dd5237a15ef78e73a61b48b0169bb639161be503",
+      "preparedSHA256": "a597609eae2b8658a048b9c5dd5237a15ef78e73a61b48b0169bb639161be503"
+    },
+    {
+      "bytes": 659,
+      "convertedCgBI": true,
+      "height": 16,
+      "name": "ball.png",
+      "originalSHA256": "b81a43f85e5f7cb1d09baa397526f438d7af8732313c0d68a6f4848c73ca8fcc",
+      "preparedSHA256": "22e89bc75e5ae318ae46815eb3c4317072f022ca3a59a5d2506dbb2cce58355c",
+      "width": 16
+    },
+    {
+      "bytes": 23405,
+      "convertedCgBI": true,
+      "height": 128,
+      "name": "bg01_00.png",
+      "originalSHA256": "fb346009025399171aa61c277a254c552bc6767266ec4c36dcbf728df3c03772",
+      "preparedSHA256": "5af36e765e8aa6eebb3eb8b2a5310a0009ea1a0d50aacd73d8a930d8e15f9317",
+      "width": 96
+    },
+    {
+      "bytes": 22809,
+      "convertedCgBI": true,
+      "height": 128,
+      "name": "bg01_01.png",
+      "originalSHA256": "b37b817d3b9c9132843ec6b5245172d019c6075253de1fb38320c9268b2dc2b3",
+      "preparedSHA256": "0cd02594c3d745307540825f3e3079d2295a1373d7c8af5940e9bdbedcf3e07f",
+      "width": 96
+    },
+    {
+      "bytes": 23047,
+      "convertedCgBI": true,
+      "height": 128,
+      "name": "bg01_02.png",
+      "originalSHA256": "64b8398179efe423813901a6119798167484bdd5d8c6b1f2d600284c4e727c8b",
+      "preparedSHA256": "5a80818932b102274491ea8c685054c0b50db8574dd7d95a034f795a2a3092bc",
+      "width": 96
+    },
+    {
+      "bytes": 23543,
+      "convertedCgBI": true,
+      "height": 128,
+      "name": "bg01_03.png",
+      "originalSHA256": "d277425bbd3d3b97c52702710b37aa1d0520dcda0d182d5b1d6f133f76aa2335",
+      "preparedSHA256": "b150910844d010368b8e2b5d084d093203a62c8567089c13a5387dc56edf768a",
+      "width": 96
+    },
+    {
+      "bytes": 13274,
+      "convertedCgBI": true,
+      "height": 128,
+      "name": "bg01_10.png",
+      "originalSHA256": "b56344113d4412c5e98dcb227a93c08d7541a420af03612e77201f4a52043de8",
+      "preparedSHA256": "aba835eb7bf589a18b2a7d1eb28912fa69aded79e63e6a2cc837e4edc74b7fcd",
+      "width": 64
+    },
+    {
+      "bytes": 12410,
+      "convertedCgBI": true,
+      "height": 128,
+      "name": "bg01_11.png",
+      "originalSHA256": "fe5c690fb10f798384f5680969e6389eb76379d661f39b355be2a140522f1812",
+      "preparedSHA256": "11e79382092768fed8dd8b8350de0df09796f72f4e8959d13e358f043a201ebe",
+      "width": 64
+    },
+    {
+      "bytes": 14067,
+      "convertedCgBI": true,
+      "height": 128,
+      "name": "bg01_12.png",
+      "originalSHA256": "8561fe1cb58edd963adff0d1f8bb984f57f8a26a324783a8a6d6643d9762e936",
+      "preparedSHA256": "f0b1a5afea8b805e37d453361f0456581e2058ff159853b62f30bae95a04e742",
+      "width": 64
+    },
+    {
+      "bytes": 13157,
+      "convertedCgBI": true,
+      "height": 128,
+      "name": "bg01_13.png",
+      "originalSHA256": "276d210174cb54a5be8ff4cc46dd4158df16850ce4ee84afd92a9efb6b2a9779",
+      "preparedSHA256": "b910d721a1805f3d7e382fb01881a924103dc56f1f11a42b9574049011300bbd",
+      "width": 64
+    },
+    {
+      "bytes": 3682348,
+      "name": "boss01_bgm.wav",
+      "originalSHA256": "f045d6cb7ce84edcd5b651d16ffcd003773f718efe974f57b6072a7f1bde8ed7",
+      "preparedSHA256": "f045d6cb7ce84edcd5b651d16ffcd003773f718efe974f57b6072a7f1bde8ed7"
+    },
+    {
+      "bytes": 5265,
+      "convertedCgBI": true,
+      "height": 256,
+      "name": "continue.png",
+      "originalSHA256": "54bc7625f0c295e4fb9ca059bdf9292536b38fcff5ff5b5728645021edbbe148",
+      "preparedSHA256": "dfa887f27e838a9d0f66a9ba118df99eec31d9dbf21b8cc6a3a8eb2c4eb69f4e",
+      "width": 32
+    },
+    {
+      "bytes": 5265,
+      "convertedCgBI": true,
+      "height": 256,
+      "name": "continue_left.png",
+      "originalSHA256": "5024266f4e1f7660ba49017bca4341cd2b0fdd0a21dbb57a8d1d7ae6e0f4eedd",
+      "preparedSHA256": "db0390b007247fbf81e7becbd2cabd4f23de862b2d345556ff930b8dd48de43d",
+      "width": 32
+    },
+    {
+      "bytes": 4432,
+      "convertedCgBI": true,
+      "height": 256,
+      "name": "credit.png",
+      "originalSHA256": "b8665571359c2b468ebad2054acaffadcdbc789f71d461bfdef815a967321237",
+      "preparedSHA256": "a60375befd41353263417621b376dac1b52d779871d7a45dff2247ae44e2e832",
+      "width": 32
+    },
+    {
+      "bytes": 5015,
+      "convertedCgBI": true,
+      "height": 256,
+      "name": "credits.png",
+      "originalSHA256": "1ff82bc27b96357825751472d726166c0f1305b5e32d024d059c8cb5529f448f",
+      "preparedSHA256": "dc3744560499244466aef8e9705b69e826430905f09ac68f5a7878cdc9aaf470",
+      "width": 32
+    },
+    {
+      "bytes": 69308,
+      "convertedCgBI": true,
+      "height": 174,
+      "name": "exp01.png",
+      "originalSHA256": "8c9729e8f35dbd8df8dffb85afabb29439925d62909c0fb2080d77f24b873f89",
+      "preparedSHA256": "48ee8b39f824702b0996368164ca9d090ab64a9037ad888d40696e81201a6c98",
+      "width": 256
+    },
+    {
+      "bytes": 230981,
+      "convertedCgBI": true,
+      "height": 392,
+      "name": "exp02.png",
+      "originalSHA256": "dbef4e766b1a867287f006b3547bed9e3718d356d9e54e24439309f936bb4e38",
+      "preparedSHA256": "72ecae10c2849809397897b72cb97b1618ee501dbfb0a4ab816dcdb11d0daab8",
+      "width": 512
+    },
+    {
+      "bytes": 17728,
+      "convertedCgBI": true,
+      "height": 256,
+      "name": "font.png",
+      "originalSHA256": "b31e9d804348fe57890dac89a8112be8fe48158513f672beca54765926d1feac",
+      "preparedSHA256": "2854fce893642d4b30ff4b0e48ec84d68ac4423430db247fd003bdc741cb9ca1",
+      "width": 256
+    },
+    {
+      "bytes": 8949,
+      "convertedCgBI": true,
+      "height": 128,
+      "name": "font_s.png",
+      "originalSHA256": "2693793697e8f771e3f5e21fb7fbdb02c2bb1f7d4fa98dba1e456efab3a4c14c",
+      "preparedSHA256": "3c109088b9f51cb0b96e209bc1b7efda3846748fd7db9831266903deff497730",
+      "width": 128
+    },
+    {
+      "bytes": 6396,
+      "convertedCgBI": true,
+      "height": 256,
+      "name": "game_clear.png",
+      "originalSHA256": "4b96d0b45833d5476a422ba9f03f154248cf1874ce2f9b1cb8f5e18c48d4fed3",
+      "preparedSHA256": "0d56199ebe8548c6469d807e56b32347cb51d482ad085323833ffe30d67f3f18",
+      "width": 32
+    },
+    {
+      "bytes": 6722,
+      "convertedCgBI": true,
+      "height": 256,
+      "name": "game_start.png",
+      "originalSHA256": "646c002a6cfb86790a652cfc04c9ab2c0bc477bc7d71acd3590dd80a5dba6364",
+      "preparedSHA256": "3fbe3353b7b1c333e0ef2e25af9209522af0cfb5fecb18d4c5cc7c42cc13f5bb",
+      "width": 32
+    },
+    {
+      "bytes": 954412,
+      "name": "gameclear.wav",
+      "originalSHA256": "461a3a23ca931bd6b24cf09dcef00a92254cf02ac7b13fd8b8eecbf8cf25c845",
+      "preparedSHA256": "461a3a23ca931bd6b24cf09dcef00a92254cf02ac7b13fd8b8eecbf8cf25c845"
+    },
+    {
+      "bytes": 4603948,
+      "name": "gameover.wav",
+      "originalSHA256": "03ed026c091d397b96e2c18792d486b0b56223061ed01b3d35b3a48f18c4c1fc",
+      "preparedSHA256": "03ed026c091d397b96e2c18792d486b0b56223061ed01b3d35b3a48f18c4c1fc"
+    },
+    {
+      "bytes": 4335,
+      "convertedCgBI": true,
+      "height": 64,
+      "name": "gray_ball.png",
+      "originalSHA256": "5ae524c354cdebbd8cedf211e101ec8c4331f0e130222562e56fdfeb4afcfefe",
+      "preparedSHA256": "326bd3707a99ff7b0d617c1fb4946b020b670085070c7a4c9056c609ea154356",
+      "width": 64
+    },
+    {
+      "bytes": 8741,
+      "convertedCgBI": true,
+      "height": 57,
+      "name": "icon.png",
+      "originalSHA256": "63d29fe069fffaaec2b03d6eee28c2a75cc5be52130643df91222dd73a678e72",
+      "preparedSHA256": "a298810a277570538d32977ebceed45ca70ba904d239224f42cf69175dd8e0dd",
+      "width": 57
+    },
+    {
+      "bytes": 118,
+      "convertedCgBI": true,
+      "height": 16,
+      "name": "laser.png",
+      "originalSHA256": "9b2e00a974745ed901ae660ffe56d449c934ad01a8fede9473d1562e66de8235",
+      "preparedSHA256": "f6b4f7392f1fe8e7a76e42720f82d7b17cbdf3a758de68f98e23d3271d195c98",
+      "width": 16
+    },
+    {
+      "bytes": 1139,
+      "convertedCgBI": true,
+      "height": 64,
+      "name": "lockmark.png",
+      "originalSHA256": "50d19b6c548c389a627c2c78ebbddc266c4dd1a07bc46f141a67836bac04b5d6",
+      "preparedSHA256": "f9eced161bbbb787d279567689284afb8eeb03b6d6e2c92b1b300ebd5b5f38d1",
+      "width": 64
+    },
+    {
+      "bytes": 200,
+      "convertedCgBI": true,
+      "height": 32,
+      "name": "missile.png",
+      "originalSHA256": "f60b53f0ead1aa4d4a0a9bb15412930c6806adf27f781e5255be477ee8d20005",
+      "preparedSHA256": "2ec006494d0e2cc7fea169d8ee3e8399624ffe6d9a62e2bac2550354cecd8704",
+      "width": 8
+    },
+    {
+      "bytes": 3789,
+      "convertedCgBI": true,
+      "height": 256,
+      "name": "option.png",
+      "originalSHA256": "5df73359f92b72032bc7c8e00f6a1d1351463ee255d28b7cbb83892442bb7124",
+      "preparedSHA256": "e11e700baa73f23fe4bd73d1eabb73fb6ab585482d2a95b379592fda37526985",
+      "width": 32
+    },
+    {
+      "bytes": 4502,
+      "convertedCgBI": true,
+      "height": 256,
+      "name": "options.png",
+      "originalSHA256": "0a81bb169d89c10298580831afe49c4133188a195235ec6f0c4eea0523423ca8",
+      "preparedSHA256": "153880987910d7e1255569f1ba18411ab8a351011936fe9e3d0f18f8d895cc4f",
+      "width": 32
+    },
+    {
+      "bytes": 735,
+      "convertedCgBI": true,
+      "height": 24,
+      "name": "p.png",
+      "originalSHA256": "ba7bfae9636ba36a1076003ac03145460901742399cf528aa45ad09dc71a446b",
+      "preparedSHA256": "db23e9d891c70b51ecb79d1edf7d343ca5b0b6860015859f1af1b29760f07c28",
+      "width": 24
+    },
+    {
+      "bytes": 13293,
+      "convertedCgBI": true,
+      "height": 128,
+      "name": "playerShip_01.png",
+      "originalSHA256": "4dc93d3617fdb9332b2c6ef02ebbf75817878d3d5f3dd01427679da89b5c170f",
+      "preparedSHA256": "1a6dfb0c84a750231dad4e2d97d93eb250e7ea48446c9aaff73eb1bcad97ac4b",
+      "width": 128
+    },
+    {
+      "bytes": 13270,
+      "convertedCgBI": true,
+      "height": 128,
+      "name": "playerShip_02.png",
+      "originalSHA256": "a25ab5deb1f382dd0f6ebfd20b962f62dfa93cd532b43c85915a090f5f580cfe",
+      "preparedSHA256": "8fa9b179ee45ac7a5aca2a026b5d259fd7959edf0c49f0f35db3b8c235febb42",
+      "width": 128
+    },
+    {
+      "bytes": 13068,
+      "convertedCgBI": true,
+      "height": 128,
+      "name": "playerShip_03.png",
+      "originalSHA256": "952d5ae1d75643d7bcf5e262cc814f139457a4a838d5413481794fb270295aa4",
+      "preparedSHA256": "0968ac1989167f714f71d80b9ba09337acf50067e270b46c38053462a36cfb01",
+      "width": 128
+    },
+    {
+      "bytes": 13159,
+      "convertedCgBI": true,
+      "height": 128,
+      "name": "playerShip_04.png",
+      "originalSHA256": "c0e41cd5b7a3cab431d5911197fa69c6c6eb51a109f394f5fb671a2d9b18328a",
+      "preparedSHA256": "8ea3472c8e4ada32cbbc081eb10c432bcd4058a6abdcf2b317535030a06b3368",
+      "width": 128
+    },
+    {
+      "bytes": 13100,
+      "convertedCgBI": true,
+      "height": 128,
+      "name": "playerShip_05.png",
+      "originalSHA256": "550ca27198741f10d50b711fabb21fbe18121f9f4d88e4406e9aac955b7bbbf1",
+      "preparedSHA256": "85e21dd0b4dfdea29de9a7bbb6a6cb79ba630920e4bde50c3e0cf0aa7a5cb76e",
+      "width": 128
+    },
+    {
+      "bytes": 13103,
+      "convertedCgBI": true,
+      "height": 128,
+      "name": "playerShip_06.png",
+      "originalSHA256": "70e03a5fd6f7a924aab3be5ca90d27b0c174c992f82fd173b18d5811dcc5fda6",
+      "preparedSHA256": "106b338f50cefe2f4b25ad60583014c7dba1a91632e1b91c2967ea2b887c831f",
+      "width": 128
+    },
+    {
+      "bytes": 13484,
+      "convertedCgBI": true,
+      "height": 128,
+      "name": "playerShip_07.png",
+      "originalSHA256": "2495a79b104a2f6108d7b6319f989da96db545cdd05547cad8a8aaeb99e6b6c4",
+      "preparedSHA256": "587a19001864c2124e9bbb3cd459682a93fdf4daca5607a426745d9544531134",
+      "width": 128
+    },
+    {
+      "bytes": 13368,
+      "convertedCgBI": true,
+      "height": 128,
+      "name": "playerShip_08.png",
+      "originalSHA256": "7f79125a1d1ffabd11053ad4465fd326f206612d77a1abd56e09bdfabea46f4a",
+      "preparedSHA256": "72fe1256e9157d75172e7da4a32f58e2cded8d65eeaeb6e30effd21174d9c89a",
+      "width": 128
+    },
+    {
+      "bytes": 12958,
+      "convertedCgBI": true,
+      "height": 128,
+      "name": "playerShip_09.png",
+      "originalSHA256": "349a42f578d3ae5936c080e6e0b0f90027b54f6b1a54a0539eaec14368ad4a42",
+      "preparedSHA256": "10d20853ea15c17dbdb3e556b4c16fa962755f6d5cb28ac53fb7bcfedc2256c7",
+      "width": 128
+    },
+    {
+      "bytes": 12639,
+      "convertedCgBI": true,
+      "height": 128,
+      "name": "playerShip_10.png",
+      "originalSHA256": "8be0f4551946350a582d6fd4fd9a380240596001536fa200510b536cb52fb746",
+      "preparedSHA256": "d031eb020bb887ce1a3e01d9b79318d6cb50b573c132b4697ace1c8d21dd4b25",
+      "width": 128
+    },
+    {
+      "bytes": 12256,
+      "convertedCgBI": true,
+      "height": 128,
+      "name": "playerShip_11.png",
+      "originalSHA256": "4b03f0c795c2eeded54bd1363b6f9ab93647ba162d10cff1d9607e71d2c39f39",
+      "preparedSHA256": "bef22afc6e4faed5be6d4fc28168fd067729ba1757475c0e53f0666460dd13a9",
+      "width": 128
+    },
+    {
+      "bytes": 11330,
+      "convertedCgBI": true,
+      "height": 128,
+      "name": "playerShip_12.png",
+      "originalSHA256": "b6e536cc3c5b984c998dfebca8a7461491a108d80e87f9a2cc092466f6f7bf4e",
+      "preparedSHA256": "34879409885d2c2ccd559ee3e9b576cd8b441789cf8b2bf78622570695b81044",
+      "width": 128
+    },
+    {
+      "bytes": 10102,
+      "convertedCgBI": true,
+      "height": 128,
+      "name": "playerShip_13.png",
+      "originalSHA256": "2352caad60ad6e32ccd66f5d126179738da0b4cf9e2923da5551b4d0473670d3",
+      "preparedSHA256": "f773543e9430ff1938b40852d5b888fae6edf863af7392b111580d734b561d18",
+      "width": 128
+    },
+    {
+      "bytes": 11153,
+      "convertedCgBI": true,
+      "height": 128,
+      "name": "playerShip_14.png",
+      "originalSHA256": "0e091139fc0c072f268ba6bfcf39b08eaaf1c85c550cd4f845c11588e643bff5",
+      "preparedSHA256": "abcf29e43a70e9ec1a37fb95a2a9985cf1d5b91e1cb8ddc2492ff724516c08e0",
+      "width": 128
+    },
+    {
+      "bytes": 12301,
+      "convertedCgBI": true,
+      "height": 128,
+      "name": "playerShip_15.png",
+      "originalSHA256": "5d40583535597cbe0023d0d4389c965187dc68698f0567d46fc92c3a7ef2b22d",
+      "preparedSHA256": "f91dabdc59ee3f69589f4c622c80a2eb31a8f7e2360bf9cb4275508652224bfb",
+      "width": 128
+    },
+    {
+      "bytes": 12833,
+      "convertedCgBI": true,
+      "height": 128,
+      "name": "playerShip_16.png",
+      "originalSHA256": "8b165348602c20d30396cbb0f4477fedb0b37c36de1c550c96abae42fdd869d7",
+      "preparedSHA256": "a9fc2c0b5cacaa78201f3038e84651cee0083e85a3dc45e66c5c57a7879e58e8",
+      "width": 128
+    },
+    {
+      "bytes": 12964,
+      "convertedCgBI": true,
+      "height": 128,
+      "name": "playerShip_17.png",
+      "originalSHA256": "0e3ce44e11656a3e70c283859dcd7a89a3257f7993394541b79098409cd85fbb",
+      "preparedSHA256": "dafdd16d8365c9ae74a8077fe32937258b9df87faa4457bf42ce0a00338d2927",
+      "width": 128
+    },
+    {
+      "bytes": 13626,
+      "convertedCgBI": true,
+      "height": 128,
+      "name": "playerShip_18.png",
+      "originalSHA256": "41420cd8a858cfc1e1e06ca28c1e13e10f39733e8563713e33dc51481592ff2e",
+      "preparedSHA256": "8b05e8ac723b8ebecd0a8d7f44ea65e6aceb606c65e0f3dd768394a90d0e1ec3",
+      "width": 128
+    },
+    {
+      "bytes": 14263,
+      "convertedCgBI": true,
+      "height": 128,
+      "name": "playerShip_19.png",
+      "originalSHA256": "eb6fdd392531348275cb10f505d73e8656e16ad0d19b80832d82fe7146000d64",
+      "preparedSHA256": "91acbf7b2649a6f6e5c6cd070612f0fd2543c40ac014ad2dd83efc4746075cd6",
+      "width": 128
+    },
+    {
+      "bytes": 14361,
+      "convertedCgBI": true,
+      "height": 128,
+      "name": "playerShip_20.png",
+      "originalSHA256": "e6204119af884c446fbf8f35da02171c7002c7b013bc6c32183c3f256d31e964",
+      "preparedSHA256": "9bee5eaf3ca8811f14fb120e98f6bee55a33e93007a09b7714680fef3bd49800",
+      "width": 128
+    },
+    {
+      "bytes": 14541,
+      "convertedCgBI": true,
+      "height": 128,
+      "name": "playerShip_21.png",
+      "originalSHA256": "bb022323e603217b3fd59d0d407a6e9cb7498b89f0820eba9390f0888dc0ad52",
+      "preparedSHA256": "69cd76ce3c051db78b9b369fbb6b630972b01fce9d5f23dd1d262df568057e30",
+      "width": 128
+    },
+    {
+      "bytes": 14673,
+      "convertedCgBI": true,
+      "height": 128,
+      "name": "playerShip_22.png",
+      "originalSHA256": "0f71e30e6911f81a160183ef4266608b304cb6203d489a4eb4ec8b5f4c8e0af6",
+      "preparedSHA256": "231f989c24056216386125da9e54c31257cebe5c555abcea59eb840311010bf1",
+      "width": 128
+    },
+    {
+      "bytes": 14522,
+      "convertedCgBI": true,
+      "height": 128,
+      "name": "playerShip_23.png",
+      "originalSHA256": "7c08f984e328a27ab37417a418524b55201100ddb6ed9f261e92a7f9b24e7e8e",
+      "preparedSHA256": "41b2dec2fcce25f14b29d2d99280986decd486763552059c67244b0d314af40d",
+      "width": 128
+    },
+    {
+      "bytes": 14477,
+      "convertedCgBI": true,
+      "height": 128,
+      "name": "playerShip_24.png",
+      "originalSHA256": "3326a745e9bb15bf5e02e593e60982b3e125c015a20e13fbbb3c622d2b7fcc32",
+      "preparedSHA256": "87f927b97f38eb59fba6922026bf827bf6cdbdebccbc4445a40ad1c1fa19ba01",
+      "width": 128
+    },
+    {
+      "bytes": 13937,
+      "convertedCgBI": true,
+      "height": 128,
+      "name": "playerShip_25.png",
+      "originalSHA256": "f88a258e9b6e65cda5878f480f466b8b2d7be5a8aaba91f0978f011e601f80a6",
+      "preparedSHA256": "15ac2bf7f64554ad5d8c178e37c96aa61e33988220f461ffd04aaf414ee46692",
+      "width": 128
+    },
+    {
+      "bytes": 2558,
+      "name": "pochi00-11.wav",
+      "originalSHA256": "bcae220660c9bc4819dd338804f2b276632160410947e0bf87678bee0b44278f",
+      "preparedSHA256": "bcae220660c9bc4819dd338804f2b276632160410947e0bf87678bee0b44278f"
+    },
+    {
+      "bytes": 3051,
+      "convertedCgBI": true,
+      "height": 256,
+      "name": "quit.png",
+      "originalSHA256": "fc37a3da217a6599b033c2fab823d2f9c88b5e9d2e671e13443c424e62196e30",
+      "preparedSHA256": "943a80796cdf1873e6903312f0e58d3a243d0faba9b5c92fb2c4ed266e911dd5",
+      "width": 32
+    },
+    {
+      "bytes": 846,
+      "convertedCgBI": true,
+      "height": 24,
+      "name": "segment_tools.png",
+      "originalSHA256": "12dffa76488cbc87f36673e0ba4d6b530e52caa5a5641c90282f0125d8953f10",
+      "preparedSHA256": "f22118e6f04856508c9183a428e6c1510a16d738c33af46398fdb118ccbfc5bf",
+      "width": 24
+    },
+    {
+      "bytes": 5554,
+      "convertedCgBI": true,
+      "height": 64,
+      "name": "sergeant.png",
+      "originalSHA256": "b50d451fd3e42aa32f1e30775a2aa6f45237a9500ee4f4e70b14160379a3dcca",
+      "preparedSHA256": "6c7795e79dd5c71ab21580557446ac2ad5ce4c6b568dd5f78a52dc8c234b49bc",
+      "width": 64
+    },
+    {
+      "bytes": 5383,
+      "convertedCgBI": true,
+      "height": 48,
+      "name": "snake_dou.png",
+      "originalSHA256": "f6548363fd2a4780d42b25cbc7b2d9a9594b615d31b399abe6f10ae7637ced33",
+      "preparedSHA256": "f05019ac9d7c5cbd308938a276b8c4e953346128012a04c5fec1de119221b1f5",
+      "width": 48
+    },
+    {
+      "bytes": 11205,
+      "convertedCgBI": true,
+      "height": 96,
+      "name": "snake_head.png",
+      "originalSHA256": "bfa300d9d641e69f591f98d1733f9064a7ddeb83549e81cc4cf5ff90c14065f8",
+      "preparedSHA256": "03d0738340d58b41a034ea97c0c121fc8652e4e8b81fd5d3049acf72fd4d0d77",
+      "width": 48
+    },
+    {
+      "bytes": 8669,
+      "convertedCgBI": true,
+      "height": 48,
+      "name": "snake_tail.png",
+      "originalSHA256": "c3f3820f70eab213c637d0a9bc5e86044215ce5f6be8dafea89ec65743c58a03",
+      "preparedSHA256": "6c275b159203059eaa69db7efebe18a285913a65ee83e8c4f178cf01a7456917",
+      "width": 96
+    },
+    {
+      "bytes": 4418,
+      "convertedCgBI": true,
+      "height": 64,
+      "name": "splinter.png",
+      "originalSHA256": "129712a8bbb40017cac30c70236aa38063576a64906c283108ceefef0c4941bf",
+      "preparedSHA256": "2d1f8855d574ed66c14eaf86115b2f810488e8d6878e335a470374b6986935bc",
+      "width": 64
+    },
+    {
+      "bytes": 3301420,
+      "name": "stage1_bgm.wav",
+      "originalSHA256": "2b4dc81dac97b9c20c99bdc160a64e9b1881769031a72b8680fe2118efa79f86",
+      "preparedSHA256": "2b4dc81dac97b9c20c99bdc160a64e9b1881769031a72b8680fe2118efa79f86"
+    },
+    {
+      "bytes": 211218,
+      "convertedCgBI": true,
+      "height": 480,
+      "name": "title.png",
+      "originalSHA256": "5d6b5639a9360c5cfbf49e83eeb284efd59d75053633c425898295eae3582ec4",
+      "preparedSHA256": "8f1d4a63273a238b7dbd9ac6b870213b4542289f5b98beabe79e27809abfb67c",
+      "width": 320
+    },
+    {
+      "bytes": 200449,
+      "convertedCgBI": true,
+      "height": 480,
+      "name": "title_bg.png",
+      "originalSHA256": "84abd42ce533715241cfaf97a4a2bfbff6bb934114ab1415ff839766193f5346",
+      "preparedSHA256": "9813e13b6b2576f72094ccc4c1d69c9a14781bd80a883f23a97f58ef10b36742",
+      "width": 320
+    },
+    {
+      "bytes": 9657,
+      "convertedCgBI": true,
+      "height": 316,
+      "name": "title_name.png",
+      "originalSHA256": "b1900d27e5d1d26afa866a28b30e8f974220e0ca3be04e0de91af1d7783282b4",
+      "preparedSHA256": "44e6be085ee14204620dcf4ef188cecca1b8674041bb40deae284a22205cf15a",
+      "width": 76
+    },
+    {
+      "bytes": 44448,
+      "convertedCgBI": true,
+      "height": 512,
+      "name": "touch_shooter.png",
+      "originalSHA256": "60764963c09e73f4bda1ff5f9486fa968e967a6c20956030b6bad037ee227008",
+      "preparedSHA256": "bafdf59add5662f7bda0cfc9d61668c49c486f3820f30289374cf2f9c8d891da",
+      "width": 96
+    },
+    {
+      "bytes": 5992,
+      "convertedCgBI": true,
+      "height": 256,
+      "name": "warning.png",
+      "originalSHA256": "e63f34782a45d9da5ca21374425d3e0f758548f86b7e0bed5cecf18a74369957",
+      "preparedSHA256": "0fb670fb3b0ee83a072dc15b8bf0ffd6269913083980405df1963be76a4458f0",
+      "width": 32
+    },
+    {
+      "bytes": 2600,
+      "convertedCgBI": true,
+      "height": 32,
+      "name": "zako01.png",
+      "originalSHA256": "99a47a20366fc0802eedf13515a17857a4d04e5fcd0fb10ae262215048be97e9",
+      "preparedSHA256": "3cb972899b00555a42a1f40203d75b3e40e5c5d47c79e49bf9236e19f8099a83",
+      "width": 32
+    },
+    {
+      "bytes": 5938,
+      "convertedCgBI": true,
+      "height": 64,
+      "name": "zako02.png",
+      "originalSHA256": "a9ddad7dc862d27ae25f4f151d1fcb3175a5c3aaa6b4e79cf6ec4729bb8ce262",
+      "preparedSHA256": "b1c01053329e87845721eabe55754077dfbb6e08ab040c631a2cf5c42727e501",
+      "width": 64
+    }
+  ],
+  "entryPoints": {
+    "cameraRender": 36903,
+    "forcePause": 35953,
+    "freeFileBuffer": 43353,
+    "gameManagerConstructor": 36347,
+    "gameManagerGet": 35461,
+    "gameManagerRender": 35619,
+    "gameManagerUpdate": 35571,
+    "load": 35973,
+    "readFile": 43169,
+    "renderImage": 28065,
+    "save": 36371,
+    "setGravity": 35885,
+    "setPause": 35897,
+    "soundConstructor": 59369,
+    "soundFadeOutBgm": 59617,
+    "soundGet": 59357,
+    "soundInitialize": 60161,
+    "soundMuteBgm": 59545,
+    "soundPlay": 59797,
+    "soundPlayBgm": 60149,
+    "soundPlayBgmWithLoop": 59925,
+    "soundStopBgm": 59503,
+    "soundUpdate": 59633,
+    "switch32Arm": 61052,
+    "switchU8Arm": 61028,
+    "textureManagerGet": 16909,
+    "textureManagerInitialize": 16925,
+    "touchBegan": 35645,
+    "touchCancelled": 35861,
+    "touchEnded": 35803,
+    "touchMoved": 35703,
+    "writeFile": 43021
+  },
+  "executable": {
+    "architecture": "armv6",
+    "bytes": 179136,
+    "dependencies": [
+      "/System/Library/Frameworks/Foundation.framework/Foundation",
+      "/System/Library/Frameworks/UIKit.framework/UIKit",
+      "/System/Library/Frameworks/OpenGLES.framework/OpenGLES",
+      "/System/Library/Frameworks/QuartzCore.framework/QuartzCore",
+      "/System/Library/Frameworks/CoreGraphics.framework/CoreGraphics",
+      "/System/Library/Frameworks/AudioToolbox.framework/AudioToolbox",
+      "/System/Library/Frameworks/OpenAL.framework/OpenAL",
+      "/usr/lib/libstdc++.6.dylib",
+      "/usr/lib/libgcc_s.1.dylib",
+      "/usr/lib/libSystem.B.dylib",
+      "/usr/lib/libobjc.A.dylib",
+      "/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation"
+    ],
+    "encryption": [
+      {
+        "id": 0,
+        "offset": 4096,
+        "size": 69632
+      }
+    ],
+    "flags": 65669,
+    "format": "Mach-O 32-bit executable",
+    "name": "psh",
+    "segments": [
+      {
+        "address": 0,
+        "fileOffset": 0,
+        "fileSize": 0,
+        "name": "__PAGEZERO",
+        "size": 4096
+      },
+      {
+        "address": 4096,
+        "fileOffset": 0,
+        "fileSize": 73728,
+        "name": "__TEXT",
+        "size": 73728
+      },
+      {
+        "address": 77824,
+        "fileOffset": 73728,
+        "fileSize": 12288,
+        "name": "__DATA",
+        "size": 12288
+      },
+      {
+        "address": 90112,
+        "fileOffset": 86016,
+        "fileSize": 93120,
+        "name": "__LINKEDIT",
+        "size": 94208
+      }
+    ],
+    "sha256": "f90a2cdeae9c955520c9358b0f511f92d8327ba69650816b34a7d6f177025d1e",
+    "symbols": 3026
+  },
+  "globals": {
+    "camera": 89432,
+    "game": 88652,
+    "gameManager": 89428,
+    "sound": 89452,
+    "taskManager": 87872,
+    "textures": 87876
+  },
+  "logicalViewport": {
+    "height": 480,
+    "origin": "center",
+    "positiveY": "up",
+    "width": 320
+  },
+  "originalApp": {
+    "CFBundleDisplayName": "S.deadbeef",
+    "CFBundleIdentifier": "MyFirstBundleIdentifier",
+    "CFBundleVersion": "1.01",
+    "DTSDKName": "iphoneos2.1",
+    "MinimumOSVersion": "2.1"
+  },
+  "preparation": {
+    "cgbi": "Unfilter BGRA, unpremultiply alpha, swap to RGBA, encode standard PNG",
+    "runtimeEvidence": "Static inspection only; manifest is not gameplay verification"
+  },
+  "schemaVersion": 1,
+  "sounds": [
+    {
+      "entry": 0,
+      "gain": 1.0,
+      "name": "Beep004_16St.wav",
+      "volume": 1.0
+    },
+    {
+      "entry": 1,
+      "gain": 1.0,
+      "name": "Beep003_16St.wav",
+      "volume": 1.0
+    },
+    {
+      "entry": 2,
+      "gain": 0.5,
+      "name": "BurnerA_11.wav",
+      "volume": 0.5
+    },
+    {
+      "entry": 3,
+      "gain": 1.0,
+      "name": "TypewriterA_08.wav",
+      "volume": 1.0
+    },
+    {
+      "entry": 4,
+      "gain": 1.0,
+      "name": "ShotA_11.wav",
+      "volume": 1.0
+    },
+    {
+      "entry": 5,
+      "gain": 0.5,
+      "name": "ExplosionF-11.wav",
+      "volume": 0.5
+    },
+    {
+      "entry": 6,
+      "gain": 1.0,
+      "name": "Beep019_16.wav",
+      "volume": 1.0
+    },
+    {
+      "entry": 7,
+      "gain": 1.0,
+      "name": "MDoorA_16.wav",
+      "volume": 1.0
+    },
+    {
+      "entry": 8,
+      "gain": 1.0,
+      "name": "gameover.wav",
+      "volume": 1.0
+    },
+    {
+      "entry": 9,
+      "gain": 1.0,
+      "name": "gameclear.wav",
+      "volume": 1.0
+    },
+    {
+      "entry": 10,
+      "gain": 1.0,
+      "name": "stage1_bgm.wav",
+      "volume": 1.0
+    },
+    {
+      "entry": 11,
+      "gain": 1.0,
+      "name": "boss01_bgm.wav",
+      "volume": 1.0
+    }
+  ],
+  "textureCapacity": 62,
+  "textureRecordBytes": 32,
+  "textures": [
+    {
+      "entry": 0,
+      "handle": 1,
+      "height": 256,
+      "maxS": 1.0,
+      "maxT": 1.0,
+      "name": "font.png",
+      "pixelsHigh": 256,
+      "pixelsWide": 256,
+      "width": 256
+    },
+    {
+      "entry": 1,
+      "handle": 2,
+      "height": 128,
+      "maxS": 1.0,
+      "maxT": 1.0,
+      "name": "font_s.png",
+      "pixelsHigh": 128,
+      "pixelsWide": 128,
+      "width": 128
+    },
+    {
+      "entry": 2,
+      "handle": 3,
+      "height": 480,
+      "maxS": 0.625,
+      "maxT": 0.9375,
+      "name": "title.png",
+      "pixelsHigh": 512,
+      "pixelsWide": 512,
+      "width": 320
+    },
+    {
+      "entry": 3,
+      "handle": 4,
+      "height": 256,
+      "maxS": 1.0,
+      "maxT": 1.0,
+      "name": "game_start.png",
+      "pixelsHigh": 256,
+      "pixelsWide": 32,
+      "width": 32
+    },
+    {
+      "entry": 4,
+      "handle": 5,
+      "height": 256,
+      "maxS": 1.0,
+      "maxT": 1.0,
+      "name": "credits.png",
+      "pixelsHigh": 256,
+      "pixelsWide": 32,
+      "width": 32
+    },
+    {
+      "entry": 5,
+      "handle": 6,
+      "height": 256,
+      "maxS": 1.0,
+      "maxT": 1.0,
+      "name": "continue.png",
+      "pixelsHigh": 256,
+      "pixelsWide": 32,
+      "width": 32
+    },
+    {
+      "entry": 6,
+      "handle": 7,
+      "height": 256,
+      "maxS": 1.0,
+      "maxT": 1.0,
+      "name": "continue_left.png",
+      "pixelsHigh": 256,
+      "pixelsWide": 32,
+      "width": 32
+    },
+    {
+      "entry": 7,
+      "handle": 8,
+      "height": 256,
+      "maxS": 1.0,
+      "maxT": 1.0,
+      "name": "quit.png",
+      "pixelsHigh": 256,
+      "pixelsWide": 32,
+      "width": 32
+    },
+    {
+      "entry": 8,
+      "handle": 9,
+      "height": 256,
+      "maxS": 1.0,
+      "maxT": 1.0,
+      "name": "options.png",
+      "pixelsHigh": 256,
+      "pixelsWide": 32,
+      "width": 32
+    },
+    {
+      "entry": 9,
+      "handle": 10,
+      "height": 256,
+      "maxS": 1.0,
+      "maxT": 1.0,
+      "name": "warning.png",
+      "pixelsHigh": 256,
+      "pixelsWide": 32,
+      "width": 32
+    },
+    {
+      "entry": 10,
+      "handle": 11,
+      "height": 256,
+      "maxS": 1.0,
+      "maxT": 1.0,
+      "name": "game_clear.png",
+      "pixelsHigh": 256,
+      "pixelsWide": 32,
+      "width": 32
+    },
+    {
+      "entry": 11,
+      "handle": 12,
+      "height": 24,
+      "maxS": 0.75,
+      "maxT": 0.75,
+      "name": "p.png",
+      "pixelsHigh": 32,
+      "pixelsWide": 32,
+      "width": 24
+    },
+    {
+      "entry": 12,
+      "handle": 13,
+      "height": 128,
+      "maxS": 1.0,
+      "maxT": 1.0,
+      "name": "playerShip_01.png",
+      "pixelsHigh": 128,
+      "pixelsWide": 128,
+      "width": 128
+    },
+    {
+      "entry": 13,
+      "handle": 14,
+      "height": 128,
+      "maxS": 1.0,
+      "maxT": 1.0,
+      "name": "playerShip_02.png",
+      "pixelsHigh": 128,
+      "pixelsWide": 128,
+      "width": 128
+    },
+    {
+      "entry": 14,
+      "handle": 15,
+      "height": 128,
+      "maxS": 1.0,
+      "maxT": 1.0,
+      "name": "playerShip_03.png",
+      "pixelsHigh": 128,
+      "pixelsWide": 128,
+      "width": 128
+    },
+    {
+      "entry": 15,
+      "handle": 16,
+      "height": 128,
+      "maxS": 1.0,
+      "maxT": 1.0,
+      "name": "playerShip_04.png",
+      "pixelsHigh": 128,
+      "pixelsWide": 128,
+      "width": 128
+    },
+    {
+      "entry": 16,
+      "handle": 17,
+      "height": 128,
+      "maxS": 1.0,
+      "maxT": 1.0,
+      "name": "playerShip_05.png",
+      "pixelsHigh": 128,
+      "pixelsWide": 128,
+      "width": 128
+    },
+    {
+      "entry": 17,
+      "handle": 18,
+      "height": 128,
+      "maxS": 1.0,
+      "maxT": 1.0,
+      "name": "playerShip_06.png",
+      "pixelsHigh": 128,
+      "pixelsWide": 128,
+      "width": 128
+    },
+    {
+      "entry": 18,
+      "handle": 19,
+      "height": 128,
+      "maxS": 1.0,
+      "maxT": 1.0,
+      "name": "playerShip_07.png",
+      "pixelsHigh": 128,
+      "pixelsWide": 128,
+      "width": 128
+    },
+    {
+      "entry": 19,
+      "handle": 20,
+      "height": 128,
+      "maxS": 1.0,
+      "maxT": 1.0,
+      "name": "playerShip_08.png",
+      "pixelsHigh": 128,
+      "pixelsWide": 128,
+      "width": 128
+    },
+    {
+      "entry": 20,
+      "handle": 21,
+      "height": 128,
+      "maxS": 1.0,
+      "maxT": 1.0,
+      "name": "playerShip_09.png",
+      "pixelsHigh": 128,
+      "pixelsWide": 128,
+      "width": 128
+    },
+    {
+      "entry": 21,
+      "handle": 22,
+      "height": 128,
+      "maxS": 1.0,
+      "maxT": 1.0,
+      "name": "playerShip_10.png",
+      "pixelsHigh": 128,
+      "pixelsWide": 128,
+      "width": 128
+    },
+    {
+      "entry": 22,
+      "handle": 23,
+      "height": 128,
+      "maxS": 1.0,
+      "maxT": 1.0,
+      "name": "playerShip_11.png",
+      "pixelsHigh": 128,
+      "pixelsWide": 128,
+      "width": 128
+    },
+    {
+      "entry": 23,
+      "handle": 24,
+      "height": 128,
+      "maxS": 1.0,
+      "maxT": 1.0,
+      "name": "playerShip_12.png",
+      "pixelsHigh": 128,
+      "pixelsWide": 128,
+      "width": 128
+    },
+    {
+      "entry": 24,
+      "handle": 25,
+      "height": 128,
+      "maxS": 1.0,
+      "maxT": 1.0,
+      "name": "playerShip_13.png",
+      "pixelsHigh": 128,
+      "pixelsWide": 128,
+      "width": 128
+    },
+    {
+      "entry": 25,
+      "handle": 26,
+      "height": 128,
+      "maxS": 1.0,
+      "maxT": 1.0,
+      "name": "playerShip_14.png",
+      "pixelsHigh": 128,
+      "pixelsWide": 128,
+      "width": 128
+    },
+    {
+      "entry": 26,
+      "handle": 27,
+      "height": 128,
+      "maxS": 1.0,
+      "maxT": 1.0,
+      "name": "playerShip_15.png",
+      "pixelsHigh": 128,
+      "pixelsWide": 128,
+      "width": 128
+    },
+    {
+      "entry": 27,
+      "handle": 28,
+      "height": 128,
+      "maxS": 1.0,
+      "maxT": 1.0,
+      "name": "playerShip_16.png",
+      "pixelsHigh": 128,
+      "pixelsWide": 128,
+      "width": 128
+    },
+    {
+      "entry": 28,
+      "handle": 29,
+      "height": 128,
+      "maxS": 1.0,
+      "maxT": 1.0,
+      "name": "playerShip_17.png",
+      "pixelsHigh": 128,
+      "pixelsWide": 128,
+      "width": 128
+    },
+    {
+      "entry": 29,
+      "handle": 30,
+      "height": 128,
+      "maxS": 1.0,
+      "maxT": 1.0,
+      "name": "playerShip_18.png",
+      "pixelsHigh": 128,
+      "pixelsWide": 128,
+      "width": 128
+    },
+    {
+      "entry": 30,
+      "handle": 31,
+      "height": 128,
+      "maxS": 1.0,
+      "maxT": 1.0,
+      "name": "playerShip_19.png",
+      "pixelsHigh": 128,
+      "pixelsWide": 128,
+      "width": 128
+    },
+    {
+      "entry": 31,
+      "handle": 32,
+      "height": 128,
+      "maxS": 1.0,
+      "maxT": 1.0,
+      "name": "playerShip_20.png",
+      "pixelsHigh": 128,
+      "pixelsWide": 128,
+      "width": 128
+    },
+    {
+      "entry": 32,
+      "handle": 33,
+      "height": 128,
+      "maxS": 1.0,
+      "maxT": 1.0,
+      "name": "playerShip_21.png",
+      "pixelsHigh": 128,
+      "pixelsWide": 128,
+      "width": 128
+    },
+    {
+      "entry": 33,
+      "handle": 34,
+      "height": 128,
+      "maxS": 1.0,
+      "maxT": 1.0,
+      "name": "playerShip_22.png",
+      "pixelsHigh": 128,
+      "pixelsWide": 128,
+      "width": 128
+    },
+    {
+      "entry": 34,
+      "handle": 35,
+      "height": 128,
+      "maxS": 1.0,
+      "maxT": 1.0,
+      "name": "playerShip_23.png",
+      "pixelsHigh": 128,
+      "pixelsWide": 128,
+      "width": 128
+    },
+    {
+      "entry": 35,
+      "handle": 36,
+      "height": 128,
+      "maxS": 1.0,
+      "maxT": 1.0,
+      "name": "playerShip_24.png",
+      "pixelsHigh": 128,
+      "pixelsWide": 128,
+      "width": 128
+    },
+    {
+      "entry": 36,
+      "handle": 37,
+      "height": 128,
+      "maxS": 1.0,
+      "maxT": 1.0,
+      "name": "playerShip_25.png",
+      "pixelsHigh": 128,
+      "pixelsWide": 128,
+      "width": 128
+    },
+    {
+      "entry": 37,
+      "handle": 38,
+      "height": 128,
+      "maxS": 0.75,
+      "maxT": 1.0,
+      "name": "bg01_00.png",
+      "pixelsHigh": 128,
+      "pixelsWide": 128,
+      "width": 96
+    },
+    {
+      "entry": 38,
+      "handle": 39,
+      "height": 128,
+      "maxS": 0.75,
+      "maxT": 1.0,
+      "name": "bg01_01.png",
+      "pixelsHigh": 128,
+      "pixelsWide": 128,
+      "width": 96
+    },
+    {
+      "entry": 39,
+      "handle": 40,
+      "height": 128,
+      "maxS": 0.75,
+      "maxT": 1.0,
+      "name": "bg01_02.png",
+      "pixelsHigh": 128,
+      "pixelsWide": 128,
+      "width": 96
+    },
+    {
+      "entry": 40,
+      "handle": 41,
+      "height": 128,
+      "maxS": 0.75,
+      "maxT": 1.0,
+      "name": "bg01_03.png",
+      "pixelsHigh": 128,
+      "pixelsWide": 128,
+      "width": 96
+    },
+    {
+      "entry": 41,
+      "handle": 42,
+      "height": 128,
+      "maxS": 1.0,
+      "maxT": 1.0,
+      "name": "bg01_10.png",
+      "pixelsHigh": 128,
+      "pixelsWide": 64,
+      "width": 64
+    },
+    {
+      "entry": 42,
+      "handle": 43,
+      "height": 128,
+      "maxS": 1.0,
+      "maxT": 1.0,
+      "name": "bg01_11.png",
+      "pixelsHigh": 128,
+      "pixelsWide": 64,
+      "width": 64
+    },
+    {
+      "entry": 43,
+      "handle": 44,
+      "height": 128,
+      "maxS": 1.0,
+      "maxT": 1.0,
+      "name": "bg01_12.png",
+      "pixelsHigh": 128,
+      "pixelsWide": 64,
+      "width": 64
+    },
+    {
+      "entry": 44,
+      "handle": 45,
+      "height": 128,
+      "maxS": 1.0,
+      "maxT": 1.0,
+      "name": "bg01_13.png",
+      "pixelsHigh": 128,
+      "pixelsWide": 64,
+      "width": 64
+    },
+    {
+      "entry": 46,
+      "handle": 47,
+      "height": 42,
+      "maxS": 0.625,
+      "maxT": 0.65625,
+      "name": "ThrustMiddle.png",
+      "pixelsHigh": 64,
+      "pixelsWide": 64,
+      "width": 40
+    },
+    {
+      "entry": 47,
+      "handle": 48,
+      "height": 64,
+      "maxS": 1.0,
+      "maxT": 1.0,
+      "name": "lockmark.png",
+      "pixelsHigh": 64,
+      "pixelsWide": 64,
+      "width": 64
+    },
+    {
+      "entry": 48,
+      "handle": 49,
+      "height": 16,
+      "maxS": 1.0,
+      "maxT": 1.0,
+      "name": "laser.png",
+      "pixelsHigh": 16,
+      "pixelsWide": 16,
+      "width": 16
+    },
+    {
+      "entry": 49,
+      "handle": 50,
+      "height": 32,
+      "maxS": 1.0,
+      "maxT": 1.0,
+      "name": "missile.png",
+      "pixelsHigh": 32,
+      "pixelsWide": 8,
+      "width": 8
+    },
+    {
+      "entry": 50,
+      "handle": 51,
+      "height": 114,
+      "maxS": 0.7734375,
+      "maxT": 0.890625,
+      "name": "Explosion.png",
+      "pixelsHigh": 128,
+      "pixelsWide": 128,
+      "width": 99
+    },
+    {
+      "entry": 51,
+      "handle": 52,
+      "height": 174,
+      "maxS": 1.0,
+      "maxT": 0.6796875,
+      "name": "exp01.png",
+      "pixelsHigh": 256,
+      "pixelsWide": 256,
+      "width": 256
+    },
+    {
+      "entry": 52,
+      "handle": 53,
+      "height": 392,
+      "maxS": 1.0,
+      "maxT": 0.765625,
+      "name": "exp02.png",
+      "pixelsHigh": 512,
+      "pixelsWide": 512,
+      "width": 512
+    },
+    {
+      "entry": 53,
+      "handle": 54,
+      "height": 64,
+      "maxS": 1.0,
+      "maxT": 1.0,
+      "name": "splinter.png",
+      "pixelsHigh": 64,
+      "pixelsWide": 64,
+      "width": 64
+    },
+    {
+      "entry": 54,
+      "handle": 55,
+      "height": 64,
+      "maxS": 1.0,
+      "maxT": 1.0,
+      "name": "gray_ball.png",
+      "pixelsHigh": 64,
+      "pixelsWide": 64,
+      "width": 64
+    },
+    {
+      "entry": 55,
+      "handle": 56,
+      "height": 16,
+      "maxS": 1.0,
+      "maxT": 1.0,
+      "name": "ball.png",
+      "pixelsHigh": 16,
+      "pixelsWide": 16,
+      "width": 16
+    },
+    {
+      "entry": 56,
+      "handle": 57,
+      "height": 32,
+      "maxS": 1.0,
+      "maxT": 1.0,
+      "name": "zako01.png",
+      "pixelsHigh": 32,
+      "pixelsWide": 32,
+      "width": 32
+    },
+    {
+      "entry": 57,
+      "handle": 58,
+      "height": 64,
+      "maxS": 1.0,
+      "maxT": 1.0,
+      "name": "zako02.png",
+      "pixelsHigh": 64,
+      "pixelsWide": 64,
+      "width": 64
+    },
+    {
+      "entry": 58,
+      "handle": 59,
+      "height": 64,
+      "maxS": 1.0,
+      "maxT": 1.0,
+      "name": "sergeant.png",
+      "pixelsHigh": 64,
+      "pixelsWide": 64,
+      "width": 64
+    },
+    {
+      "entry": 59,
+      "handle": 60,
+      "height": 48,
+      "maxS": 0.75,
+      "maxT": 0.75,
+      "name": "snake_dou.png",
+      "pixelsHigh": 64,
+      "pixelsWide": 64,
+      "width": 48
+    },
+    {
+      "entry": 60,
+      "handle": 61,
+      "height": 96,
+      "maxS": 0.75,
+      "maxT": 0.75,
+      "name": "snake_head.png",
+      "pixelsHigh": 128,
+      "pixelsWide": 64,
+      "width": 48
+    },
+    {
+      "entry": 61,
+      "handle": 62,
+      "height": 48,
+      "maxS": 0.75,
+      "maxT": 0.75,
+      "name": "snake_tail.png",
+      "pixelsHigh": 64,
+      "pixelsWide": 128,
+      "width": 96
+    }
+  ]
+}
