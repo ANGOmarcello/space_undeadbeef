@@ -13,7 +13,17 @@ Open `SPACE UNDEADBEEF.xcodeproj` with Xcode 27.2 or newer and select one of the
 - `SPACE UNDEADBEEF tvOS` — tvOS 18+
 - `SPACE UNDEADBEEF watchOS` — standalone watch app, watchOS 11+
 
-Set your own signing team for physical devices. macOS local build/run uses `./script/build_and_run.sh`; `--build-only` builds without launching. Build output stays in standard Xcode DerivedData. Each platform has a distinct host bundle identity and its own save directory.
+Automatic development signing uses Angelo Cammalleri's existing team. Other
+developers should select their own team. macOS local build/run uses
+`./script/build_and_run.sh`; `--build-only` builds without launching. Build output
+stays in standard Xcode DerivedData. Each platform has a distinct host bundle
+identity and its own save directory.
+
+For a physical Watch, select **SPACE UNDEADBEEF watchOS** and the Watch destination.
+Enable Developer Mode on the Watch, complete its restart and confirmation, and
+keep it connected to its paired iPhone. Xcode's **Product → Destination → Manage
+Devices…** shows its connection status. The iOS, Mac, and TV schemes each list
+their own platform's destinations.
 
 The checked resources are reproducible from the supplied IPA:
 

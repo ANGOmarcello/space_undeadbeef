@@ -82,3 +82,16 @@ AppKit's resolved Mac application icon also displayed the ship with the system
 mask. All four icon builds passed. The final TV/iOS builds had no warnings; Mac
 and Watch emitted the routine skipped-App-Intents metadata notice. No physical
 device launcher icon was verified in these checks.
+
+## Physical Watch preparation
+
+Automatic signing is configured for Angelo Cammalleri's existing development
+team. A Debug build for `generic/platform=watchOS` succeeded with both `arm64`
+and `arm64_32` slices, a development provisioning profile, and a valid code
+signature (`codesign --verify --strict`). The deployment minimum remains watchOS
+11. This establishes a signed device build; it does not establish installation.
+
+During destination diagnosis, the iOS scheme listed physical iPhones, while both
+this project's Watch scheme and CocaWatch listed no physical Watch. The user
+identified Developer Mode as disabled on the intended Series 12. Device discovery
+and installation still require the Watch to finish enabling Developer Mode.
