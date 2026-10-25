@@ -11,6 +11,7 @@ host ran on Apple silicon with macOS 27.0. These are local development checks.
 | iPhone 18 Pro, iOS 27.2 Simulator | Original title and Options; Sound ON; Respect Silent Mode OFF then ON; SAVE-EXIT; Game Start; targeting drag; Home and foreground resume. | `HostUITests.testOriginalGameInteraction`: 1 passed, 0 failed. Settled screenshots accompany the test. |
 | Apple TV 4K, 3rd generation, tvOS 27.2 Simulator | Remote directional input and Select start the original game; Play/Pause holds a touch, a rightward sweep moves the pointer, and Play/Pause releases it. | `HostUITests.testOriginalGameInteraction`: 1 passed, 0 failed, with screenshots. |
 | Apple Watch Series 12, 46 mm, watchOS 27.2 Simulator | Standalone install and launch; readable title and fitted Options; coordinate taps on the Simulator enter gameplay. A later frame shows stage 1-03 and score 15. | App screenshots and explicit-device tap logs. Digital Crown interaction was not exercised. |
+| Physical Apple Watch Series 12, watchOS 27.0.1 | The user built and ran the app after completing Developer Mode and Mac pairing. Device Hub's live screen showed original gameplay at stage 1-11, score/high score 1,950, and zero deaths. | CoreDevice reported installed `dev.cammalleri.SpaceUndeadbeef.watch` version 1.0 (1), its running `SpaceUndeadbeef.app` process (PID 521), and a compatible physical Watch destination. No agent reinstall, restart, or game input was performed. |
 | Native macOS | Original title, Options with Sound ON, SAVE-EXIT, mouse Game Start, Right Arrow and Space, and visible pointer response. Gameplay advanced from stage 1-00 to stage 1-03 with score 15. Window resize from 960×640 to 1000×800 preserved the playfield with black letterboxing; restored to 960×640. | Captures were restricted to the verified application window. No desktop or other-app screenshot was used. |
 
 The Watch originally failed installation with contradictory watch-only and
@@ -57,9 +58,10 @@ than a promise that temporary output will remain available indefinitely.
 
 ## Limits
 
-No physical iPhone, Apple TV, or Watch installation, hardware silent-mode switch,
-audible output, sustained performance, thermal behavior, or universal instruction
-and graphics conformance was established. The Watch Crown remains untested.
+Physical iPhone and Apple TV installation remain unverified. Hardware silent-mode
+behavior, audible output, sustained performance, thermal behavior, and universal
+instruction and graphics conformance were not established. The Watch Crown
+remains untested by the agent.
 Full game parity, every stage and boss, and original-device timing comparison
 remain open. No App Store submission or public distribution was performed.
 
@@ -83,25 +85,28 @@ mask. All four icon builds passed. The final TV/iOS builds had no warnings; Mac
 and Watch emitted the routine skipped-App-Intents metadata notice. No physical
 device launcher icon was verified in these checks.
 
-## Physical Watch preparation
+## Physical Watch build and run
 
 Automatic signing is configured for Angelo Cammalleri's existing development
 team. A Debug build for `generic/platform=watchOS` succeeded with both `arm64`
 and `arm64_32` slices, a development provisioning profile, and a valid code
 signature (`codesign --verify --strict`). The deployment minimum remains watchOS
-11. This establishes a signed device build; it does not establish installation.
+11. This first check established a signed device build separately from installation.
 
 During destination diagnosis, the iOS scheme listed physical iPhones, while both
 this project's Watch scheme and CocaWatch listed no physical Watch. The user
-identified Developer Mode as disabled on the intended Series 12. Device discovery
-initially required the Watch to finish enabling Developer Mode. The user then
-confirmed the restart and final Turn On prompt were complete.
-
-A subsequent live check still found no physical Series 12 in CoreDevice or the
-Watch scheme's destinations. Device Hub displayed its iPhone/Watch **Waiting to
-pair** sheet. This is a separate Mac-pairing step, not evidence that Developer
-Mode is still disabled. The retained Series 12 entry is a simulator; the cached
-unavailable physical Watch is an older Series 5 and is not the intended device.
-The signed build remains valid, but installation is pending completion of pairing
-the Series 12 with this Mac. Xcode 27's network-pairing workflow is documented in
+enabled Developer Mode, completed its restart confirmation, and then paired the
+Series 12 directly with this Mac through Device Hub. These were separate steps;
+no Simulator-only project restriction was found. Xcode 27's network-pairing
+workflow is documented in
 [Apple's Device Hub guide](https://developer.apple.com/documentation/xcode/managing-your-simulated-and-physical-devices-in-device-hub).
+
+After pairing, CoreDevice identified the connected physical Series 12 (`Watch8,4`)
+and Xcode listed it as a compatible `watchOS, arm64` destination. The user reported
+that the game ran successfully. A read-only app query confirmed version 1.0 (1)
+installed under the intended Watch bundle ID, and the process query confirmed the
+game running. Device Hub's live mirror then visibly showed stage 1-11 and score
+1,950. The agent did not replace the user's build or send gameplay input. The
+temporary screen-sharing stream was stopped after verification; the game was left
+running. This establishes physical installation and gameplay, while the hardware
+audio, Crown, and sustained-performance limits above remain separate.

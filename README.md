@@ -56,7 +56,12 @@ The game retains its original touch controls: hold and sweep over enemies to loc
 
 ## Evidence and limits
 
-Native macOS gameplay and iOS, tvOS, and watchOS Simulator interaction were verified on 25 October 2026 with Xcode 27.2. See [Documentation/Verification.md](Documentation/Verification.md) for the devices, exercised flows, evidence identifiers, and remaining limits. These checks do not establish physical-device performance, hardware silent-mode behavior, or audible speaker output.
+Native macOS gameplay, physical Apple Watch Series 12 gameplay, and iOS, tvOS,
+and watchOS Simulator interaction were verified on 25 October 2026 with Xcode
+27.2. See [Documentation/Verification.md](Documentation/Verification.md) for the
+devices, exercised flows, evidence identifiers, and remaining limits. These
+checks do not establish sustained physical-device performance, hardware
+silent-mode behavior, or audible speaker output.
 
 See [Documentation/Restoration.md](Documentation/Restoration.md) for exact input hashes, entry points, architecture, and headless integration checks. See [Documentation/Backend.md](Documentation/Backend.md) for the service and persistence inventory.
 

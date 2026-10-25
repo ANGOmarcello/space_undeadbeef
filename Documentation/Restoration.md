@@ -254,7 +254,9 @@ from the headless integration results above.
 
 These checks exercise concrete guest paths and generated saves. They do not
 establish every enemy, boss, stage, instruction, import, or rendering path, nor an
-exact visual/timing match against a running original device. Physical-device
-performance, hardware audio and silent-mode behavior, device signing, physical
-installation, and distribution require their own evidence. The recorded host
-interactions cover specific flows rather than every control or platform behavior.
+exact visual/timing match against a running original device. Native Mac, physical
+Watch installation and gameplay, and Simulator host evidence are recorded in
+[Verification.md](Verification.md). Sustained physical-device performance,
+hardware audio and silent-mode behavior, and distribution remain separate checks.
+The recorded host interactions cover specific flows rather than every control or
+platform behavior.
