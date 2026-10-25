@@ -1,0 +1,989 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 46;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		027B5FDC743DE59188E425B1E65F72FE /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 40D31CE088E9063843D83C8EB937C823 /* Foundation.framework */; };
+		041D46FA30ACA93B7E662A967A95FA50 /* HostUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 444B372AA42125662FD05841A26FE753 /* HostUITests.swift */; };
+		0CB6A63355813403D5672320A470E6A5 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E3FB14270E334955A65620E768B5994C /* Foundation.framework */; };
+		0CF1B740FD91A9B238EA62D76DA0BBDB /* GuestCPU.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 334B65A5DCE521FEB577914494179556 /* GuestCPU.cpp */; };
+		0D211CC40C4B0C2074FEBA8242B773FE /* SpaceUndeadbeefApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34E65BD3412A126762DCB0C067451CE2 /* SpaceUndeadbeefApp.swift */; };
+		0E321C82912930F07D9F641E53999349 /* SpaceUndeadbeefApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34E65BD3412A126762DCB0C067451CE2 /* SpaceUndeadbeefApp.swift */; };
+		0EB8099CC3B2FB9ACF205B0571F15815 /* GameSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 096459CD2CBB569C6D8CDED3B69C673F /* GameSession.swift */; };
+		12B8ECEFD6464657735FD12841E7742C /* GameView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D628EE129574D3A906DFFCC4E47144C4 /* GameView.swift */; };
+		1C59716537BFFA86FCFDB73812E48C9B /* GameSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 096459CD2CBB569C6D8CDED3B69C673F /* GameSession.swift */; };
+		22CF07FA6F0EEDC2A834781832BC85D5 /* Original in Resources */ = {isa = PBXBuildFile; fileRef = 01FB921373D272DCE3FCEDD1B4EB44C2 /* Original */; };
+		241DABAC2C587C492ADEAEDA35093A71 /* GuestCPU.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 334B65A5DCE521FEB577914494179556 /* GuestCPU.cpp */; };
+		2934E6CFA59F1AB905059865851729AA /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 40D31CE088E9063843D83C8EB937C823 /* Foundation.framework */; };
+		3AA3642891CE4F9AC2179077A840CB8D /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C3B176969C1B2F52ACE522BB7649E936 /* AVFoundation.framework */; };
+		4216CCC010C7D0411F1A012932FDEFA6 /* SDBEngine.mm in Sources */ = {isa = PBXBuildFile; fileRef = B9409C08BE85654F46E048E17D766549 /* SDBEngine.mm */; };
+		4258DE6B7CF64A8C288C1E7890F9FF1C /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 67DA5516E911DDFB32B7719F493510DD /* CoreGraphics.framework */; };
+		4380CEF4479DBBD46EC1D5B698C7C458 /* GameView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D628EE129574D3A906DFFCC4E47144C4 /* GameView.swift */; };
+		471D7E1AF51CD4044586526E17F5EDAA /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F8882BAFC6A2BA9399B40C2FF1A725B9 /* AVFoundation.framework */; };
+		4922C868E558DD685154CF572009A85A /* HostUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 444B372AA42125662FD05841A26FE753 /* HostUITests.swift */; };
+		4C37A262385D0E245D3F1FFFBBFD5E5F /* GuestCPU.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 334B65A5DCE521FEB577914494179556 /* GuestCPU.cpp */; };
+		59F1F226B17DF5F506967B7C1CCC18A0 /* GameSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 096459CD2CBB569C6D8CDED3B69C673F /* GameSession.swift */; };
+		63C360024EB26FB5FE5374E98EA6B9F3 /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 318348C6BBC2BD49021631DD6AD3616C /* CoreGraphics.framework */; };
+		6A7D416F3566D20E71C344D7EF6BF221 /* Original in Resources */ = {isa = PBXBuildFile; fileRef = 01FB921373D272DCE3FCEDD1B4EB44C2 /* Original */; };
+		6BD75DE1517410BD5E38E8AD26D73B2A /* ImageIO.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7E17A1A169F7AEEC101315AD11E500B1 /* ImageIO.framework */; };
+		6D62264ACDDF43B541CD36F52F26964C /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E3FB14270E334955A65620E768B5994C /* Foundation.framework */; };
+		70250C4EE3E2E0A89AC4F1161178F3E0 /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CDB1EBA1ED502E3282A04D8695848CC1 /* CoreGraphics.framework */; };
+		71C37D435A985F01F1C91697A7A64916 /* GameView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D628EE129574D3A906DFFCC4E47144C4 /* GameView.swift */; };
+		816229EA3E1534F28DB1B3AB3918063A /* Original in Resources */ = {isa = PBXBuildFile; fileRef = 01FB921373D272DCE3FCEDD1B4EB44C2 /* Original */; };
+		81FC72128D431FC29BC562C8E47B502D /* SpaceUndeadbeefApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34E65BD3412A126762DCB0C067451CE2 /* SpaceUndeadbeefApp.swift */; };
+		831E4D11FB5F3E13ACCA057A4BDDA967 /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9AE0A7624DA240DAA7B6BEA8C79CE5AB /* AVFoundation.framework */; };
+		8913E82501013BD5B419E53F019E9B52 /* Original in Resources */ = {isa = PBXBuildFile; fileRef = 01FB921373D272DCE3FCEDD1B4EB44C2 /* Original */; };
+		8C97CCA3CA8A5E0E80EFC089A3E6EF22 /* GameSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 096459CD2CBB569C6D8CDED3B69C673F /* GameSession.swift */; };
+		907A49513CEEBA46549339433627DF30 /* ImageIO.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 85DF1FE000FB3628953D8B915A79C2D8 /* ImageIO.framework */; };
+		A9CCBDB55F6CF0D54318CABF067E7F53 /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9CDA567D370C3DB90F2DD07D31A12488 /* CoreGraphics.framework */; };
+		B3D217530859124D1F7F8245A5096E67 /* SDBEngine.mm in Sources */ = {isa = PBXBuildFile; fileRef = B9409C08BE85654F46E048E17D766549 /* SDBEngine.mm */; };
+		BC315CCFC8BAC32565BC856370A17237 /* GuestCPU.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 334B65A5DCE521FEB577914494179556 /* GuestCPU.cpp */; };
+		C0FC52484261882035858C73DB70EEBD /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2BA982925BA0D0CBF84F15F6E8F14F52 /* Foundation.framework */; };
+		C8BC5699777DE1EA59AF83C0917093E4 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8739B696C67F56E563B61AFEF7A9AC48 /* Foundation.framework */; };
+		C9C1390C1E8CC82DCE91CD38387B1CFF /* GameView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D628EE129574D3A906DFFCC4E47144C4 /* GameView.swift */; };
+		D1CC19AC8ABB605CDD8937AA809EBBB9 /* ImageIO.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 134F7099438BC19FFC7CF5B709C87DA4 /* ImageIO.framework */; };
+		E0BDB5B15819948DFDC00CC0B7229B92 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 680B3A514D790EFF4E8E180838A9A801 /* Cocoa.framework */; };
+		E109E633309A451E845FEC06D7D48A99 /* SDBEngine.mm in Sources */ = {isa = PBXBuildFile; fileRef = B9409C08BE85654F46E048E17D766549 /* SDBEngine.mm */; };
+		E39EDF65E92A0A32C83123B06CAD43C3 /* ImageIO.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FEBBBFE6A49D43886C82E489DAF08BA1 /* ImageIO.framework */; };
+		E7161091145C9469AEC368086A23BCC6 /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 150D7D3114169BF6CAD9ADC5894B2985 /* AVFoundation.framework */; };
+		E942D53AD8E482E16ECDB9A0B6F73E68 /* SpaceUndeadbeefApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34E65BD3412A126762DCB0C067451CE2 /* SpaceUndeadbeefApp.swift */; };
+		F7FB573CB7981205158BB32F63B04AF2 /* SDBEngine.mm in Sources */ = {isa = PBXBuildFile; fileRef = B9409C08BE85654F46E048E17D766549 /* SDBEngine.mm */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		1F2EABCE496CED8527475C1667E3E836 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 904470823B1F4F59403FC058F562D000 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 1A85768226961FF2341D124CE6977D91;
+			remoteInfo = "SPACE UNDEADBEEF tvOS";
+		};
+		7CDBAB5BDAA08521A17501B46756CC8A /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 904470823B1F4F59403FC058F562D000 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = C39AC69CCF132B3E8A686D692BE80F56;
+			remoteInfo = "SPACE UNDEADBEEF iOS";
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		01FB921373D272DCE3FCEDD1B4EB44C2 /* Original */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = folder; path = Original; sourceTree = "<group>"; };
+		07A67C6CFA49BC0E5D19FCB75B446B4A /* SpaceUndeadbeef (macOS).app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; name = "SpaceUndeadbeef (macOS).app"; path = SpaceUndeadbeef.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		096459CD2CBB569C6D8CDED3B69C673F /* GameSession.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GameSession.swift; sourceTree = "<group>"; };
+		134F7099438BC19FFC7CF5B709C87DA4 /* ImageIO.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ImageIO.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.0.sdk/System/Library/Frameworks/ImageIO.framework; sourceTree = DEVELOPER_DIR; };
+		150D7D3114169BF6CAD9ADC5894B2985 /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.0.sdk/System/Library/Frameworks/AVFoundation.framework; sourceTree = DEVELOPER_DIR; };
+		21ED3D1D2BF37F4743F2C698C36A9962 /* macOS-Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = "macOS-Info.plist"; sourceTree = "<group>"; };
+		22138A33280C1C89056BDDF9A40E8F1C /* GuestCPU.h */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.h; path = GuestCPU.h; sourceTree = "<group>"; };
+		29AEFAC49B271A4B3A21E3E8F5AC1D77 /* SpaceUndeadbeef (iOS).app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; name = "SpaceUndeadbeef (iOS).app"; path = SpaceUndeadbeef.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		2BA982925BA0D0CBF84F15F6E8F14F52 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/WatchOS.platform/Developer/SDKs/WatchOS26.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
+		318348C6BBC2BD49021631DD6AD3616C /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = Platforms/AppleTVOS.platform/Developer/SDKs/AppleTVOS26.0.sdk/System/Library/Frameworks/CoreGraphics.framework; sourceTree = DEVELOPER_DIR; };
+		334B65A5DCE521FEB577914494179556 /* GuestCPU.cpp */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.cpp.cpp; path = GuestCPU.cpp; sourceTree = "<group>"; };
+		34E65BD3412A126762DCB0C067451CE2 /* SpaceUndeadbeefApp.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SpaceUndeadbeefApp.swift; sourceTree = "<group>"; };
+		40D31CE088E9063843D83C8EB937C823 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
+		444B372AA42125662FD05841A26FE753 /* HostUITests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = HostUITests.swift; sourceTree = "<group>"; };
+		4A4425BE9BFBA736A51D5B0A8D1EC8ED /* watchOS-Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = "watchOS-Info.plist"; sourceTree = "<group>"; };
+		64BDE250B129385C41D6CCC949A50DC6 /* iOS-Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = "iOS-Info.plist"; sourceTree = "<group>"; };
+		67DA5516E911DDFB32B7719F493510DD /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = Platforms/WatchOS.platform/Developer/SDKs/WatchOS26.0.sdk/System/Library/Frameworks/CoreGraphics.framework; sourceTree = DEVELOPER_DIR; };
+		680B3A514D790EFF4E8E180838A9A801 /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/System/Library/Frameworks/Cocoa.framework; sourceTree = DEVELOPER_DIR; };
+		7E17A1A169F7AEEC101315AD11E500B1 /* ImageIO.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ImageIO.framework; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/System/Library/Frameworks/ImageIO.framework; sourceTree = DEVELOPER_DIR; };
+		8101B4A469F19F888C67F09AAC10DB76 /* SPACE UNDEADBEEF tvOS UITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "SPACE UNDEADBEEF tvOS UITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		85DF1FE000FB3628953D8B915A79C2D8 /* ImageIO.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ImageIO.framework; path = Platforms/AppleTVOS.platform/Developer/SDKs/AppleTVOS26.0.sdk/System/Library/Frameworks/ImageIO.framework; sourceTree = DEVELOPER_DIR; };
+		8675C61B659DA05BA606A8F791C176D0 /* SPACE UNDEADBEEF iOS UITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "SPACE UNDEADBEEF iOS UITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		8739B696C67F56E563B61AFEF7A9AC48 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
+		8874297DDB2134C55C5520717CF6B2E5 /* App.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; path = App.xcconfig; sourceTree = "<group>"; };
+		8D8C4904E9483DC0F2FCF1716026201F /* SpaceUndeadbeef (watchOS).app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; name = "SpaceUndeadbeef (watchOS).app"; path = SpaceUndeadbeef.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		9AE0A7624DA240DAA7B6BEA8C79CE5AB /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = Platforms/AppleTVOS.platform/Developer/SDKs/AppleTVOS26.0.sdk/System/Library/Frameworks/AVFoundation.framework; sourceTree = DEVELOPER_DIR; };
+		9CDA567D370C3DB90F2DD07D31A12488 /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/System/Library/Frameworks/CoreGraphics.framework; sourceTree = DEVELOPER_DIR; };
+		B5D871AD7CB5C9EAF81E61C9478D26F8 /* SDBEngine.h */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.h; path = SDBEngine.h; sourceTree = "<group>"; };
+		B9409C08BE85654F46E048E17D766549 /* SDBEngine.mm */ = {isa = PBXFileReference; includeInIndex = 1; path = SDBEngine.mm; sourceTree = "<group>"; };
+		B9CEC8088367CCA781173035874BD93E /* SpaceUndeadbeef (tvOS).app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; name = "SpaceUndeadbeef (tvOS).app"; path = SpaceUndeadbeef.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		C3B176969C1B2F52ACE522BB7649E936 /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.0.sdk/System/Library/Frameworks/AVFoundation.framework; sourceTree = DEVELOPER_DIR; };
+		CDB1EBA1ED502E3282A04D8695848CC1 /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.0.sdk/System/Library/Frameworks/CoreGraphics.framework; sourceTree = DEVELOPER_DIR; };
+		D22E030EC4C46840E6024F412130C5AB /* tvOS-Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = "tvOS-Info.plist"; sourceTree = "<group>"; };
+		D628EE129574D3A906DFFCC4E47144C4 /* GameView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GameView.swift; sourceTree = "<group>"; };
+		E3FB14270E334955A65620E768B5994C /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/AppleTVOS.platform/Developer/SDKs/AppleTVOS26.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
+		F8882BAFC6A2BA9399B40C2FF1A725B9 /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = Platforms/WatchOS.platform/Developer/SDKs/WatchOS26.0.sdk/System/Library/Frameworks/AVFoundation.framework; sourceTree = DEVELOPER_DIR; };
+		FEBBBFE6A49D43886C82E489DAF08BA1 /* ImageIO.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ImageIO.framework; path = Platforms/WatchOS.platform/Developer/SDKs/WatchOS26.0.sdk/System/Library/Frameworks/ImageIO.framework; sourceTree = DEVELOPER_DIR; };
+		FFE89157483D7018DE95638D97D3667E /* SpaceUndeadbeef-Bridging-Header.h */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.h; path = "SpaceUndeadbeef-Bridging-Header.h"; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		1B11932EEC473B3F7988A301EABF03DE /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				6D62264ACDDF43B541CD36F52F26964C /* Foundation.framework in Frameworks */,
+				63C360024EB26FB5FE5374E98EA6B9F3 /* CoreGraphics.framework in Frameworks */,
+				907A49513CEEBA46549339433627DF30 /* ImageIO.framework in Frameworks */,
+				831E4D11FB5F3E13ACCA057A4BDDA967 /* AVFoundation.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		64E6DA6D3C0537BB2D804134D92D93BE /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				027B5FDC743DE59188E425B1E65F72FE /* Foundation.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		8796A98DBB97E689AADB48A2D5BBD625 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0CB6A63355813403D5672320A470E6A5 /* Foundation.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		983574DD12628C60CFE53E945DE3C20A /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C0FC52484261882035858C73DB70EEBD /* Foundation.framework in Frameworks */,
+				4258DE6B7CF64A8C288C1E7890F9FF1C /* CoreGraphics.framework in Frameworks */,
+				E39EDF65E92A0A32C83123B06CAD43C3 /* ImageIO.framework in Frameworks */,
+				471D7E1AF51CD4044586526E17F5EDAA /* AVFoundation.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B8E171890DDF366879E76E1192EF8C5C /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E0BDB5B15819948DFDC00CC0B7229B92 /* Cocoa.framework in Frameworks */,
+				C8BC5699777DE1EA59AF83C0917093E4 /* Foundation.framework in Frameworks */,
+				A9CCBDB55F6CF0D54318CABF067E7F53 /* CoreGraphics.framework in Frameworks */,
+				6BD75DE1517410BD5E38E8AD26D73B2A /* ImageIO.framework in Frameworks */,
+				3AA3642891CE4F9AC2179077A840CB8D /* AVFoundation.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C502D78E76467DCD3495500178433C8E /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2934E6CFA59F1AB905059865851729AA /* Foundation.framework in Frameworks */,
+				70250C4EE3E2E0A89AC4F1161178F3E0 /* CoreGraphics.framework in Frameworks */,
+				D1CC19AC8ABB605CDD8937AA809EBBB9 /* ImageIO.framework in Frameworks */,
+				E7161091145C9469AEC368086A23BCC6 /* AVFoundation.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		11087A5E6BA39CBF1286290BA5F341AB /* Tests */ = {
+			isa = PBXGroup;
+			children = (
+				444B372AA42125662FD05841A26FE753 /* HostUITests.swift */,
+			);
+			name = Tests;
+			path = Tests;
+			sourceTree = "<group>";
+		};
+		4555FB047F5C036F8F3A9178B969A98C /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				9A3250B4948F89C21AC88C9CB25C7CE2 /* iOS */,
+				FA6E2B0A7F6A64487ADE5AF3F84F186C /* OS X */,
+				F443EDE7F02A691DA64669A0655ED534 /* tvOS */,
+				5C22FDF862D29992319167D0CC0736E2 /* watchOS */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		460727A10349365E0FF5FC0E6B75180C = {
+			isa = PBXGroup;
+			children = (
+				69EFC4C76EEBB574977036169004771A /* Products */,
+				4555FB047F5C036F8F3A9178B969A98C /* Frameworks */,
+				87525BE3B3142526F2265192C6BDF51E /* Sources */,
+				B9D006075500C3BAD070B4C53627191F /* Config */,
+				C85864FE0790B4563F50BA83A4025DDB /* Resources */,
+				11087A5E6BA39CBF1286290BA5F341AB /* Tests */,
+			);
+			sourceTree = "<group>";
+		};
+		5C22FDF862D29992319167D0CC0736E2 /* watchOS */ = {
+			isa = PBXGroup;
+			children = (
+				2BA982925BA0D0CBF84F15F6E8F14F52 /* Foundation.framework */,
+				67DA5516E911DDFB32B7719F493510DD /* CoreGraphics.framework */,
+				FEBBBFE6A49D43886C82E489DAF08BA1 /* ImageIO.framework */,
+				F8882BAFC6A2BA9399B40C2FF1A725B9 /* AVFoundation.framework */,
+			);
+			name = watchOS;
+			sourceTree = "<group>";
+		};
+		69EFC4C76EEBB574977036169004771A /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				29AEFAC49B271A4B3A21E3E8F5AC1D77 /* SpaceUndeadbeef (iOS).app */,
+				8675C61B659DA05BA606A8F791C176D0 /* SPACE UNDEADBEEF iOS UITests.xctest */,
+				07A67C6CFA49BC0E5D19FCB75B446B4A /* SpaceUndeadbeef (macOS).app */,
+				B9CEC8088367CCA781173035874BD93E /* SpaceUndeadbeef (tvOS).app */,
+				8101B4A469F19F888C67F09AAC10DB76 /* SPACE UNDEADBEEF tvOS UITests.xctest */,
+				8D8C4904E9483DC0F2FCF1716026201F /* SpaceUndeadbeef (watchOS).app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		87525BE3B3142526F2265192C6BDF51E /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				B676C22972EAF032799B6EE1835DEA85 /* Host */,
+				F26A71A0177D56CE6CA0F17A75404EB1 /* Legacy */,
+			);
+			name = Sources;
+			path = Sources;
+			sourceTree = "<group>";
+		};
+		9A3250B4948F89C21AC88C9CB25C7CE2 /* iOS */ = {
+			isa = PBXGroup;
+			children = (
+				40D31CE088E9063843D83C8EB937C823 /* Foundation.framework */,
+				CDB1EBA1ED502E3282A04D8695848CC1 /* CoreGraphics.framework */,
+				134F7099438BC19FFC7CF5B709C87DA4 /* ImageIO.framework */,
+				150D7D3114169BF6CAD9ADC5894B2985 /* AVFoundation.framework */,
+			);
+			name = iOS;
+			sourceTree = "<group>";
+		};
+		B676C22972EAF032799B6EE1835DEA85 /* Host */ = {
+			isa = PBXGroup;
+			children = (
+				096459CD2CBB569C6D8CDED3B69C673F /* GameSession.swift */,
+				D628EE129574D3A906DFFCC4E47144C4 /* GameView.swift */,
+				34E65BD3412A126762DCB0C067451CE2 /* SpaceUndeadbeefApp.swift */,
+			);
+			name = Host;
+			path = Host;
+			sourceTree = "<group>";
+		};
+		B9D006075500C3BAD070B4C53627191F /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				8874297DDB2134C55C5520717CF6B2E5 /* App.xcconfig */,
+				FFE89157483D7018DE95638D97D3667E /* SpaceUndeadbeef-Bridging-Header.h */,
+				64BDE250B129385C41D6CCC949A50DC6 /* iOS-Info.plist */,
+				21ED3D1D2BF37F4743F2C698C36A9962 /* macOS-Info.plist */,
+				D22E030EC4C46840E6024F412130C5AB /* tvOS-Info.plist */,
+				4A4425BE9BFBA736A51D5B0A8D1EC8ED /* watchOS-Info.plist */,
+			);
+			name = Config;
+			path = Config;
+			sourceTree = "<group>";
+		};
+		C85864FE0790B4563F50BA83A4025DDB /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				01FB921373D272DCE3FCEDD1B4EB44C2 /* Original */,
+			);
+			name = Resources;
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		F26A71A0177D56CE6CA0F17A75404EB1 /* Legacy */ = {
+			isa = PBXGroup;
+			children = (
+				334B65A5DCE521FEB577914494179556 /* GuestCPU.cpp */,
+				22138A33280C1C89056BDDF9A40E8F1C /* GuestCPU.h */,
+				B5D871AD7CB5C9EAF81E61C9478D26F8 /* SDBEngine.h */,
+				B9409C08BE85654F46E048E17D766549 /* SDBEngine.mm */,
+			);
+			name = Legacy;
+			path = Legacy;
+			sourceTree = "<group>";
+		};
+		F443EDE7F02A691DA64669A0655ED534 /* tvOS */ = {
+			isa = PBXGroup;
+			children = (
+				E3FB14270E334955A65620E768B5994C /* Foundation.framework */,
+				318348C6BBC2BD49021631DD6AD3616C /* CoreGraphics.framework */,
+				85DF1FE000FB3628953D8B915A79C2D8 /* ImageIO.framework */,
+				9AE0A7624DA240DAA7B6BEA8C79CE5AB /* AVFoundation.framework */,
+			);
+			name = tvOS;
+			sourceTree = "<group>";
+		};
+		FA6E2B0A7F6A64487ADE5AF3F84F186C /* OS X */ = {
+			isa = PBXGroup;
+			children = (
+				680B3A514D790EFF4E8E180838A9A801 /* Cocoa.framework */,
+				8739B696C67F56E563B61AFEF7A9AC48 /* Foundation.framework */,
+				9CDA567D370C3DB90F2DD07D31A12488 /* CoreGraphics.framework */,
+				7E17A1A169F7AEEC101315AD11E500B1 /* ImageIO.framework */,
+				C3B176969C1B2F52ACE522BB7649E936 /* AVFoundation.framework */,
+			);
+			name = "OS X";
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		00D8D7274D1DC7509D0CB7EC2107A05E /* SPACE UNDEADBEEF macOS */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 700A7C0CCD5AB4551FE08387C8E35F2F /* Build configuration list for PBXNativeTarget "SPACE UNDEADBEEF macOS" */;
+			buildPhases = (
+				20C1AFF9D9A7318176164BF3C273A0E7 /* Sources */,
+				B8E171890DDF366879E76E1192EF8C5C /* Frameworks */,
+				BC7FD46F3A57CA45AB6BE9BC922BF79E /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "SPACE UNDEADBEEF macOS";
+			productName = SpaceUndeadbeef;
+			productReference = 07A67C6CFA49BC0E5D19FCB75B446B4A /* SpaceUndeadbeef (macOS).app */;
+			productType = "com.apple.product-type.application";
+		};
+		18B56CA177B175EECB815D80A0BB5555 /* SPACE UNDEADBEEF iOS UITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 0E679FE39354D0278F83EC3651220449 /* Build configuration list for PBXNativeTarget "SPACE UNDEADBEEF iOS UITests" */;
+			buildPhases = (
+				96BA049B8A6B93E8508D85CABD435706 /* Sources */,
+				64E6DA6D3C0537BB2D804134D92D93BE /* Frameworks */,
+				1FA8ECD343157B32883B07C6DAF05E33 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				A7CE8AB874F177C5EFE9137BEB9EC6B6 /* PBXTargetDependency */,
+			);
+			name = "SPACE UNDEADBEEF iOS UITests";
+			productName = "SPACE UNDEADBEEF iOS UITests";
+			productReference = 8675C61B659DA05BA606A8F791C176D0 /* SPACE UNDEADBEEF iOS UITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+		1A85768226961FF2341D124CE6977D91 /* SPACE UNDEADBEEF tvOS */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F0BF7E20B0FB5B9C348DDB9CA78F50AD /* Build configuration list for PBXNativeTarget "SPACE UNDEADBEEF tvOS" */;
+			buildPhases = (
+				32BA4E61A28B62F3026ABA0EAB52EC4D /* Sources */,
+				1B11932EEC473B3F7988A301EABF03DE /* Frameworks */,
+				56A4F23B8F849C32F8207D6FDBB1C887 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "SPACE UNDEADBEEF tvOS";
+			productName = SpaceUndeadbeef;
+			productReference = B9CEC8088367CCA781173035874BD93E /* SpaceUndeadbeef (tvOS).app */;
+			productType = "com.apple.product-type.application";
+		};
+		79BE4A898F8469E60CFE3D58002EBC47 /* SPACE UNDEADBEEF watchOS */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 18DB56C597365E6E4ED3136ED6AD2D17 /* Build configuration list for PBXNativeTarget "SPACE UNDEADBEEF watchOS" */;
+			buildPhases = (
+				D51B592A2C20828FB20DB67CD941D109 /* Sources */,
+				983574DD12628C60CFE53E945DE3C20A /* Frameworks */,
+				97D67A7AF7C2D87EE0C61EB923400208 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "SPACE UNDEADBEEF watchOS";
+			productName = SpaceUndeadbeef;
+			productReference = 8D8C4904E9483DC0F2FCF1716026201F /* SpaceUndeadbeef (watchOS).app */;
+			productType = "com.apple.product-type.application";
+		};
+		840A0681A24C976AAE6286C05049BD78 /* SPACE UNDEADBEEF tvOS UITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 00CA687F91CAC048A7AF0E7FA5E265A0 /* Build configuration list for PBXNativeTarget "SPACE UNDEADBEEF tvOS UITests" */;
+			buildPhases = (
+				4AFC63B11C864912232A9516661DE4E1 /* Sources */,
+				8796A98DBB97E689AADB48A2D5BBD625 /* Frameworks */,
+				ECB74ADAFA197081D4310F9DB4A76062 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				5EA240ADB6A9BC9074128CBF1101E973 /* PBXTargetDependency */,
+			);
+			name = "SPACE UNDEADBEEF tvOS UITests";
+			productName = "SPACE UNDEADBEEF tvOS UITests";
+			productReference = 8101B4A469F19F888C67F09AAC10DB76 /* SPACE UNDEADBEEF tvOS UITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+		C39AC69CCF132B3E8A686D692BE80F56 /* SPACE UNDEADBEEF iOS */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = CD2ABB0B8B4259E1ED763F5A37C6C7BB /* Build configuration list for PBXNativeTarget "SPACE UNDEADBEEF iOS" */;
+			buildPhases = (
+				06560E5D95DDE472BAE2AD381C817EE1 /* Sources */,
+				C502D78E76467DCD3495500178433C8E /* Frameworks */,
+				7A1C5DC374423EFAE7EE925E4F04336C /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "SPACE UNDEADBEEF iOS";
+			productName = SpaceUndeadbeef;
+			productReference = 29AEFAC49B271A4B3A21E3E8F5AC1D77 /* SpaceUndeadbeef (iOS).app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		904470823B1F4F59403FC058F562D000 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastSwiftUpdateCheck = 1600;
+				LastUpgradeCheck = 2720;
+				ORGANIZATIONNAME = "Angelo Cammalleri";
+			};
+			buildConfigurationList = 0B60C297D2A389EE405590EFBE03AFB5 /* Build configuration list for PBXProject "SPACE UNDEADBEEF" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 460727A10349365E0FF5FC0E6B75180C;
+			minimizedProjectReferenceProxies = 0;
+			preferredProjectObjectVersion = 100;
+			productRefGroup = 69EFC4C76EEBB574977036169004771A /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				C39AC69CCF132B3E8A686D692BE80F56 /* SPACE UNDEADBEEF iOS */,
+				18B56CA177B175EECB815D80A0BB5555 /* SPACE UNDEADBEEF iOS UITests */,
+				00D8D7274D1DC7509D0CB7EC2107A05E /* SPACE UNDEADBEEF macOS */,
+				1A85768226961FF2341D124CE6977D91 /* SPACE UNDEADBEEF tvOS */,
+				840A0681A24C976AAE6286C05049BD78 /* SPACE UNDEADBEEF tvOS UITests */,
+				79BE4A898F8469E60CFE3D58002EBC47 /* SPACE UNDEADBEEF watchOS */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		1FA8ECD343157B32883B07C6DAF05E33 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		56A4F23B8F849C32F8207D6FDBB1C887 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				22CF07FA6F0EEDC2A834781832BC85D5 /* Original in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7A1C5DC374423EFAE7EE925E4F04336C /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				8913E82501013BD5B419E53F019E9B52 /* Original in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		97D67A7AF7C2D87EE0C61EB923400208 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				6A7D416F3566D20E71C344D7EF6BF221 /* Original in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		BC7FD46F3A57CA45AB6BE9BC922BF79E /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				816229EA3E1534F28DB1B3AB3918063A /* Original in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		ECB74ADAFA197081D4310F9DB4A76062 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		06560E5D95DDE472BAE2AD381C817EE1 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				8C97CCA3CA8A5E0E80EFC089A3E6EF22 /* GameSession.swift in Sources */,
+				C9C1390C1E8CC82DCE91CD38387B1CFF /* GameView.swift in Sources */,
+				0D211CC40C4B0C2074FEBA8242B773FE /* SpaceUndeadbeefApp.swift in Sources */,
+				0CF1B740FD91A9B238EA62D76DA0BBDB /* GuestCPU.cpp in Sources */,
+				4216CCC010C7D0411F1A012932FDEFA6 /* SDBEngine.mm in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		20C1AFF9D9A7318176164BF3C273A0E7 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1C59716537BFFA86FCFDB73812E48C9B /* GameSession.swift in Sources */,
+				12B8ECEFD6464657735FD12841E7742C /* GameView.swift in Sources */,
+				0E321C82912930F07D9F641E53999349 /* SpaceUndeadbeefApp.swift in Sources */,
+				BC315CCFC8BAC32565BC856370A17237 /* GuestCPU.cpp in Sources */,
+				E109E633309A451E845FEC06D7D48A99 /* SDBEngine.mm in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		32BA4E61A28B62F3026ABA0EAB52EC4D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0EB8099CC3B2FB9ACF205B0571F15815 /* GameSession.swift in Sources */,
+				71C37D435A985F01F1C91697A7A64916 /* GameView.swift in Sources */,
+				81FC72128D431FC29BC562C8E47B502D /* SpaceUndeadbeefApp.swift in Sources */,
+				4C37A262385D0E245D3F1FFFBBFD5E5F /* GuestCPU.cpp in Sources */,
+				B3D217530859124D1F7F8245A5096E67 /* SDBEngine.mm in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		4AFC63B11C864912232A9516661DE4E1 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				041D46FA30ACA93B7E662A967A95FA50 /* HostUITests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		96BA049B8A6B93E8508D85CABD435706 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				4922C868E558DD685154CF572009A85A /* HostUITests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D51B592A2C20828FB20DB67CD941D109 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				59F1F226B17DF5F506967B7C1CCC18A0 /* GameSession.swift in Sources */,
+				4380CEF4479DBBD46EC1D5B698C7C458 /* GameView.swift in Sources */,
+				E942D53AD8E482E16ECDB9A0B6F73E68 /* SpaceUndeadbeefApp.swift in Sources */,
+				241DABAC2C587C492ADEAEDA35093A71 /* GuestCPU.cpp in Sources */,
+				F7FB573CB7981205158BB32F63B04AF2 /* SDBEngine.mm in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		5EA240ADB6A9BC9074128CBF1101E973 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = "SPACE UNDEADBEEF tvOS";
+			target = 1A85768226961FF2341D124CE6977D91 /* SPACE UNDEADBEEF tvOS */;
+			targetProxy = 1F2EABCE496CED8527475C1667E3E836 /* PBXContainerItemProxy */;
+		};
+		A7CE8AB874F177C5EFE9137BEB9EC6B6 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = "SPACE UNDEADBEEF iOS";
+			target = C39AC69CCF132B3E8A686D692BE80F56 /* SPACE UNDEADBEEF iOS */;
+			targetProxy = 7CDBAB5BDAA08521A17501B46756CC8A /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		0709F1597773F8D03ABEB2043C6DD708 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 8874297DDB2134C55C5520717CF6B2E5 /* App.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				COMBINE_HIDPI_IMAGES = YES;
+				ENABLE_APP_SANDBOX = YES;
+				INFOPLIST_FILE = "Config/macOS-Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.cammalleri.SpaceUndeadbeef.mac;
+				SDKROOT = macosx;
+				SUPPORTED_PLATFORMS = macosx;
+			};
+			name = Release;
+		};
+		1106D7372380681C7034FF6AB82B716F /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 8874297DDB2134C55C5520717CF6B2E5 /* App.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = "App Icon & Top Shelf Image";
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				INFOPLIST_FILE = "Config/tvOS-Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				PRODUCT_BUNDLE_IDENTIFIER = dev.cammalleri.SpaceUndeadbeef.tv;
+				SDKROOT = appletvos;
+				SUPPORTED_PLATFORMS = "appletvos appletvsimulator";
+				TARGETED_DEVICE_FAMILY = 3;
+				TVOS_DEPLOYMENT_TARGET = 18.0;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		11E5037E1BF028D80178588635827128 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 8874297DDB2134C55C5520717CF6B2E5 /* App.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				INFOPLIST_FILE = "Config/watchOS-Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				PRODUCT_BUNDLE_IDENTIFIER = dev.cammalleri.SpaceUndeadbeef.watch;
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "watchos watchsimulator";
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 11.0;
+			};
+			name = Debug;
+		};
+		163FD4B3B02B99F416FAD98898472C06 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.cammalleri.SpaceUndeadbeef.uitests;
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = "SPACE UNDEADBEEF iOS";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		2F104B720FF91DF31F196DF2BBB22E50 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.cammalleri.SpaceUndeadbeef.tv.uitests;
+				SDKROOT = appletvos;
+				SUPPORTED_PLATFORMS = "appletvos appletvsimulator";
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 3;
+				TEST_TARGET_NAME = "SPACE UNDEADBEEF tvOS";
+				TVOS_DEPLOYMENT_TARGET = 18.0;
+			};
+			name = Debug;
+		};
+		59DB6945116FAFB599DFB321C395D586 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		81D84F4E79431089E74DEABBBC2D4B03 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 8874297DDB2134C55C5520717CF6B2E5 /* App.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				INFOPLIST_FILE = "Config/iOS-Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				PRODUCT_BUNDLE_IDENTIFIER = dev.cammalleri.SpaceUndeadbeef;
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		868EEEEC064A113948E20CC8F0716431 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 8874297DDB2134C55C5520717CF6B2E5 /* App.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				COMBINE_HIDPI_IMAGES = YES;
+				ENABLE_APP_SANDBOX = YES;
+				INFOPLIST_FILE = "Config/macOS-Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.cammalleri.SpaceUndeadbeef.mac;
+				SDKROOT = macosx;
+				SUPPORTED_PLATFORMS = macosx;
+			};
+			name = Debug;
+		};
+		A738C894B59904591AA1A3C5C955EDAF /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 8874297DDB2134C55C5520717CF6B2E5 /* App.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				INFOPLIST_FILE = "Config/watchOS-Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				PRODUCT_BUNDLE_IDENTIFIER = dev.cammalleri.SpaceUndeadbeef.watch;
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "watchos watchsimulator";
+				TARGETED_DEVICE_FAMILY = 4;
+				VALIDATE_PRODUCT = YES;
+				WATCHOS_DEPLOYMENT_TARGET = 11.0;
+			};
+			name = Release;
+		};
+		A753B3B996EE91D83F464DF342C2A24A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		DBDFA1D85CD94B08E7395F63633A04EB /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 8874297DDB2134C55C5520717CF6B2E5 /* App.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				INFOPLIST_FILE = "Config/iOS-Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				PRODUCT_BUNDLE_IDENTIFIER = dev.cammalleri.SpaceUndeadbeef;
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		E3A48E0AD8BBE6589B3B6FCFD1682E1D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.cammalleri.SpaceUndeadbeef.tv.uitests;
+				SDKROOT = appletvos;
+				SUPPORTED_PLATFORMS = "appletvos appletvsimulator";
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 3;
+				TEST_TARGET_NAME = "SPACE UNDEADBEEF tvOS";
+				TVOS_DEPLOYMENT_TARGET = 18.0;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		EC2225C24F01BA9C88C83D55309E5D69 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.cammalleri.SpaceUndeadbeef.uitests;
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = "SPACE UNDEADBEEF iOS";
+			};
+			name = Debug;
+		};
+		ED21C366EB4E8D5B4EF1BDB3001596B3 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 8874297DDB2134C55C5520717CF6B2E5 /* App.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = "App Icon & Top Shelf Image";
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				INFOPLIST_FILE = "Config/tvOS-Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				PRODUCT_BUNDLE_IDENTIFIER = dev.cammalleri.SpaceUndeadbeef.tv;
+				SDKROOT = appletvos;
+				SUPPORTED_PLATFORMS = "appletvos appletvsimulator";
+				TARGETED_DEVICE_FAMILY = 3;
+				TVOS_DEPLOYMENT_TARGET = 18.0;
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		00CA687F91CAC048A7AF0E7FA5E265A0 /* Build configuration list for PBXNativeTarget "SPACE UNDEADBEEF tvOS UITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E3A48E0AD8BBE6589B3B6FCFD1682E1D /* Release */,
+				2F104B720FF91DF31F196DF2BBB22E50 /* Debug */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		0B60C297D2A389EE405590EFBE03AFB5 /* Build configuration list for PBXProject "SPACE UNDEADBEEF" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				59DB6945116FAFB599DFB321C395D586 /* Debug */,
+				A753B3B996EE91D83F464DF342C2A24A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		0E679FE39354D0278F83EC3651220449 /* Build configuration list for PBXNativeTarget "SPACE UNDEADBEEF iOS UITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				163FD4B3B02B99F416FAD98898472C06 /* Release */,
+				EC2225C24F01BA9C88C83D55309E5D69 /* Debug */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		18DB56C597365E6E4ED3136ED6AD2D17 /* Build configuration list for PBXNativeTarget "SPACE UNDEADBEEF watchOS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A738C894B59904591AA1A3C5C955EDAF /* Release */,
+				11E5037E1BF028D80178588635827128 /* Debug */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		700A7C0CCD5AB4551FE08387C8E35F2F /* Build configuration list for PBXNativeTarget "SPACE UNDEADBEEF macOS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0709F1597773F8D03ABEB2043C6DD708 /* Release */,
+				868EEEEC064A113948E20CC8F0716431 /* Debug */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		CD2ABB0B8B4259E1ED763F5A37C6C7BB /* Build configuration list for PBXNativeTarget "SPACE UNDEADBEEF iOS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DBDFA1D85CD94B08E7395F63633A04EB /* Release */,
+				81D84F4E79431089E74DEABBBC2D4B03 /* Debug */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		F0BF7E20B0FB5B9C348DDB9CA78F50AD /* Build configuration list for PBXNativeTarget "SPACE UNDEADBEEF tvOS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				1106D7372380681C7034FF6AB82B716F /* Release */,
+				ED21C366EB4E8D5B4EF1BDB3001596B3 /* Debug */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 904470823B1F4F59403FC058F562D000 /* Project object */;
+}
