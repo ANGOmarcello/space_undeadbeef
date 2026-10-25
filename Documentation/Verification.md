@@ -94,4 +94,14 @@ signature (`codesign --verify --strict`). The deployment minimum remains watchOS
 During destination diagnosis, the iOS scheme listed physical iPhones, while both
 this project's Watch scheme and CocaWatch listed no physical Watch. The user
 identified Developer Mode as disabled on the intended Series 12. Device discovery
-and installation still require the Watch to finish enabling Developer Mode.
+initially required the Watch to finish enabling Developer Mode. The user then
+confirmed the restart and final Turn On prompt were complete.
+
+A subsequent live check still found no physical Series 12 in CoreDevice or the
+Watch scheme's destinations. Device Hub displayed its iPhone/Watch **Waiting to
+pair** sheet. This is a separate Mac-pairing step, not evidence that Developer
+Mode is still disabled. The retained Series 12 entry is a simulator; the cached
+unavailable physical Watch is an older Series 5 and is not the intended device.
+The signed build remains valid, but installation is pending completion of pairing
+the Series 12 with this Mac. Xcode 27's network-pairing workflow is documented in
+[Apple's Device Hub guide](https://developer.apple.com/documentation/xcode/managing-your-simulated-and-physical-devices-in-device-hub).

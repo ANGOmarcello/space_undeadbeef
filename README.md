@@ -25,6 +25,12 @@ keep it connected to its paired iPhone. Xcode's **Product → Destination → Ma
 Devices…** shows its connection status. The iOS, Mac, and TV schemes each list
 their own platform's destinations.
 
+Developer Mode and pairing the Watch with the Mac are separate steps. For
+watchOS 27 and Xcode 27, open **Device Hub → + → Pair Nearby Device…**, select
+iPhone/Watch, and complete the device's pairing and trust prompts. Keep both
+devices on the same Wi-Fi network. Only a Watch paired with this Mac appears as
+a physical run destination. See [Apple's device-pairing instructions](https://developer.apple.com/documentation/xcode/managing-your-simulated-and-physical-devices-in-device-hub).
+
 The checked resources are reproducible from the supplied IPA:
 
 ```sh
