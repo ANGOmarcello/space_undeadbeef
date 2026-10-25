@@ -88,7 +88,8 @@ bool pixel(const Runtime& runtime, unsigned x, unsigned y, int red, int green, i
 }
 
 bool compareGPU(Runtime& runtime, SDBMetalRenderer *gpu, const char *name,
-                const Texture& texture, const std::vector<Vertex>& vertices) {
+                const Texture& texture, const std::vector<Vertex>& vertices,
+                bool unalignedVertexRange = false) {
     if (!gpu.supported) return true;
     if (![gpu setTexture:FixtureTexture rgba:texture.pixels.data() byteLength:texture.pixels.size()
                   width:texture.width height:texture.height]) {
@@ -97,11 +98,15 @@ bool compareGPU(Runtime& runtime, SDBMetalRenderer *gpu, const char *name,
     auto background = quad(runtime);
     std::vector<SDBMetalVertex> metal;
     for (const Vertex& v : background) metal.push_back({v.x, v.y, 0, 0, 0, 0, 1, 1});
+    // Draw ranges need not begin at a buffer index divisible by three.
+    // A skipped vertex catches per-triangle bounds indexed from buffer zero.
+    if (unalignedVertexRange) metal.push_back({0, 0, 0, 0, 0, 0, 0, 0});
+    const uint32_t firstGlyphVertex = uint32_t(metal.size());
     for (const Vertex& v : vertices) metal.push_back({v.x, v.y, v.u, v.v, v.r, v.g, v.b, v.a});
     const SDBMetalDraw draws[] = {
-        {0, uint32_t(background.size()), 0, 0, 0x2100, 0, 1, 0, 0, 0},
-        {uint32_t(background.size()), uint32_t(vertices.size()), FixtureTexture, 1, 0x1e01,
-            1, 0x302, 0x303, 0, texture.distanceField}
+        {0, uint32_t(background.size()), 0, 0, 0x2100, 0, 1, 0, 0, 0, 0},
+        {firstGlyphVertex, uint32_t(vertices.size()), FixtureTexture, 1, 0x1e01,
+            1, 0x302, 0x303, 0, texture.distanceField, uint32_t(texture.glyphAtlas)}
     };
     if (![gpu renderVertices:metal.data() vertexCount:metal.size() draws:draws drawCount:2
         logicalSize:CGSizeMake(runtime.geometry.logicalSize.width, runtime.geometry.logicalSize.height)
@@ -134,6 +139,38 @@ bool compareGPU(Runtime& runtime, SDBMetalRenderer *gpu, const char *name,
     printf("%s %s CPU/Metal max=%u mean=%.6f bytes\n", maximum <= MaximumByteError && opaque ? "PASS" : "FAIL",
            name, maximum, double(sum) / (RasterWidth * RasterHeight * 3));
     return require(opaque && maximum <= MaximumByteError, "CPU/Metal parity within one byte");
+}
+
+bool glyphAtlasIsolation(Runtime& runtime, SDBMetalRenderer *gpu) {
+    // A magnified glyph has a transparent one-texel border. Opaque adjacent
+    // cells make any cross-cell linear sampling appear as a bright hairline.
+    Texture atlas;
+    atlas.width = 128; atlas.height = 64;
+    atlas.pixels.assign(size_t(atlas.width) * atlas.height * 4, 255);
+    constexpr unsigned CellSide = 8, Column = 5, Row = 3;
+    for (unsigned y = 0; y < CellSide; ++y) for (unsigned x = 0; x < CellSide; ++x) {
+        const bool ink = x >= 2 && x < 6 && y >= 2 && y < 6;
+        atlas.pixels[4 * ((Row * CellSide + y) * atlas.width + Column * CellSide + x) + 3] = ink ? 255 : 0;
+    }
+    const auto vertices = quad(runtime, Column / 16.f, Row / 8.f, (Column + 1) / 16.f,
+                               (Row + 1) / 8.f, float(.25 / runtime.geometry.pixelsPerLogicalUnit));
+    if (!renderCPU(runtime, atlas, vertices) ||
+        !require(runtime.pixels[4 * ((RasterHeight / 2) * RasterWidth)] > MaximumByteError,
+                 "unisolated control exposes neighboring glyph-cell bleed") ||
+        !compareGPU(runtime, gpu, "glyph atlas unisolated bleed control", atlas, vertices)) return false;
+
+    atlas.glyphAtlas = true;
+    if (!renderCPU(runtime, atlas, vertices)) return false;
+    for (unsigned y = 0; y < RasterHeight; ++y) for (unsigned x = 0; x < RasterWidth; ++x) {
+        if (x && y && x + 1 < RasterWidth && y + 1 < RasterHeight) continue;
+        const uint8_t *p = runtime.pixels.data() + 4 * (y * RasterWidth + x);
+        if (p[0] || p[1] || p[2] != 255) {
+            fprintf(stderr, "FAIL isolated glyph border at %u,%u: RGB=%u,%u,%u\n",
+                    x, y, unsigned(p[0]), unsigned(p[1]), unsigned(p[2]));
+            return false;
+        }
+    }
+    return compareGPU(runtime, gpu, "glyph atlas isolated fractional magnification, firstVertex7", atlas, vertices, true);
 }
 
 bool prepareMenus(NSString *resources, Texture& gameStart) {
@@ -181,10 +218,20 @@ int main(int argc, const char *argv[]) {
         if (argc != 2) { fprintf(stderr, "Usage: RendererTests <Resources/Original directory>\n"); return 2; }
         NSString *resources = [NSString stringWithUTF8String:argv[1]];
         if (!require(resources != nil, "resource path is UTF-8")) return 2;
-        Texture menu, font;
-        if (!prepareMenus(resources, menu) || !loadTexture(resources, @"font_s.png", font)) return 1;
-        if (!require(menu.width == 32 && menu.height == 256 && font.width == 128 && font.height == 128,
+        Texture menu, font, originalFont;
+        if (!prepareMenus(resources, menu) || !loadTexture(resources, @"font_s.png", font) ||
+            !loadTexture(resources, @"font.png", originalFont)) return 1;
+        if (!require(menu.width == 32 && menu.height == 256 && font.width == 128 && font.height == 128 &&
+                     originalFont.width == 256 && originalFont.height == 256,
                      "original fixture asset dimensions")) return 1;
+        Texture originalSmallFont = font;
+        // Production keeps the supplied glyph alpha and extends its white ink
+        // into transparent RGB, preventing a dark fringe under linear sampling.
+        for (Texture *atlas : {&originalSmallFont, &originalFont}) {
+            atlas->glyphAtlas = true;
+            for (size_t p = 0; p < atlas->pixels.size(); p += 4)
+                atlas->pixels[p] = atlas->pixels[p + 1] = atlas->pixels[p + 2] = 255;
+        }
         font.pixels = sdb::text::TextDistanceField::make(font.pixels, font.width, font.height);
         font.distanceField = 1;
         if (!require(!font.pixels.empty(), "font atlas SDF exists")) return 1;
@@ -216,6 +263,30 @@ int main(int argc, const char *argv[]) {
 
         vertices = quad(runtime, 0, 48.f / font.height, 40.f / font.width, 68.f / font.height);
         if (!renderCPU(runtime, font, vertices) || !compareGPU(runtime, gpu, "original font_s at2x", font, vertices)) return 1;
+        // Both supplied atlases contain the same 16-by-8 glyph grid. Reuse one
+        // normalized HUD-digit cell on an identical logical glyph quad, keeping
+        // the original 1:2 glyph proportions. Its doubled source resolution
+        // changes this glyph from 2x to 1x output without changing its metrics.
+        vertices = quad(runtime, 0, 3.f / 8, 1.f / 16, 4.f / 8);
+        const float logicalWidth = float(runtime.geometry.logicalSize.width);
+        const float logicalHeight = float(runtime.geometry.logicalSize.height);
+        const float glyphWidth = float(originalFont.width / 16 / runtime.geometry.pixelsPerLogicalUnit);
+        const float glyphHeight = float(originalFont.height / 8 / runtime.geometry.pixelsPerLogicalUnit);
+        for (Vertex& vertex : vertices) {
+            vertex.x = vertex.x / logicalWidth * glyphWidth + (logicalWidth - glyphWidth) / 2;
+            vertex.y = vertex.y / logicalHeight * glyphHeight + (logicalHeight - glyphHeight) / 2;
+        }
+        if (!renderCPU(runtime, originalSmallFont, vertices) ||
+            !compareGPU(runtime, gpu, "original font_s alpha at2x shared UV", originalSmallFont, vertices) ||
+            !renderCPU(runtime, originalFont, vertices) ||
+            !compareGPU(runtime, gpu, "original font alpha at1x shared UV", originalFont, vertices)) return 1;
+        // A quarter-pixel placement forces actual bilinear interpolation across
+        // original antialiased edges rather than sampling only texel centers.
+        const float quarterPixel = float(.25 / runtime.geometry.pixelsPerLogicalUnit);
+        for (Vertex& vertex : vertices) vertex.x += quarterPixel;
+        if (!renderCPU(runtime, originalFont, vertices) ||
+            !compareGPU(runtime, gpu, "original font alpha fractional linear sampling", originalFont, vertices)) return 1;
+        if (!glyphAtlasIsolation(runtime, gpu)) return 1;
         // Rotate the original portrait label UVs into landscape; this crop has
         // curved glyph edges and the original soft shadow at two output pixels
         // per source pixel, rather than an artificially generated font sample.
@@ -224,7 +295,7 @@ int main(int argc, const char *argv[]) {
             {0,height,24.f/32,32.f/256,1,1,1,1}, {0,height,24.f/32,32.f/256,1,1,1,1},
             {width,0,4.f/32,72.f/256,1,1,1,1}, {width,height,24.f/32,72.f/256,1,1,1,1}};
         if (!renderCPU(runtime, menu, vertices) || !compareGPU(runtime, gpu, "original GAMESTART mode2 at2x", menu, vertices)) return 1;
-        printf("PASS CPU coverage, winding, shadow and six-label decomposition; GPU parity %s.\n",
+        printf("PASS CPU coverage, winding, shadow, original font alpha/linear and six-label decomposition; GPU parity %s.\n",
                gpu.supported ? "passed" : "SKIPPED");
         return 0;
     }

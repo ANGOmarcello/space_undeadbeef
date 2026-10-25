@@ -56,11 +56,24 @@ camera transform, preserving cloud proportions without a repeated sky seam.
 The Metal backend preserves triangle order, matrices, UVs, original texture
 padding, colour modulation and blending. Native Metal views present its texture
 directly; they do not advance the game or read each frame back to the CPU. Watch
-uses the software renderer at its native backing resolution. Both reconstruct
-original lettering contours at the output pixel density. Baked menu labels keep
+uses the software renderer at its native backing resolution. Baked menu labels keep
 their original off-white foreground and soft dark shadow as separate fields,
 avoiding the old shadow's pixel fringe being mistaken for the letter outline.
 This retains the existing font shapes; it does not recover missing sprite detail.
+
+Dynamic lettering in Credits, Options, the version label and HUD keeps the
+original bitmap alpha and linear antialiasing. The original small and large font
+atlases share the same 16×8 ASCII grid. The renderer substitutes the larger
+original atlas for the small one, preserving all guest glyph dimensions, UVs and
+advances. Each glyph samples only its own cell's texel centers, preventing adjacent
+letters from appearing as faint lines. Whole-atlas distance-field reconstruction
+is deliberately avoided here: these tightly packed cells have no gutters, and
+neighboring glyphs distort the reconstructed outlines. This remains bitmap text,
+with the original asset's resolution limit.
+
+The baked main-menu labels already crop their dark shadows at the original PNG
+boundary. The Credits and Options dynamic text has no separate black shadow pass;
+its visible original atlas pixels are white and the game applies the text tint.
 
 The iOS host remakes the original folded-corner P control as native vector paths.
 It reaches the full screen's top-right corner, provides a minimum 44-point touch

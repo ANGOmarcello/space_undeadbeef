@@ -19,11 +19,12 @@
 
 namespace {
 constexpr uint32_t ExtendedTitle = 1000;
+constexpr uint32_t OriginalFont = 1, OriginalSmallFont = 2;
 using sdb::display::DisplayGeometry;
 constexpr uint32_t SilentOn=0x01d00000,SilentOff=0x01d00004,SilentOnDraw=0x01d00008,SilentOffDraw=0x01d0000c;
 uint32_t bits(float f) { uint32_t u; memcpy(&u,&f,4); return u; }
 float real(uint32_t u) { float f; memcpy(&f,&u,4); return f; }
-struct Texture { int width=0,height=0,contentWidth=0,contentHeight=0; uint32_t distanceField=0; std::vector<uint8_t> pixels; };
+struct Texture { int width=0,height=0,contentWidth=0,contentHeight=0; uint32_t distanceField=0,glyphAtlas=0; std::vector<uint8_t> pixels; };
 struct Vertex { float x,y,u,v,r,g,b,a; };
 struct Matrix {
     std::array<float,16> m={1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1};
@@ -133,6 +134,18 @@ struct Runtime {
         int x0=std::max(0,int(std::floor(std::min({a.x,b.x,c.x})))),x1=std::min(Width-1,int(std::ceil(std::max({a.x,b.x,c.x}))));
         int y0=std::max(0,int(std::floor(std::min({a.y,b.y,c.y})))),y1=std::min(Height-1,int(std::ceil(std::max({a.y,b.y,c.y}))));
         auto ti=textures.find(texture);const Texture *t=textured&&ti!=textures.end()?&ti->second:nullptr;
+        const bool glyphAtlas=t&&t->glyphAtlas&&!t->distanceField&&t->width>=16&&t->height>=8;
+        float glyphMinU=0,glyphMinV=0,glyphMaxU=1,glyphMaxV=1;
+        if(glyphAtlas) {
+            // The original Font::print emits one 16x8 ASCII cell per glyph.
+            // Infer it from the triangle, not a fragment exactly on a UV edge.
+            const float centerU=(std::min({a.u,b.u,c.u})+std::max({a.u,b.u,c.u}))*.5f;
+            const float centerV=(std::min({a.v,b.v,c.v})+std::max({a.v,b.v,c.v}))*.5f;
+            const float column=std::clamp(std::floor(centerU*16),0.f,15.f);
+            const float row=std::clamp(std::floor(centerV*8),0.f,7.f);
+            glyphMinU=column/16+.5f/t->width;glyphMaxU=(column+1)/16-.5f/t->width;
+            glyphMinV=row/8+.5f/t->height;glyphMaxV=(row+1)/8-.5f/t->height;
+        }
         // Reconstruct bitmap glyph coverage at the final pixel density. The
         // atlas contour stays at 0.5; neighboring pixels match Metal's fwidth.
         float dux=0,duy=0,dvx=0,dvy=0;
@@ -154,6 +167,7 @@ struct Runtime {
             if(t) {
                 if(textureEnv==0x1e01)for(float &channel:rgba)channel=1;
                 float u=wa*a.u+wb*b.u+wc*c.u,v=wa*a.v+wb*b.v+wc*c.v;
+                if(glyphAtlas) {u=std::clamp(u,glyphMinU,glyphMaxU);v=std::clamp(v,glyphMinV,glyphMaxV);}
                 // GL_LINEAR, clamped to the padded original texture.
                 const float sampleX=u*t->width-.5f,sampleY=v*t->height-.5f;
                 float tx=std::clamp(sampleX,0.f,float(t->width-1)),ty=std::clamp(sampleY,0.f,float(t->height-1));
@@ -210,7 +224,8 @@ struct Runtime {
         if(metal&&metalVertices.size()>first) {
             auto t=textures.find(texture);
             metalDraws.push_back({first,uint32_t(metalVertices.size()-first),texture,uint32_t(textured),textureEnv,
-                uint32_t(blend),sourceBlend,destBlend,0,t!=textures.end()?t->second.distanceField:0});
+                uint32_t(blend),sourceBlend,destBlend,0,t!=textures.end()?t->second.distanceField:0,
+                t!=textures.end()?t->second.glyphAtlas:0});
         }
     }
     void draw(uint32_t mode,unsigned first,unsigned count) {
@@ -487,22 +502,12 @@ struct Runtime {
         for(size_t p=0;p<t.pixels.size();p+=4)if(t.pixels[p+3])for(int k=0;k<3;++k)t.pixels[p+k]=uint8_t(std::min(255u,unsigned(t.pixels[p+k])*255/t.pixels[p+3]));
         NSString *name=entry[@"name"];
         if([@[@"font.png",@"font_s.png"] containsObject:name]) {
-            auto field=sdb::text::TextDistanceField::make(t.pixels.data(),pw,ph);
-            if(field.empty()) {c.fail("Original lettering distance field could not be created");return;}
-            // Retain original shading inside each glyph, extending its nearest
-            // visible colour only through the small antialiasing fringe.
-            auto original=t.pixels;
-            for(unsigned y=0;y<ph;++y)for(unsigned x=0;x<pw;++x) {
-                size_t p=4*(y*pw+x);t.pixels[p+3]=field[p+3];
-                if(original[p+3]>=128)continue;
-                int best=1000;size_t nearest=p;
-                for(int dy=-4;dy<=4;++dy)for(int dx=-4;dx<=4;++dx) {
-                    int xx=int(x)+dx,yy=int(y)+dy,d=dx*dx+dy*dy;
-                    if(xx>=0&&yy>=0&&xx<int(pw)&&yy<int(ph)&&d<best&&original[4*(yy*pw+xx)+3]>=128) {best=d;nearest=4*(yy*pw+xx);}
-                }
-                for(int ch=0;ch<3;++ch)t.pixels[p+ch]=original[nearest+ch];
-            }
-            t.distanceField=1;
+            t.glyphAtlas=1;
+            // Keep the original antialiasing. Atlas cells have no gutters, so
+            // whole-atlas distance fields let neighbouring glyphs distort edges.
+            // All original ink is white; extend that colour through transparent
+            // texels to prevent a dark fringe when linearly filtering the alpha.
+            for(size_t p=0;p<t.pixels.size();p+=4)t.pixels[p]=t.pixels[p+1]=t.pixels[p+2]=255;
         } else if([@[@"game_start.png",@"credits.png",@"continue.png",@"continue_left.png",@"quit.png",@"options.png"] containsObject:name]) {
             // The original baked labels are off-white lettering over a soft
             // black shadow. Split their premultiplied contribution before
@@ -805,7 +810,11 @@ struct Runtime {
         else if(is("_glTranslatef"))r.matrix=r.matrix*Matrix::translation(a,b,r.farg(2));
         else if(is("_glScalef"))r.matrix=r.matrix*Matrix::scale(a,b,r.farg(2));
         else if(is("_glRotatef"))r.matrix=r.matrix*Matrix::rotation(a,b,r.farg(2),r.farg(3));
-        else if(is("_glBindTexture"))r.texture=c.r[1];
+        else if(is("_glBindTexture")) {
+            // Both original fonts use the same 16x8 normalized glyph grid.
+            // Use the larger original artwork without changing guest metrics.
+            r.texture=c.r[1]==OriginalSmallFont?OriginalFont:c.r[1];
+        }
         else if(is("_glEnable")||is("_glDisable")) {if(c.r[0]==0xde1)r.textured=is("_glEnable");if(c.r[0]==0xbe2)r.blend=is("_glEnable");}
         else if(is("_glEnableClientState")||is("_glDisableClientState")) {if(c.r[0]==0x8076)r.colorArray=is("_glEnableClientState");}
         else if(is("_glBlendFunc")) {r.sourceBlend=c.r[0];r.destBlend=c.r[1];}

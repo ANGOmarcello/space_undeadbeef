@@ -170,3 +170,28 @@ Final display/source verification completed on 26 October 2026. Latest applicati
 products and device dSYMs are retained in their standard DerivedData locations;
 task-owned temporary captures, test results and compilation intermediates are
 removed after recording these results.
+
+## Original lettering correction — 26 October 2026
+
+Direct source-asset inspection confirms the main-menu label shadows already
+reach the PNG edge and are cropped there in the original. Dynamic Credits and
+Options lettering has white atlas pixels and a single glyph draw, with no
+separate black-shadow pass. The earlier whole-atlas distance-field treatment
+distorted these tightly packed letters and exaggerated their uneven edges.
+
+Dynamic lettering now keeps original alpha, uses the larger original font atlas
+for the identical small-font grid, and clamps each glyph's sampling to its own
+cell's texel centers. Glyph positions, UVs, dimensions and advances are retained.
+This improves the supplied bitmap rendering without claiming vector-font detail.
+
+`script/test_rendering.sh` passed all ten software/actual-Mac-GPU comparisons
+within one byte. New coverage includes original small/large font alpha with the
+same normalized glyph cell, fractional linear sampling, and a synthetic atlas
+that visibly bleeds without isolation but has an exact background-colored
+perimeter with isolation. The isolated GPU draw starts at vertex 7, verifying
+triangle bounds relative to an arbitrary draw offset.
+
+iOS, native macOS and Watch Simulator builds succeeded. Credits and Options were
+visually reviewed in the iPhone 18 Pro Simulator and native Mac app, including
+the large Mac view where neighboring-cell hairlines were visible before the fix.
+The Watch result here is build proof; no new physical-device run is claimed.

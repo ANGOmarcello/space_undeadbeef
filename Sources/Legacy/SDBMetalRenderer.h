@@ -27,6 +27,10 @@ typedef struct {
     /// alpha distance plus original shadow coverage in R. Both fields reconstruct
     /// foreground coverage at the final pixel density.
     uint32_t distanceField;
+    /// Original RGBA font atlas: a 16x8 ASCII grid. Each triangle samples only
+    /// its cell's texel centers, without changing its positions or UV metrics.
+    /// Ignored for distance fields and textures smaller than the grid.
+    uint32_t glyphAtlas;
 } SDBMetalDraw;
 
 /// A bounded, ordered GPU renderer. Call its methods from one CPU thread.
