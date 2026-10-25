@@ -19,17 +19,25 @@ final class HostUITests: XCTestCase {
     func testOriginalGameInteraction() throws {
         let app = XCUIApplication()
         app.launchEnvironment["SDB_MUTE_AUDIO"] = "1"
+        app.launchEnvironment["SDB_UI_TEST"] = "1"
+        app.launchEnvironment["SDB_SAVE_DIRECTORY"] = NSTemporaryDirectory().appending("space-undeadbeef-ui-tests")
         app.launch()
         let canvas = app.descendants(matching: .any).matching(identifier: "game-canvas").firstMatch
         XCTAssertTrue(canvas.waitForExistence(timeout: 15))
-        Thread.sleep(forTimeInterval: 1)
+        func waitForMenu(_ type: Int) {
+            let predicate = NSPredicate(format: "value CONTAINS %@", "menuType \(type)")
+            expectation(for: predicate, evaluatedWith: canvas)
+            waitForExpectations(timeout: 10)
+        }
+        waitForMenu(1)
         capture(app, "01-title")
         #if os(tvOS)
         // Default virtual pointer is (240,160). Move it to the original Start row.
         for _ in 0..<4 { XCUIRemote.shared.press(.left) }
-        for _ in 0..<6 { XCUIRemote.shared.press(.up) }
+        for _ in 0..<5 { XCUIRemote.shared.press(.up) }
         XCUIRemote.shared.press(.select)
-        Thread.sleep(forTimeInterval: 2)
+        waitForMenu(0)
+        Thread.sleep(forTimeInterval: 5)
         capture(app, "02-gameplay-remote-select")
         XCUIRemote.shared.press(.playPause)
         for _ in 0..<5 { XCUIRemote.shared.press(.right) }
@@ -37,7 +45,12 @@ final class HostUITests: XCTestCase {
         capture(app, "03-remote-target-and-release")
         #else
         func point(_ x: Double, _ y: Double) -> XCUICoordinate {
-            canvas.coordinate(withNormalizedOffset: CGVector(dx: x / 480, dy: y / 320))
+            let size = canvas.frame.size
+            let width = max(480, 320 * size.width / size.height)
+            let height = max(320, 480 * size.height / size.width)
+            return canvas.coordinate(withNormalizedOffset: CGVector(
+                dx: (x + (width - 480) / 2) / width,
+                dy: (y + (height - 320) / 2) / height))
         }
         point(160, 120).tap()
         capture(app, "02-original-options")
@@ -52,8 +65,19 @@ final class HostUITests: XCTestCase {
         point(240, 280).tap()
         Thread.sleep(forTimeInterval: 1)
         point(160, 40).tap()
-        Thread.sleep(forTimeInterval: 2)
+        waitForMenu(0)
+        Thread.sleep(forTimeInterval: 5)
         capture(app, "04-original-gameplay")
+        let pause = app.buttons["pause-game"]
+        XCTAssertTrue(pause.waitForExistence(timeout: 5))
+        XCTAssertEqual(pause.frame.maxX, canvas.frame.maxX, accuracy: 1)
+        XCTAssertEqual(pause.frame.minY, canvas.frame.minY, accuracy: 1)
+        pause.tap()
+        waitForMenu(3)
+        capture(app, "04b-native-corner-pause")
+        point(240, 130).tap()
+        waitForMenu(0)
+        capture(app, "04c-resume")
         point(100, 160).press(forDuration: 0.25, thenDragTo: point(350, 80))
         capture(app, "05-targeting-drag")
         XCUIDevice.shared.press(.home)
@@ -61,5 +85,6 @@ final class HostUITests: XCTestCase {
         capture(app, "06-background-resume")
         #endif
         XCTAssertTrue(canvas.exists)
+        app.terminate()
     }
 }

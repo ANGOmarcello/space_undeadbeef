@@ -5,6 +5,10 @@
 #import <CommonCrypto/CommonDigest.h>
 #import <TargetConditionals.h>
 #include "GuestCPU.h"
+#include "DisplayGeometry.h"
+#include "GameDisplayPatch.h"
+#include "TextDistanceField.h"
+#import "SDBMetalRenderer.h"
 #include <algorithm>
 #include <cmath>
 #include <cstring>
@@ -14,11 +18,12 @@
 #include <vector>
 
 namespace {
-constexpr int Width = 480, Height = 320;
+constexpr uint32_t ExtendedTitle = 1000;
+using sdb::display::DisplayGeometry;
 constexpr uint32_t SilentOn=0x01d00000,SilentOff=0x01d00004,SilentOnDraw=0x01d00008,SilentOffDraw=0x01d0000c;
 uint32_t bits(float f) { uint32_t u; memcpy(&u,&f,4); return u; }
 float real(uint32_t u) { float f; memcpy(&f,&u,4); return f; }
-struct Texture { int width=0,height=0; std::vector<uint8_t> pixels; };
+struct Texture { int width=0,height=0,contentWidth=0,contentHeight=0; uint32_t distanceField=0; std::vector<uint8_t> pixels; };
 struct Vertex { float x,y,u,v,r,g,b,a; };
 struct Matrix {
     std::array<float,16> m={1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1};
@@ -42,12 +47,17 @@ struct Matrix {
 struct Array { uint32_t address=0,type=0x1406,size=2,stride=0; };
 struct Runtime {
     GuestCPU cpu;
+    sdb::display::GameDisplayPatch displayPatch;
+    DisplayGeometry geometry=DisplayGeometry::make({480,320},1);
+    bool metal=false, titleDrawn=false;
+    std::vector<SDBMetalVertex> metalVertices;
+    std::vector<SDBMetalDraw> metalDraws;
     uint32_t game=0,sound=0,heap=0x20000,seed=1,nextSource=1;
     std::map<uint32_t,uint32_t> allocations;
     std::multimap<uint32_t,uint32_t> freeBlocks;
     std::map<uint32_t,std::string> imports;
     std::map<uint32_t,Texture> textures;
-    std::vector<uint8_t> pixels = std::vector<uint8_t>(Width*Height*4);
+    std::vector<uint8_t> pixels = std::vector<uint8_t>(480*320*4);
     Matrix matrix;
     std::vector<Matrix> stack;
     Array vertices,uvs,colors;
@@ -101,12 +111,21 @@ struct Runtime {
         float z=vertices.size>=3?component(vertices,i,2):0;
         float mx=matrix.m[0]*x+matrix.m[4]*y+matrix.m[8]*z+matrix.m[12];
         float my=matrix.m[1]*x+matrix.m[5]*y+matrix.m[9]*z+matrix.m[13];
-        Vertex p={240+my,160+mx,component(uvs,i,0),component(uvs,i,1),color[0],color[1],color[2],color[3]};
+        Vertex p={float(geometry.logicalSize.width/2)+my,float(geometry.logicalSize.height/2)+mx,component(uvs,i,0),component(uvs,i,1),color[0],color[1],color[2],color[3]};
         if(colorArray) {p.r=component(colors,i,0);p.g=component(colors,i,1);p.b=component(colors,i,2);p.a=component(colors,i,3);}
         return p;
     }
     static float edge(const Vertex &a,const Vertex &b,float x,float y) {return (x-a.x)*(b.y-a.y)-(y-a.y)*(b.x-a.x);}
     void triangle(Vertex a,Vertex b,Vertex c) {
+        if(metal) {
+            metalVertices.push_back({a.x,a.y,a.u,a.v,a.r,a.g,a.b,a.a});
+            metalVertices.push_back({b.x,b.y,b.u,b.v,b.r,b.g,b.b,b.a});
+            metalVertices.push_back({c.x,c.y,c.u,c.v,c.r,c.g,c.b,c.a});
+            return;
+        }
+        const float scale=float(geometry.pixelsPerLogicalUnit);
+        for(Vertex *p:{&a,&b,&c}) {p->x*=scale;p->y*=scale;}
+        const int Width=int(geometry.rasterWidth), Height=int(geometry.rasterHeight);
         const float area=edge(a,b,c.x,c.y);
         if(!std::isfinite(area)||std::abs(area)<0.00001f)return;
         if(area<0) {std::swap(b,c);}
@@ -114,6 +133,18 @@ struct Runtime {
         int x0=std::max(0,int(std::floor(std::min({a.x,b.x,c.x})))),x1=std::min(Width-1,int(std::ceil(std::max({a.x,b.x,c.x}))));
         int y0=std::max(0,int(std::floor(std::min({a.y,b.y,c.y})))),y1=std::min(Height-1,int(std::ceil(std::max({a.y,b.y,c.y}))));
         auto ti=textures.find(texture);const Texture *t=textured&&ti!=textures.end()?&ti->second:nullptr;
+        // Reconstruct bitmap glyph coverage at the final pixel density. The
+        // atlas contour stays at 0.5; neighboring pixels match Metal's fwidth.
+        float dux=0,duy=0,dvx=0,dvy=0;
+        if(t&&t->distanceField) {
+            // edge() has the opposite sign from the conventional determinant.
+            // The reordered triangle has positive edge area, hence -inv here.
+            const float inverseDeterminant=-inv;
+            dux=((b.u-a.u)*(c.y-a.y)-(c.u-a.u)*(b.y-a.y))*inverseDeterminant;
+            duy=((c.u-a.u)*(b.x-a.x)-(b.u-a.u)*(c.x-a.x))*inverseDeterminant;
+            dvx=((b.v-a.v)*(c.y-a.y)-(c.v-a.v)*(b.y-a.y))*inverseDeterminant;
+            dvy=((c.v-a.v)*(b.x-a.x)-(b.v-a.v)*(c.x-a.x))*inverseDeterminant;
+        }
         auto topLeft=[](const Vertex&p,const Vertex&q) {float dy=q.y-p.y,dx=q.x-p.x;return dy<0||(dy==0&&dx>0);};
         for(int y=y0;y<=y1;++y)for(int x=x0;x<=x1;++x) {
             float ea=edge(b,c,x+.5f,y+.5f),eb=edge(c,a,x+.5f,y+.5f),ec=edge(a,b,x+.5f,y+.5f);
@@ -124,13 +155,43 @@ struct Runtime {
                 if(textureEnv==0x1e01)for(float &channel:rgba)channel=1;
                 float u=wa*a.u+wb*b.u+wc*c.u,v=wa*a.v+wb*b.v+wc*c.v;
                 // GL_LINEAR, clamped to the padded original texture.
-                float tx=std::clamp(u*t->width-.5f,0.f,float(t->width-1)),ty=std::clamp(v*t->height-.5f,0.f,float(t->height-1));
+                const float sampleX=u*t->width-.5f,sampleY=v*t->height-.5f;
+                float tx=std::clamp(sampleX,0.f,float(t->width-1)),ty=std::clamp(sampleY,0.f,float(t->height-1));
                 int ix=int(tx),iy=int(ty),jx=std::min(ix+1,t->width-1),jy=std::min(iy+1,t->height-1);
                 float fx=tx-ix,fy=ty-iy;
-                for(int ch=0;ch<4;++ch) {
-                    auto sample=[&](int sx,int sy) {return t->pixels[4*(sy*t->width+sx)+ch]/255.f;};
-                    rgba[ch]*=(1-fy)*((1-fx)*sample(ix,iy)+fx*sample(jx,iy))+fy*((1-fx)*sample(ix,jy)+fx*sample(jx,jy));
+                auto sample=[&](int sx,int sy,int ch) {return t->pixels[4*(sy*t->width+sx)+ch]/255.f;};
+                float texel[4];
+                for(int ch=0;ch<4;++ch)
+                    texel[ch]=(1-fy)*((1-fx)*sample(ix,iy,ch)+fx*sample(jx,iy,ch))+
+                        fy*((1-fx)*sample(ix,jy,ch)+fx*sample(jx,jy,ch));
+                if(t->distanceField) {
+                        float value=texel[3];
+                        auto alphaAtUV=[&](float su,float sv) {
+                            float sx=std::clamp(su*t->width-.5f,0.f,float(t->width-1));
+                            float sy=std::clamp(sv*t->height-.5f,0.f,float(t->height-1));
+                            int x0=int(sx),y0=int(sy),x1=std::min(x0+1,t->width-1),y1=std::min(y0+1,t->height-1);
+                            float fx=sx-x0,fy=sy-y0;
+                            return (1-fy)*((1-fx)*sample(x0,y0,3)+fx*sample(x1,y0,3))+
+                                fy*((1-fx)*sample(x0,y1,3)+fx*sample(x1,y1,3));
+                        };
+                        // Fragment derivatives use horizontal and vertical
+                        // pairs in a 2x2 pixel quad, including helper pixels
+                        // outside this triangle. A local analytic derivative
+                        // differs at curved glyph edges and texel boundaries.
+                        const float dx=(x&1)?-1.f:1.f,dy=(y&1)?-1.f:1.f;
+                        const float coverageWidth=std::max(.0001f,
+                            std::abs(alphaAtUV(u+dx*dux,v+dx*dvx)-value)+
+                            std::abs(alphaAtUV(u+dy*duy,v+dy*dvy)-value));
+                        value=std::clamp((value-.5f)/coverageWidth+.5f,0.f,1.f);
+                        value=value*value*(3-2*value);
+                        if(t->distanceField==2) {
+                            const float alpha=value+texel[0]*(1-value);
+                            const float gray=alpha>0?(238.f/255)*value/alpha:0;
+                            texel[0]=texel[1]=texel[2]=gray;
+                            texel[3]=alpha;
+                        } else texel[3]=value;
                 }
+                for(int ch=0;ch<4;++ch)rgba[ch]*=texel[ch];
             }
             unsigned p=4*(y*Width+x);
             auto factor=[&](uint32_t f) {switch(f){case 0:return 0.f;case 1:return 1.f;case 0x302:return rgba[3];case 0x303:return 1-rgba[3];default:cpu.fail("Unsupported GL blend factor");return 0.f;}};
@@ -139,19 +200,73 @@ struct Runtime {
             pixels[p+3]=255;
         }
     }
+    void emit(const std::vector<Vertex>& points,uint32_t mode) {
+        uint32_t first=uint32_t(metalVertices.size());
+        const unsigned count=unsigned(points.size());
+        if(mode==5)for(unsigned i=2;i<count;++i)triangle(points[i-2],points[i-1],points[i]);
+        else if(mode==4)for(unsigned i=2;i<count;i+=3)triangle(points[i-2],points[i-1],points[i]);
+        else if(mode==6)for(unsigned i=2;i<count;++i)triangle(points[0],points[i-1],points[i]);
+        else cpu.fail("Unsupported GL primitive mode");
+        if(metal&&metalVertices.size()>first) {
+            auto t=textures.find(texture);
+            metalDraws.push_back({first,uint32_t(metalVertices.size()-first),texture,uint32_t(textured),textureEnv,
+                uint32_t(blend),sourceBlend,destBlend,0,t!=textures.end()?t->second.distanceField:0});
+        }
+    }
     void draw(uint32_t mode,unsigned first,unsigned count) {
         if(count>4096) {cpu.fail("GL draw count exceeds limit");return;}
         ++draws;
-        if(mode==5)for(unsigned i=2;i<count;++i)triangle(vertex(first+i-2),vertex(first+i-1),vertex(first+i));
-        else if(mode==4)for(unsigned i=2;i<count;i+=3)triangle(vertex(first+i-2),vertex(first+i-1),vertex(first+i));
-        else if(mode==6)for(unsigned i=2;i<count;++i)triangle(vertex(first),vertex(first+i-1),vertex(first+i));
-        else cpu.fail("Unsupported GL primitive mode");
+        #if TARGET_OS_IOS
+        if(textured&&texture==12)return; // Native folded-corner control owns this affordance.
+        #endif
+        std::vector<Vertex> points;points.reserve(count);
+        for(unsigned i=0;i<count;++i)points.push_back(vertex(first+i));
+        if(textured&&texture==3&&!titleDrawn&&textures.count(ExtendedTitle)) {
+            titleDrawn=true;
+            // The extended sky sits behind the untouched central title quad.
+            // It uses the same tint and fade as the original artwork.
+            const uint32_t original=texture;texture=ExtendedTitle;
+            const Texture &t=textures.at(texture);
+            const float w=float(geometry.logicalSize.width),h=float(geometry.logicalSize.height);
+            const float artScale=std::max({1.f,w/960.f,h/640.f});
+            const float aw=960*artScale,ah=640*artScale;
+            float u0=(.5f-w/(2*aw))*t.contentWidth/t.width,u1=(.5f+w/(2*aw))*t.contentWidth/t.width;
+            float v0=(.5f-h/(2*ah))*t.contentHeight/t.height,v1=(.5f+h/(2*ah))*t.contentHeight/t.height;
+            Vertex tint=points.empty()?Vertex{0,0,0,0,1,1,1,1}:points.front();
+            std::vector<Vertex> sky(4,tint);
+            sky[0].x=0;sky[0].y=0;sky[0].u=u0;sky[0].v=v0;
+            sky[1].x=w;sky[1].y=0;sky[1].u=u1;sky[1].v=v0;
+            sky[2].x=0;sky[2].y=h;sky[2].u=u0;sky[2].v=v1;
+            sky[3].x=w;sky[3].y=h;sky[3].u=u1;sky[3].v=v1;
+            emit(sky,5);texture=original;
+        }
+        // Cover the taller arena with one uniformly scaled background band;
+        // vertical repetition would introduce a visible sky/cloud restart.
+        // BGLayer's push at 0x59aa saves the camera before its local translate
+        // and scale. Scaling about that camera-transformed world corner is
+        // exactly a uniform guest XY scale before the original camera, including
+        // its rotation and zoom, rather than a stretch along screen axes.
+        if(textured&&texture>=38&&texture<=45&&geometry.logicalSize.height>320) {
+            if(stack.empty()) {cpu.fail("Background draw lacks its original camera matrix");return;}
+            const Matrix &camera=stack.back();
+            const float halfWidth=float(geometry.logicalSize.width/2),halfHeight=float(geometry.logicalSize.height/2);
+            const float anchorX=halfWidth-camera.m[1]*halfHeight-camera.m[5]*halfWidth+camera.m[13];
+            const float anchorY=halfHeight-camera.m[0]*halfHeight-camera.m[4]*halfWidth+camera.m[12];
+            const float cover=float(geometry.logicalSize.height/320);
+            for(auto &p:points) {
+                p.x=anchorX+cover*(p.x-anchorX);
+                p.y=anchorY+cover*(p.y-anchorY);
+            }
+        }
+        emit(points,mode);
     }
 };
 }
 
 @implementation SDBEngine {
     std::unique_ptr<Runtime> _runtime;
+    SDBMetalRenderer *_metalRenderer;
+    NSString *_menuVersion;
     NSString *_resourcePath;
     NSString *_savePath;
     NSString *_failure;
@@ -173,7 +288,57 @@ struct Runtime {
     BOOL _wantedMusicLoop;
 }
 
-- (CGImageRef)frame {return _frame;}
+- (CGImageRef)frame {
+    if(_runtime->metal&&!_frame)_frame=[_metalRenderer copyCurrentFrame];
+    return _frame;
+}
+- (CGSize)logicalSize {auto s=_runtime->geometry.logicalSize;return CGSizeMake(s.width,s.height);}
+- (CGSize)rasterSize {auto &g=_runtime->geometry;return CGSizeMake(g.rasterWidth,g.rasterHeight);}
+- (CGSize)rasterViewSize {auto s=_runtime->geometry.rasterViewSize();return CGSizeMake(s.width,s.height);}
+- (BOOL)usesMetalRenderer {return _runtime->metal;}
+- (NSString *)menuVersion {return _menuVersion;}
+- (NSInteger)gameMenuType {auto &r=*_runtime;return r.game?r.cpu.read32(r.cpu.read32(r.game+4)+0x20):-1;}
+- (BOOL)canPause {
+    if(_failure||_suspended||!_runtime->game)return NO;
+    auto &r=*_runtime;return r.cpu.read32(r.cpu.read32(r.game+4)+0x20)==0;
+}
+- (void)pauseGame {
+    if(!self.canPause)return;
+    [self touchPhase:3 x:0 y:0];
+    auto &r=*_runtime;
+    // Invoke the original P-button callback, including its pause-menu transition
+    // and audio behavior, rather than only setting the simulation pause byte.
+    r.cpu.call(0x9b0f,{r.cpu.read32(r.game+4),0,0x14ef8});
+    [self checkFault];[self update:0];
+}
+- (void)applyViewportPatch {
+    auto &r=*_runtime;r.displayPatch.apply(r.cpu,r.geometry);
+    #if TARGET_OS_IOS
+    // Move the guest hit target with its replaced drawing. The native corner
+    // button invokes the same original pause routine directly.
+    r.cpu.write32(0x14ef8,bits(float(r.geometry.logicalSize.height*2)));
+    r.cpu.write32(0x14ef8+4,bits(float(r.geometry.logicalSize.width*2)));
+    #endif
+}
+#if !TARGET_OS_WATCH
+- (id<MTLDevice>)metalDevice {return _metalRenderer.device;}
+- (BOOL)presentToDrawable:(id<CAMetalDrawable>)drawable {return [_metalRenderer presentCurrentFrameToDrawable:drawable];}
+#endif
+- (CGPoint)logicalPointForViewPoint:(CGPoint)point {
+    auto p=_runtime->geometry.viewToLogical({point.x,point.y});return CGPointMake(p.x,p.y);
+}
+- (void)configureViewport:(CGSize)size displayScale:(double)scale safeArea:(CGRect)safe {
+    if(_failure)return;
+    auto geometry=DisplayGeometry::make({size.width,size.height},scale,
+        {safe.origin.y,safe.origin.x,std::max(0.,double(size.height-CGRectGetMaxY(safe))),std::max(0.,double(size.width-CGRectGetMaxX(safe)))},
+        16*1024*1024);
+    if(!geometry.valid)return;
+    [self touchPhase:3 x:0 y:0];
+    _runtime->geometry=geometry;
+    [self applyViewportPatch];
+    if(!_runtime->metal)_runtime->pixels.resize(size_t(geometry.pixelCount())*4);
+    [self checkFault];[self update:0];
+}
 - (NSString *)failure {return _failure;}
 - (NSString *)diagnostics {
     if(!_runtime)return @"Runtime unavailable";
@@ -182,8 +347,8 @@ struct Runtime {
     #if !TARGET_OS_OSX
     category=AVAudioSession.sharedInstance.category;
     #endif
-    return [NSString stringWithFormat:@"frames=%llu draws=%llu instructions=%llu heap=%u allocations=%lu audio=%llu game=%08x menu=%08x sound=%d respectSilent=%d category=%@ audioError=%@",
-        r.frames,r.draws,r.cpu.instructionCount,r.heap,(unsigned long)r.allocations.size(),r.audioEvents,r.game,r.cpu.read32(r.game+4),_soundEnabled,_respectsSilentMode,category,_audioSessionError?:@"none"];
+    return [NSString stringWithFormat:@"frames=%llu draws=%llu instructions=%llu heap=%u allocations=%lu audio=%llu game=%08x menu=%08x sound=%d respectSilent=%d category=%@ audioError=%@ menuType=%u viewport=%.1fx%.1f raster=%ux%u renderer=%@",
+        r.frames,r.draws,r.cpu.instructionCount,r.heap,(unsigned long)r.allocations.size(),r.audioEvents,r.game,r.cpu.read32(r.game+4),_soundEnabled,_respectsSilentMode,category,_audioSessionError?:@"none",r.cpu.read32(r.cpu.read32(r.game+4)+0x20),r.geometry.logicalSize.width,r.geometry.logicalSize.height,r.geometry.rasterWidth,r.geometry.rasterHeight,r.metal?@"Metal":@"CPU"];
 }
 - (id)preference:(NSString *)key {
     return _testPreferencesPath?_testPreferences[key]:[NSUserDefaults.standardUserDefaults objectForKey:key];
@@ -247,8 +412,11 @@ struct Runtime {
         _soundEnabled=[self preference:@"audio.soundEnabled"]?[[self preference:@"audio.soundEnabled"] boolValue]:YES;
         _respectsSilentMode=[self preference:@"audio.respectsSilentMode"]?[[self preference:@"audio.respectsSilentMode"] boolValue]:YES;
         _wantedMusicEntry=-1;_wantedMusicLoop=YES;
+        _metalRenderer=[[SDBMetalRenderer alloc] init];
+        _runtime->metal=_metalRenderer.supported&&NSProcessInfo.processInfo.environment[@"SDB_CPU_RENDERER"]==nil;
         __unsafe_unretained SDBEngine *owner=self;
         _runtime->cpu.hook=[owner](GuestCPU &cpu,uint32_t pc) {
+            if(sdb::display::GameDisplayPatch::handlesPc(pc))return owner->_runtime->displayPatch.handleInstruction(cpu,pc);
             if((pc>=0xee9c&&pc<0xf478)||pc==0xa80c||pc==0xa8a0||pc==0xa958||pc==0x8e04||pc==0xea14||pc==0xe86e||
                (pc>=SilentOn&&pc<=SilentOffDraw))return [owner bridge:pc];
             return false;
@@ -299,6 +467,7 @@ struct Runtime {
         if(str>=data.length) {c.fail("Invalid original symbol");return;}
         r.imports[stubAddress+i*stubWidth]=std::string((const char*)data.bytes+str,strnlen((const char*)data.bytes+str,data.length-str));
     }
+    if(!r.displayPatch.initialize(c))return;
     c.call(0x421d);if(!c.fault.empty())return;uint32_t records=c.read32(0x15744);
     for(NSDictionary *entry in manifest[@"textures"]) {
         uint32_t index=[entry[@"entry"] unsignedIntValue];if(index>=62)continue;
@@ -309,18 +478,79 @@ struct Runtime {
         if(!image) {c.fail("Original texture could not be decoded");return;}
         unsigned w=(unsigned)CGImageGetWidth(image),h=(unsigned)CGImageGetHeight(image),pw=1,ph=1;
         while(pw<w)pw*=2;while(ph<h)ph*=2;
-        Texture t;t.width=pw;t.height=ph;t.pixels.resize(pw*ph*4);
+        Texture t;t.width=pw;t.height=ph;t.contentWidth=w;t.contentHeight=h;t.pixels.resize(pw*ph*4);
         CGColorSpaceRef space=CGColorSpaceCreateDeviceRGB();
         CGContextRef context=CGBitmapContextCreate(t.pixels.data(),pw,ph,8,pw*4,space,kCGImageAlphaPremultipliedLast|kCGBitmapByteOrder32Big);
         CGColorSpaceRelease(space);
         CGContextDrawImage(context,CGRectMake(0,ph-h,w,h),image);CGContextRelease(context);CGImageRelease(image);
         // Texture2D uses straight-alpha GL blending. Convert decoded premultiplication once.
         for(size_t p=0;p<t.pixels.size();p+=4)if(t.pixels[p+3])for(int k=0;k<3;++k)t.pixels[p+k]=uint8_t(std::min(255u,unsigned(t.pixels[p+k])*255/t.pixels[p+3]));
+        NSString *name=entry[@"name"];
+        if([@[@"font.png",@"font_s.png"] containsObject:name]) {
+            auto field=sdb::text::TextDistanceField::make(t.pixels.data(),pw,ph);
+            if(field.empty()) {c.fail("Original lettering distance field could not be created");return;}
+            // Retain original shading inside each glyph, extending its nearest
+            // visible colour only through the small antialiasing fringe.
+            auto original=t.pixels;
+            for(unsigned y=0;y<ph;++y)for(unsigned x=0;x<pw;++x) {
+                size_t p=4*(y*pw+x);t.pixels[p+3]=field[p+3];
+                if(original[p+3]>=128)continue;
+                int best=1000;size_t nearest=p;
+                for(int dy=-4;dy<=4;++dy)for(int dx=-4;dx<=4;++dx) {
+                    int xx=int(x)+dx,yy=int(y)+dy,d=dx*dx+dy*dy;
+                    if(xx>=0&&yy>=0&&xx<int(pw)&&yy<int(ph)&&d<best&&original[4*(yy*pw+xx)+3]>=128) {best=d;nearest=4*(yy*pw+xx);}
+                }
+                for(int ch=0;ch<3;++ch)t.pixels[p+ch]=original[nearest+ch];
+            }
+            t.distanceField=1;
+        } else if([@[@"game_start.png",@"credits.png",@"continue.png",@"continue_left.png",@"quit.png",@"options.png"] containsObject:name]) {
+            // The original baked labels are off-white lettering over a soft
+            // black shadow. Split their premultiplied contribution before
+            // sharpening only the foreground outline; retain the shadow mask.
+            auto foreground=t.pixels;
+            std::vector<uint8_t> shadow(size_t(pw)*ph);
+            for(size_t p=0;p<t.pixels.size();p+=4) {
+                const float alpha=t.pixels[p+3]/255.f;
+                const float ink=std::clamp(t.pixels[p]/238.f*alpha,0.f,alpha);
+                const float shade=ink<1?std::clamp((alpha-ink)/(1-ink),0.f,1.f):0;
+                foreground[p+3]=uint8_t(std::round(ink*255));
+                shadow[p/4]=uint8_t(std::round(shade*255));
+            }
+            auto field=sdb::text::TextDistanceField::make(foreground.data(),pw,ph);
+            if(field.empty()) {c.fail("Original menu foreground distance field could not be created");return;}
+            for(size_t p=0;p<t.pixels.size();p+=4) {
+                t.pixels[p]=shadow[p/4];t.pixels[p+1]=t.pixels[p+2]=238;
+                t.pixels[p+3]=field[p+3];
+            }
+            t.distanceField=2;
+        }
+        if(index==2) {
+            // The original opaque title has a baked one-pixel image frame.
+            // It was hidden at the old screen edge, but appears as a matte
+            // line in an expanded viewport. Normalize that frame only; retain
+            // every interior pixel and the original content dimensions/UVs.
+            if(w<3||h<3) {c.fail("Original title is too small to normalize its border");return;}
+            for(unsigned y=0;y<h;++y)for(unsigned x=0;x<w;++x) {
+                if(x!=0&&y!=0&&x!=w-1&&y!=h-1)continue;
+                const unsigned sx=std::clamp(x,1u,w-2),sy=std::clamp(y,1u,h-2);
+                memcpy(t.pixels.data()+4*(size_t(y)*pw+x),t.pixels.data()+4*(size_t(sy)*pw+sx),4);
+            }
+            // maxS/maxT end at the content boundary inside a larger POT
+            // texture. Extrude one texel into its unused padding so linear
+            // filtering cannot introduce a transparent-black rim there.
+            for(unsigned y=0;y<=h&&y<ph;++y)for(unsigned x=0;x<=w&&x<pw;++x) {
+                if(x!=w&&y!=h)continue;
+                const unsigned sx=std::min(x,w-1),sy=std::min(y,h-1);
+                memcpy(t.pixels.data()+4*(size_t(y)*pw+x),t.pixels.data()+4*(size_t(sy)*pw+sx),4);
+            }
+        }
+        if(r.metal&&![_metalRenderer setTexture:index+1 rgba:t.pixels.data() byteLength:t.pixels.size() width:pw height:ph]) {c.fail(_metalRenderer.failure.UTF8String?:"Texture upload failed");return;}
         r.textures[index+1]=std::move(t);
         uint32_t p=records+32*index;c.write32(p,index+1);c.write32(p+4,bits(w));c.write32(p+8,bits(h));
         c.write32(p+12,pw);c.write32(p+16,ph);c.write32(p+20,0);c.write32(p+24,bits(float(w)/pw));c.write32(p+28,bits(float(h)/ph));
     }
     if(!c.fault.empty())return;
+    [self loadExtendedTitle];
     r.sound=r.allocate(0x108);if(!c.fault.empty())return;
     c.call(0xe7e9,{r.sound});if(!c.fault.empty())return;
     c.call(0xeb01,{r.sound});if(!c.fault.empty())return;
@@ -355,6 +585,132 @@ struct Runtime {
     }
     c.write32(0x14680,table);
     #endif
+    NSString *version=[NSBundle.mainBundle objectForInfoDictionaryKey:@"CFBundleShortVersionString"]?:@"dev";
+    _menuVersion=[@"Ver." stringByAppendingString:version];
+    const uint32_t versionRow=0x14d90;
+    if(r.string(c.read32(versionRow+36))!="Ver.1.01") {c.fail("Unsupported original version row");return;}
+    NSData *versionBytes=[_menuVersion dataUsingEncoding:NSASCIIStringEncoding];
+    uint32_t versionText=r.allocate(uint32_t(versionBytes.length+1));
+    c.load(versionText,versionBytes.bytes,versionBytes.length);c.write32(versionRow+36,versionText);
+    [self applyViewportPatch];
+}
+- (void)loadExtendedTitle {
+    // Modern artwork is kept separate from the untouched original resources.
+    NSString *path=[[_resourcePath stringByDeletingLastPathComponent] stringByAppendingPathComponent:@"Modern/title-sky.png"];
+    CGImageSourceRef source=CGImageSourceCreateWithURL((__bridge CFURLRef)[NSURL fileURLWithPath:path],nullptr);
+    CGImageRef image=source?CGImageSourceCreateImageAtIndex(source,0,nullptr):nullptr;
+    if(source)CFRelease(source);
+    if(!image)return;
+    unsigned w=(unsigned)CGImageGetWidth(image),h=(unsigned)CGImageGetHeight(image),pw=1,ph=1;
+    while(pw<w)pw*=2;while(ph<h)ph*=2;
+    Texture t;t.width=pw;t.height=ph;t.contentWidth=w;t.contentHeight=h;t.pixels.resize(size_t(pw)*ph*4);
+    CGColorSpaceRef space=CGColorSpaceCreateDeviceRGB();
+    CGContextRef context=CGBitmapContextCreate(t.pixels.data(),pw,ph,8,pw*4,space,kCGImageAlphaPremultipliedLast|kCGBitmapByteOrder32Big);
+    CGColorSpaceRelease(space);
+    // Keep the same padded top-left texture orientation as the originals.
+    CGContextDrawImage(context,CGRectMake(0,ph-h,w,h),image);
+    CGContextRelease(context);CGImageRelease(image);
+    const auto originalIt=_runtime->textures.find(3);
+    if(originalIt==_runtime->textures.end()||originalIt->second.contentWidth<=0||originalIt->second.contentHeight<=0) {
+        _runtime->cpu.fail("Original title is unavailable for matching the extended sky");return;
+    }
+    const Texture &original=originalIt->second;
+    // Match the scenery to the untouched original quad at its exact boundary.
+    // Both textures use top-left content rows; the original is portrait and
+    // appears clockwise in landscape. Sampling is expressed at texel centers,
+    // so local landscape (x,y) maps to original (y-.5,height-.5-x).
+    const double coreWidth=original.contentHeight,coreHeight=original.contentWidth;
+    const double canvasWidth=2*coreWidth,canvasHeight=2*coreHeight;
+    const double coreLeft=(canvasWidth-coreWidth)/2,coreTop=(canvasHeight-coreHeight)/2;
+    const auto unmodifiedSky=t.pixels;
+    const auto sample=[](const Texture &texture,const std::vector<uint8_t>&pixels,double x,double y) {
+        x=std::clamp(x,0.,double(texture.contentWidth-1));
+        y=std::clamp(y,0.,double(texture.contentHeight-1));
+        const unsigned x0=unsigned(x),y0=unsigned(y);
+        const unsigned x1=std::min(x0+1,unsigned(texture.contentWidth-1));
+        const unsigned y1=std::min(y0+1,unsigned(texture.contentHeight-1));
+        const double fx=x-x0,fy=y-y0;
+        std::array<double,3> rgb{};
+        for(unsigned channel=0;channel<3;++channel) {
+            const auto value=[&](unsigned xx,unsigned yy) {return double(pixels[4*(size_t(yy)*texture.width+xx)+channel]);};
+            rgb[channel]=(1-fy)*((1-fx)*value(x0,y0)+fx*value(x1,y0))+
+                fy*((1-fx)*value(x0,y1)+fx*value(x1,y1));
+        }
+        return rgb;
+    };
+    // Diffuse the colour difference into the surrounding scenery rather than
+    // extending each edge pixel along a ray, which produces visible streaks.
+    // The original core and the outer sky border are fixed Dirichlet values.
+    // A 240x160-cell field is sufficient for palette correction; the final
+    // short-range residual below restores fine boundary detail separately.
+    const unsigned cellsX=240,cellsY=160,columns=cellsX+1,rows=cellsY+1;
+    std::vector<std::array<double,3>> field(size_t(columns)*rows);
+    std::vector<uint8_t> fixed(field.size());
+    for(unsigned y=0;y<rows;++y)for(unsigned x=0;x<columns;++x) {
+        const size_t p=size_t(y)*columns+x;
+        const double lx=x*canvasWidth/cellsX,ly=y*canvasHeight/cellsY;
+        const bool inside=lx>=coreLeft&&lx<=coreLeft+coreWidth&&ly>=coreTop&&ly<=coreTop+coreHeight;
+        fixed[p]=inside||x==0||y==0||x==cellsX||y==cellsY;
+        if(inside) {
+            const auto core=sample(original,original.pixels,ly-coreTop-.5,coreWidth-.5-(lx-coreLeft));
+            const auto sky=sample(t,unmodifiedSky,lx*w/canvasWidth-.5,ly*h/canvasHeight-.5);
+            for(unsigned channel=0;channel<3;++channel)field[p][channel]=core[channel]-sky[channel];
+        }
+    }
+    for(unsigned iteration=0;iteration<160;++iteration)for(unsigned parity=0;parity<2;++parity) {
+        for(unsigned y=1;y<cellsY;++y)for(unsigned x=1;x<cellsX;++x) {
+            const size_t p=size_t(y)*columns+x;
+            if(fixed[p]||((x+y)&1)!=parity)continue;
+            for(unsigned channel=0;channel<3;++channel) {
+                const double average=(field[p-1][channel]+field[p+1][channel]+
+                    field[p-columns][channel]+field[p+columns][channel])/4;
+                field[p][channel]+=1.5*(average-field[p][channel]);
+            }
+        }
+    }
+    const auto correction=[&](double lx,double ly) {
+        const double gx=std::clamp(lx*cellsX/canvasWidth,0.,double(cellsX));
+        const double gy=std::clamp(ly*cellsY/canvasHeight,0.,double(cellsY));
+        const unsigned x0=unsigned(gx),y0=unsigned(gy),x1=std::min(x0+1,cellsX),y1=std::min(y0+1,cellsY);
+        const double fx=gx-x0,fy=gy-y0;
+        std::array<double,3> rgb{};
+        for(unsigned channel=0;channel<3;++channel) {
+            const auto value=[&](unsigned x,unsigned y) {return field[size_t(y)*columns+x][channel];};
+            rgb[channel]=(1-fy)*((1-fx)*value(x0,y0)+fx*value(x1,y0))+
+                fy*((1-fx)*value(x0,y1)+fx*value(x1,y1));
+        }
+        return rgb;
+    };
+    const double fineTransition=coreHeight/40;
+    for(unsigned y=0;y<h;++y)for(unsigned x=0;x<w;++x) {
+        const size_t pixel=4*(size_t(y)*pw+x);
+        t.pixels[pixel+3]=255;
+        const double logicalX=(x+.5)*canvasWidth/w,logicalY=(y+.5)*canvasHeight/h;
+        const double boundaryX=std::clamp(logicalX,coreLeft,coreLeft+coreWidth);
+        const double boundaryY=std::clamp(logicalY,coreTop,coreTop+coreHeight);
+        const double distance=std::hypot(logicalX-boundaryX,logicalY-boundaryY);
+        const auto edge=sample(original,original.pixels,boundaryY-coreTop-.5,
+            coreWidth-.5-(boundaryX-coreLeft));
+        if(distance==0) {
+            // Hidden beneath the opaque original quad. Matching this side of
+            // the sampling boundary too prevents GL_LINEAR from blending an
+            // adjacent uncorrected sky texel back into the visible outer edge.
+            for(unsigned channel=0;channel<3;++channel)t.pixels[pixel+channel]=uint8_t(std::lround(edge[channel]));
+            continue;
+        }
+        const auto coarse=correction(logicalX,logicalY);
+        const auto boundary=correction(boundaryX,boundaryY);
+        const auto sky=sample(t,unmodifiedSky,boundaryX*w/canvasWidth-.5,boundaryY*h/canvasHeight-.5);
+        const double fraction=std::min(1.,distance/fineTransition);
+        const double weight=1-fraction*fraction*(3-2*fraction);
+        for(unsigned channel=0;channel<3;++channel) {
+            const double residual=edge[channel]-sky[channel]-boundary[channel];
+            const double corrected=unmodifiedSky[pixel+channel]+coarse[channel]+weight*residual;
+            t.pixels[pixel+channel]=uint8_t(std::clamp(std::lround(corrected),0l,255l));
+        }
+    }
+    if(_runtime->metal)[_metalRenderer setTexture:ExtendedTitle rgba:t.pixels.data() byteLength:t.pixels.size() width:pw height:ph];
+    _runtime->textures[ExtendedTitle]=std::move(t);
 }
 
 - (BOOL)bridge:(uint32_t)pc {
@@ -489,19 +845,31 @@ struct Runtime {
     Runtime &r=*_runtime;
     if(delta>0)r.cpu.call(0x8af3,{r.game,bits(1.f/60.f)});
     [self checkFault];if(_failure)return;
-    std::fill(r.pixels.begin(),r.pixels.end(),0);r.matrix=Matrix();r.stack.clear();r.colorArray=false;
+    if(!r.metal)std::fill(r.pixels.begin(),r.pixels.end(),0);
+    r.metalVertices.clear();r.metalDraws.clear();r.titleDrawn=false;
+    r.matrix=Matrix();r.stack.clear();r.colorArray=false;
     r.cpu.call(0x8b23,{r.game});[self checkFault];if(_failure)return;
-    for(size_t p=3;p<r.pixels.size();p+=4)r.pixels[p]=255;
-    CFDataRef bytes=CFDataCreate(nullptr,r.pixels.data(),r.pixels.size());
-    CGDataProviderRef provider=CGDataProviderCreateWithCFData(bytes);CFRelease(bytes);
-    CGColorSpaceRef space=CGColorSpaceCreateDeviceRGB();
-    CGImageRef next=CGImageCreate(Width,Height,8,32,Width*4,space,kCGImageAlphaPremultipliedLast|kCGBitmapByteOrder32Big,provider,nullptr,false,kCGRenderingIntentDefault);
-    CGColorSpaceRelease(space);CGDataProviderRelease(provider);
-    if(_frame)CGImageRelease(_frame);_frame=next;++r.frames;
+    if(r.metal) {
+        BOOL submitted=[_metalRenderer renderVertices:r.metalVertices.data() vertexCount:r.metalVertices.size()
+            draws:r.metalDraws.data() drawCount:r.metalDraws.size() logicalSize:self.logicalSize
+            pixelWidth:r.geometry.rasterWidth pixelHeight:r.geometry.rasterHeight];
+        if(_metalRenderer.failure)_failure=_metalRenderer.failure;
+        if(submitted&&_frame) {CGImageRelease(_frame);_frame=nullptr;}
+    } else {
+        for(size_t p=3;p<r.pixels.size();p+=4)r.pixels[p]=255;
+        CFDataRef bytes=CFDataCreate(nullptr,r.pixels.data(),r.pixels.size());
+        CGDataProviderRef provider=CGDataProviderCreateWithCFData(bytes);CFRelease(bytes);
+        CGColorSpaceRef space=CGColorSpaceCreateDeviceRGB();
+        CGImageRef next=CGImageCreate(r.geometry.rasterWidth,r.geometry.rasterHeight,8,32,r.geometry.rasterWidth*4,space,kCGImageAlphaPremultipliedLast|kCGBitmapByteOrder32Big,provider,nullptr,false,kCGRenderingIntentDefault);
+        CGColorSpaceRelease(space);CGDataProviderRelease(provider);
+        if(_frame)CGImageRelease(_frame);_frame=next;
+    }
+    ++r.frames;
 }
 - (void)touchPhase:(NSInteger)phase x:(double)x y:(double)y {
     if(_failure||_suspended)return;Runtime &r=*_runtime;
-    float gx=float(y)-160,gy=float(x)-240;
+    auto guest=r.geometry.logicalToGuest({x,y});
+    float gx=float(guest.x),gy=float(guest.y);
     if(phase==0) {r.touching=true;r.cpu.call(0x8b3d,{r.game,bits(gx),bits(gy)});}
     else if(phase==1&&r.touching)r.cpu.call(0x8b77,{r.game,bits(gx),bits(gy),bits(r.lastX),bits(r.lastY)});
     else if(phase==2&&r.touching) {r.cpu.call(0x8bdb,{r.game,bits(gx),bits(gy)});r.touching=false;}

@@ -31,16 +31,29 @@ enum GameLayout {
     }
 }
 
+struct GameViewport: Equatable {
+    let size: CGSize
+    let scale: Double
+    let safeArea: CGRect
+}
+
 @MainActor
 @Observable
 final class GameSession {
     private(set) var frame: CGImage?
+    private(set) var logicalSize = GameLayout.size
+    private(set) var rasterViewSize = GameLayout.size
+    private(set) var frameRevision: UInt64 = 0
+    private(set) var usesMetalRenderer = false
+    private(set) var canPause = false
+    private(set) var gameMenuType = 0
     private(set) var failure: String?
     private(set) var pointer = CGPoint(x: GameLayout.width / 2, y: GameLayout.height / 2)
     private(set) var showsPointer = false
     private(set) var isTouching = false
 
-    @ObservationIgnored private var engine: SDBEngine?
+    @ObservationIgnored private(set) var engine: SDBEngine?
+    @ObservationIgnored private var viewport: GameViewport?
     @ObservationIgnored private var timer: Timer?
     @ObservationIgnored private var lastTime = 0.0
     @ObservationIgnored private var accumulatedTime = 0.0
@@ -50,6 +63,7 @@ final class GameSession {
         if !active {
             cancelTouch()
             engine?.setSuspended(true)
+            canPause = false
             timer?.invalidate()
             timer = nil
             lastTime = 0
@@ -64,10 +78,12 @@ final class GameSession {
             }
             engine = SDBEngine(resourcePath: path)
             failure = engine?.failure
-            frame = engine?.frame
+            if let viewport { configure(viewport) }
+            if let engine { refreshState(from: engine) }
         }
         guard failure == nil else { return }
         engine?.setSuspended(false)
+        if let engine { refreshState(from: engine) }
         lastTime = ProcessInfo.processInfo.systemUptime
         let timer = Timer(timeInterval: GameLayout.simulationStep, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.tick() }
@@ -91,9 +107,42 @@ final class GameSession {
                 releasesTapAfterStep = false
             }
         }
-        frame = engine.frame
-        failure = engine.failure
+        refreshState(from: engine)
         if failure != nil { setActive(false) }
+    }
+
+    func configure(_ viewport: GameViewport) {
+        self.viewport = viewport
+        guard let engine else { return }
+        cancelTouch()
+        let old = logicalSize
+        engine.configureViewport(viewport.size, displayScale: viewport.scale, safeArea: viewport.safeArea)
+        logicalSize = engine.logicalSize
+        rasterViewSize = engine.rasterViewSize
+        pointer = CGPoint(x: pointer.x / old.width * logicalSize.width,
+                          y: pointer.y / old.height * logicalSize.height)
+        refreshState(from: engine)
+    }
+
+    private func refreshState(from engine: SDBEngine) {
+        usesMetalRenderer = engine.usesMetalRenderer
+        if !usesMetalRenderer { frame = engine.frame }
+        canPause = engine.canPause
+        gameMenuType = Int(engine.gameMenuType)
+        failure = engine.failure
+        frameRevision &+= 1
+    }
+
+    func pauseGame() {
+        guard let engine, canPause else { return }
+        cancelTouch()
+        engine.pauseGame()
+        refreshState(from: engine)
+        if failure != nil { setActive(false) }
+    }
+
+    func point(inView point: CGPoint) -> CGPoint {
+        engine?.logicalPoint(forViewPoint: point) ?? .zero
     }
 
     func drag(to point: CGPoint) {
@@ -118,15 +167,15 @@ final class GameSession {
 
     func movePointer(dx: CGFloat, dy: CGFloat) {
         pointer = CGPoint(
-            x: min(GameLayout.width, max(0, pointer.x + dx)),
-            y: min(GameLayout.height, max(0, pointer.y + dy))
+            x: min(logicalSize.width, max(0, pointer.x + dx)),
+            y: min(logicalSize.height, max(0, pointer.y + dy))
         )
         showsPointer = true
         if isTouching { engine?.touchPhase(1, x: pointer.x, y: pointer.y) }
     }
 
     func setPointerY(_ fraction: Double) {
-        movePointer(dx: 0, dy: CGFloat(fraction) * GameLayout.height - pointer.y)
+        movePointer(dx: 0, dy: CGFloat(fraction) * logicalSize.height - pointer.y)
     }
 
     func beginPointerTouch() {

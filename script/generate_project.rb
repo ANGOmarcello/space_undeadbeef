@@ -27,6 +27,8 @@ config_group.new_file('SpaceUndeadbeef-Bridging-Header.h')
 resources_group = project.main_group.new_group('Resources', 'Resources')
 original = resources_group.new_file('Original')
 original.last_known_file_type = 'folder'
+modern = resources_group.new_file('Modern')
+modern.last_known_file_type = 'folder'
 icons_group = resources_group.new_group('AppIcons', 'AppIcons')
 tests_group = project.main_group.new_group('Tests', 'Tests')
 ui_test_source = tests_group.new_file('HostUITests.swift')
@@ -46,9 +48,11 @@ platforms.each do |name, options|
   target.product_reference.name = "SpaceUndeadbeef (#{name}).app"
   (host_sources + legacy_sources).each { |file| target.source_build_phase.add_file_reference(file) }
   target.resources_build_phase.add_file_reference(original)
+  target.resources_build_phase.add_file_reference(modern)
   icon_catalog = icons_group.new_file("#{name}.xcassets")
   target.resources_build_phase.add_file_reference(icon_catalog)
   target.add_system_frameworks(['Foundation', 'CoreGraphics', 'ImageIO', 'AVFoundation'])
+  target.add_system_frameworks(['Metal', 'MetalKit', 'CoreImage', 'QuartzCore']) unless name == 'watchOS'
   plist_path = File.join(root, 'Config', "#{name}-Info.plist")
   plist = {
     'CFBundleDevelopmentRegion' => 'en',

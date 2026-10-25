@@ -9,6 +9,7 @@ import SwiftUI
 
 struct GameView: View {
     @State private var session = GameSession()
+    @Environment(\.displayScale) private var displayScale
     @Environment(\.scenePhase) private var scenePhase
     #if os(watchOS)
     @State private var crownPosition = 0.5
@@ -18,7 +19,12 @@ struct GameView: View {
 
     var body: some View {
         GeometryReader { geometry in
-            let size = GameLayout.fittedSize(in: geometry.size)
+            let insets = geometry.safeAreaInsets
+            let size = CGSize(width: geometry.size.width + insets.leading + insets.trailing,
+                              height: geometry.size.height + insets.top + insets.bottom)
+            let viewport = GameViewport(size: size, scale: displayScale,
+                safeArea: CGRect(x: insets.leading, y: insets.top,
+                                 width: geometry.size.width, height: geometry.size.height))
             ZStack {
                 Color.black
                 interactiveScreen(size: size)
@@ -32,9 +38,19 @@ struct GameView: View {
                         .accessibilityIdentifier("runtime-failure")
                 }
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .frame(width: size.width, height: size.height)
+            #if os(iOS)
+            .overlay(alignment: .topTrailing) {
+                if session.canPause {
+                    CornerPauseButton(viewScale: size.width / session.logicalSize.width,
+                                      action: session.pauseGame)
+                        .environment(\.layoutDirection, .leftToRight)
+                }
+            }
+            #endif
+            .offset(x: -insets.leading, y: -insets.top)
+            .onChange(of: viewport, initial: true) { _, value in session.configure(value) }
         }
-        .ignoresSafeArea()
         .onChange(of: scenePhase, initial: true) { _, phase in
             session.setActive(phase == .active)
         }
@@ -103,18 +119,28 @@ struct GameView: View {
 
     private func screen(size: CGSize) -> some View {
         ZStack {
+            #if !os(watchOS)
+            if session.usesMetalRenderer, let engine = session.engine {
+                MetalGameSurface(engine: engine, revision: session.frameRevision)
+                    .allowsHitTesting(false)
+            }
+            #endif
             if let frame = session.frame {
                 Image(decorative: frame, scale: 1, orientation: .up)
                     .resizable()
-                    .interpolation(.high)
+                    .interpolation(.none)
+                    .frame(width: session.rasterViewSize.width, height: session.rasterViewSize.height)
+                    .frame(width: size.width, height: size.height, alignment: .topLeading)
+                    .clipped()
                     .accessibilityIdentifier("original-game-frame")
             }
             if session.showsPointer {
                 Circle()
                     .stroke(.white, lineWidth: GameLayout.pointerStroke)
-                    .frame(width: GameLayout.pointerDiameter, height: GameLayout.pointerDiameter)
-                    .position(x: session.pointer.x / GameLayout.width * size.width,
-                              y: session.pointer.y / GameLayout.height * size.height)
+                    .frame(width: GameLayout.pointerDiameter * size.width / session.logicalSize.width,
+                           height: GameLayout.pointerDiameter * size.height / session.logicalSize.height)
+                    .position(x: session.pointer.x / session.logicalSize.width * size.width,
+                              y: session.pointer.y / session.logicalSize.height * size.height)
                     .allowsHitTesting(false)
             }
         }
@@ -123,12 +149,15 @@ struct GameView: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("SPACE UNDEADBEEF game")
         .accessibilityIdentifier("game-canvas")
+        .accessibilityValue(ProcessInfo.processInfo.environment["SDB_UI_TEST"] == "1"
+            ? "viewport \(Int(session.logicalSize.width)) × \(Int(session.logicalSize.height)); menuType \(session.gameMenuType)"
+            : "")
     }
 
     #if !os(tvOS)
     private func dragGesture(size: CGSize) -> some Gesture {
         DragGesture(minimumDistance: 0)
-            .onChanged { value in session.drag(to: GameLayout.point(value.location, in: size)) }
+            .onChanged { value in session.drag(to: session.point(inView: value.location)) }
             .onEnded { _ in session.endTouch() }
     }
     #endif
