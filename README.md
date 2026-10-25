@@ -23,6 +23,12 @@ python3 script/prepare_original.py
 
 To regenerate the project after adding source files, run `ruby script/generate_project.rb` (requires the `xcodeproj` Ruby gem). The committed project builds without running this generator.
 
+The four targets include platform app-icon catalogs made from the original
+57×57 ship artwork. Run `xcrun swift script/prepare_icons.swift` to regenerate
+them. Pixel scaling preserves the supplied artwork; these are not recovered
+high-resolution originals. TV assets extend the background edges to fit its
+rectangular icon and Top Shelf sizes.
+
 ## Controls
 
 The game retains its original touch controls: hold and sweep over enemies to lock targets, release to fire, and hold your ship to charge. The ship follows the pointer vertically. All presentation sizes preserve the original playfield, including inverse input mapping.

@@ -27,6 +27,7 @@ config_group.new_file('SpaceUndeadbeef-Bridging-Header.h')
 resources_group = project.main_group.new_group('Resources', 'Resources')
 original = resources_group.new_file('Original')
 original.last_known_file_type = 'folder'
+icons_group = resources_group.new_group('AppIcons', 'AppIcons')
 tests_group = project.main_group.new_group('Tests', 'Tests')
 ui_test_source = tests_group.new_file('HostUITests.swift')
 
@@ -45,6 +46,8 @@ platforms.each do |name, options|
   target.product_reference.name = "SpaceUndeadbeef (#{name}).app"
   (host_sources + legacy_sources).each { |file| target.source_build_phase.add_file_reference(file) }
   target.resources_build_phase.add_file_reference(original)
+  icon_catalog = icons_group.new_file("#{name}.xcassets")
+  target.resources_build_phase.add_file_reference(icon_catalog)
   target.add_system_frameworks(['Foundation', 'CoreGraphics', 'ImageIO', 'AVFoundation'])
   plist_path = File.join(root, 'Config', "#{name}-Info.plist")
   plist = {
@@ -82,6 +85,8 @@ platforms.each do |name, options|
     configuration.base_configuration_reference = config
     settings = configuration.build_settings
     settings['PRODUCT_BUNDLE_IDENTIFIER'] = "dev.cammalleri.SpaceUndeadbeef#{options[:suffix]}"
+    settings['ASSETCATALOG_COMPILER_APPICON_NAME'] = 'AppIcon'
+    settings.delete('ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME')
     settings['INFOPLIST_FILE'] = "Config/#{name}-Info.plist"
     settings['SDKROOT'] = options[:sdk]
     settings['SUPPORTED_PLATFORMS'] = options[:supported]

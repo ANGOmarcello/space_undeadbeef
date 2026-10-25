@@ -66,3 +66,19 @@ remain open. No App Store submission or public distribution was performed.
 Earlier native Mac instances closed through normal AppKit termination, with no
 game crash report found during the checks. The recorded evidence does not
 establish the reason for those close/quit actions.
+
+## App icons
+
+The four targets now compile platform icon catalogs derived from the original
+57×57 ship image. iOS and Watch use opaque 1024-pixel input; macOS includes the
+standard raster sizes and an emitted `AppIcon.icns`; TV includes its layered icon
+and wide Top Shelf assets. Pixel scaling preserves the original proportions and
+extends background edges for TV rectangles. The TV foreground layer is empty so
+the supplied flat artwork retains its appearance.
+
+After installation, the ship icon was visually verified on iPhone Home, Watch's
+circular app carousel, and the focused and unfocused TV launcher with Top Shelf.
+AppKit's resolved Mac application icon also displayed the ship with the system
+mask. All four icon builds passed. The final TV/iOS builds had no warnings; Mac
+and Watch emitted the routine skipped-App-Intents metadata notice. No physical
+device launcher icon was verified in these checks.
