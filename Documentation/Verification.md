@@ -110,3 +110,63 @@ game running. Device Hub's live mirror then visibly showed stage 1-11 and score
 temporary screen-sharing stream was stopped after verification; the game was left
 running. This establishes physical installation and gameplay, while the hardware
 audio, Crown, and sustained-performance limits above remain separate.
+
+
+## Version 1.1 display modernization
+
+The pre-modernization build above is preserved by
+`baseline/original-aspect-v1` at `92c0cfc`. Version 1.1 uses the shared
+`Config/App.xcconfig` for every platform and reads that bundle version for the
+original menu's `Ver.1.1` label.
+
+The adaptive display checks passed 252 CPU instruction checks, 4712 geometry and
+inverse-mapping checks, 1559 guarded original-data patch checks, and 10472 bitmap
+contour checks under sanitizers. The original Options/audio preference, save,
+resume and Continue integration smoke passed with isolated test state.
+
+`script/test_rendering.sh` passed on the actual Mac GPU. Software and Metal
+outputs differ by at most one byte for straight edges, reverse winding, pure
+shadow, original font_s and original GAMESTART foreground/shadow fixtures.
+Six original baked labels split and recombine within 0.88 alpha byte and 0.47
+premultiplied RGB byte before sharpening. This is controlled renderer proof;
+it does not imply new detail in the original bitmap sprites.
+
+Native-size viewport smoke checks passed at 2622×1206 (wide iPhone), 416×496
+(Watch software path), and 2064×2752 (portrait iPad Metal). They verify actual
+Game Start, opaque full frames, full scrolling backgrounds, live resize with the
+same game object, Pause/Continue and an isolated 256-byte lifecycle save. Later
+frames reached stage 1-03 with enemies using the expanded arena. Source sprite
+proportions are retained. A repeating sky seam on tall viewports was replaced
+with uniform background cover scaling before the original camera transform.
+
+The iPhone 18 Pro UI test verifies the original Options, Start, targeting drag,
+background/resume, native corner P-button position and the original Pause/Continue
+menu round trip. The iPad 13-inch Pro ran the same flow successfully. One iPad
+run spent five additional minutes inside XCTest's pending-crash-log wait after
+all interactions; its Xcode log ultimately records one passed test and zero
+failures. A second run with a two-minute execution allowance timed out in that
+same XCTest crash-log wait after the interactions and cleanup; it is not counted
+as another passing run. No application crash report was found for either run.
+The development-signed Watch 1.1 build also succeeded for device architectures,
+and `codesign --verify --strict` passed with normal Keychain trust access.
+
+Visual review covers the latest iPhone Pro, portrait iPad, Watch Simulator and
+native macOS. The title extension was simplified to the original muted peach sky
+and one continuing cloud after user review. Original texture-border normalization
+and padding extrusion remove the marked right-edge and bottom sampling lines.
+The native Mac window was zoomed and restored while preserving a filled surface.
+The physical Watch gameplay proof in the earlier section remains for version 1.0;
+version 1.1's hardware performance and Crown interaction require a device run.
+
+
+The final tvOS remote test also completed successfully: one passed test, zero
+failures, with an observed original-menu transition into gameplay. XCTest again
+waited five minutes for pending crash-log collection after all interactions.
+The MCP call reached its 300-second timeout first; the final Xcode log independently
+records `TEST EXECUTE SUCCEEDED`. This distinction is retained rather than treating
+the connector timeout as an application-test failure.
+
+Final display/source verification completed on 26 October 2026. Latest application
+products and device dSYMs are retained in their standard DerivedData locations;
+task-owned temporary captures, test results and compilation intermediates are
+removed after recording these results.
