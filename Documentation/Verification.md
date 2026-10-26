@@ -13,6 +13,11 @@ flow and centered bottom HUD were visually verified in the Watch Simulator;
 hardware Crown feel and the native toolbar's larger invisible hit region remain
 separate considerations documented there.
 
+The subsequent **1.1 (5)** update was installed and launched on that Series 12
+over Wi-Fi (PID 1023). CoreDevice confirmed the installed build, and a direct
+Watch screenshot showed the updated menu with **Continue 1-16** preserved.
+See the physical-update section in [WatchControls.md](WatchControls.md).
+
 Build **1.1 (2)** corrects menu/weapon/explosion event coverage and native haptics
 view association after the user reported no felt feedback. It passed 287 engine
 sanitizer checks and 117 policy checks, then was development-signed, installed

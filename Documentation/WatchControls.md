@@ -93,3 +93,24 @@ These checks prove the original steering and host input bridge, layout and
 physical installation/launch. Automated Simulator wheel attempts do not
 establish physical Crown delivery or feel. Updated hardware gameplay remains a
 separate check. Earlier physical-build history is in [Verification.md](Verification.md).
+
+## Physical update to 1.1 (5) — 26 October 2026
+
+After the Series 12 joined the Mac's Wi-Fi network, its existing paired
+CoreDevice connection succeeded over the local network, with Developer Mode
+enabled. The current source, including `d968435`'s artwork-relative menu-version
+alignment, was built for that exact physical Watch destination. The shared build
+number advanced to 5; the marketing version remains 1.1. Watch HUD and Crown
+behavior retain the earlier corrections above.
+
+The device build succeeded, strict signature verification passed, and the
+embedded development profile includes the Series 12. CoreDevice installed the
+standalone app in place, then independently reported version **1.1 (5)** under
+`dev.cammalleri.SpaceUndeadbeef.watch`. Normal launch succeeded (PID **1023**),
+without test-save or audio overrides, uninstalling, or resetting app data.
+
+A direct physical-device screenshot confirmed the filled main menu, its
+`Ver.1.1` label and retained **Continue 1-16** progress. No gameplay input was
+sent, so this update establishes installation, launch and title rendering;
+it does not add a new physical Crown or sustained frame-rate measurement.
+Only the known Series 12 was targeted; no Apple TV discovery was performed.
