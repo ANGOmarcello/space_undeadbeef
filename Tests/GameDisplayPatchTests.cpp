@@ -246,17 +246,24 @@ void watchHUDTests(const std::vector<uint8_t>& executable) {
     const auto baseline = prefix(cpu);
     GameDisplayPatch patch;
     require(patch.initialize(cpu), "Watch HUD captures the original geometry");
-    const auto watch = DisplayGeometry::make({208, 248}, 2, {28, 0, 0, 0});
+    const auto watch = DisplayGeometry::make({208, 248}, 2, {52, 0, 34, 0});
     require(patch.apply(cpu, watch), "Watch-shaped display retains default HUD without explicit policy");
     const auto defaultLayout = prefix(cpu);
     near(cpu, 0x82f8, watch.safeUIRect.minY() - watch.logicalSize.height / 2 + 8,
          "portrait geometry alone keeps the original top HUD");
     require(patch.apply(cpu, watch, true), "explicit Watch policy moves the original HUD");
     const auto band = GameDisplayPatch::watchHUDRect(watch);
-    require(std::abs(band.y - 510.3076923076923) < 0.0001 && band.height == 32 && band.width == 480,
+    require(std::abs(band.y - 494.3076923076923) < 0.0001 && band.height == 32 && band.width == 480,
             "46mm Watch reserves the measured two-row bottom band");
-    require(band.y >= watch.safeUIRect.minY() && band.maxY() <= watch.safeUIRect.maxY() - 30,
-            "HUD clears the bottom rounded edge by the original thirty-unit inset");
+    require(band.y >= watch.safeUIRect.minY() && band.maxY() <= watch.logicalRect.maxY() - 46,
+            "HUD clears the bottom rounded edge by the original inset plus one glyph row");
+    require(std::abs(watch.logicalRect.maxY() - 30 - 32 - band.y - 16) < 0.0001,
+            "Watch HUD moves exactly one original glyph row above its previous full-surface placement");
+    const double formerTop = watch.safeUIRect.maxY() - 46 - 32;
+    require(std::abs((band.y - formerTop) * watch.pointsPerLogicalUnit - 34) < 0.0001,
+            "real fifty-two/thirty-four-point Watch safe insets lower the HUD by the full bottom inset");
+    require(std::abs((watch.logicalRect.maxY() - band.maxY()) * watch.pointsPerLogicalUnit - 19.9333333333333) < 0.0001,
+            "bottom clearance is about twenty Watch points, without a second safe-area gap");
     const auto withinBand = [&](sdb::display::Point p) {
         // Guest anchors are IEEE float; the host geometry remains double.
         constexpr double tolerance = 0.0001;
@@ -265,6 +272,27 @@ void watchHUDTests(const std::vector<uint8_t>& executable) {
     };
     const auto point = [&](uint32_t vertical, uint32_t horizontal) {
         return watch.guestToLogical({real(cpu.read32(vertical)), real(cpu.read32(horizontal))});
+    };
+    const auto centeredHUD = [&](const DisplayGeometry& geometry) {
+        const double halfWidth = geometry.logicalSize.width / 2;
+        double minimum = real(cpu.read32(0x82fc)) + halfWidth, maximum = minimum;
+        const auto include = [&](double x) { minimum = std::min(minimum, x); maximum = std::max(maximum, x); };
+        for (const auto& text : {std::make_pair(0x82fcu, 14u), std::make_pair(0x8304u, 17u),
+                                 std::make_pair(0x82fcu, 17u)}) {
+            const double x = real(cpu.read32(text.first)) + halfWidth;
+            include(x); include(x + text.second * real(cpu.read32(0x81e8)));
+        }
+        for (unsigned cell = 0; cell < 16; ++cell)
+            for (unsigned vertex = 0; vertex < 4; ++vertex)
+                include(real(cpu.read32(0x833c)) + halfWidth + cell * real(cpu.read32(0x8338)) +
+                        real(cpu.read32(0x11b50 + vertex * 8 + 4)));
+        const double gauge = real(cpu.read32(0xdba4)) + halfWidth;
+        include(gauge);
+        include(gauge + real(cpu.read32(0xd8b4)) + real(cpu.read32(0xdb88)));
+        require(std::abs((minimum + maximum) / 2 - geometry.safeUIRect.center().x) < 0.0001,
+                "complete original text, charge and full slanted boss gauge center as one Watch HUD group");
+        require(minimum >= geometry.safeUIRect.minX() && maximum <= geometry.safeUIRect.maxX(),
+                "centered HUD union stays inside its actual horizontal safe bounds");
     };
     const auto score = point(0x82f8, 0x82fc);
     const auto highScore = point(0x82f8, 0x8304);
@@ -293,33 +321,51 @@ void watchHUDTests(const std::vector<uint8_t>& executable) {
     }
     require(score.x + 14 * 8 <= highScore.x && highScore.x + 17 * 8 <= charge.x - 15 * 6 - 4,
             "score, high-score and charge columns retain their original nonoverlapping widths");
-    const std::set<uint32_t> moved = {0x82f8, 0x830c, 0x8340, 0xdba0};
+    centeredHUD(watch);
+    for (uint32_t address : {0x82fcu, 0x8304u, 0x833cu, 0xdba4u})
+        require(std::abs(real(cpu.read32(address)) - real(word(defaultLayout, address)) - 11.165) < 0.0001,
+                "every Watch HUD horizontal anchor receives the same measured whole-group translation");
+    const std::set<uint32_t> moved = {0x82f8, 0x830c, 0x8340, 0xdba0, 0x82fc, 0x8304, 0x833c, 0xdba4};
     bool onlyHUD = true;
     for (uint32_t address = 0; address < defaultLayout.size(); address += 4)
         if (!moved.count(address) && cpu.read32(address) != word(defaultLayout, address)) onlyHUD = false;
-    require(onlyHUD, "Watch policy changes only the four HUD vertical anchors, preserving the entire game arena");
+    require(onlyHUD, "Watch policy changes only its eight HUD anchors, preserving the entire game arena");
     near(cpu, 0x81e8, 8, "Watch keeps original HUD glyph width");
     near(cpu, 0x81f0, 16, "Watch keeps original HUD glyph height");
-    const auto insetWatch = DisplayGeometry::make({208, 248}, 2, {28, 8, 12, 8});
+    const auto insetWatch = DisplayGeometry::make({208, 248}, 2, {52, 8, 34, 8});
     require(patch.apply(cpu, insetWatch, true), "Watch HUD fits real horizontal and bottom safe insets");
     const double insetLeft = insetWatch.safeUIRect.minX();
     const double insetRight = insetWatch.safeUIRect.maxX();
+    const double insetScore = real(cpu.read32(0x82fc)) + insetWatch.logicalSize.width / 2;
     const double insetHigh = real(cpu.read32(0x8304)) + insetWatch.logicalSize.width / 2;
-    const double firstGap = insetHigh - (insetLeft + 30 + 112);
-    const double secondGap = insetRight - 154 - (insetHigh + 136);
+    const double insetChargeLeft = real(cpu.read32(0x833c)) + insetWatch.logicalSize.width / 2 - 94;
+    const double firstGap = insetHigh - (insetScore + 112);
+    const double secondGap = insetChargeLeft - (insetHigh + 136);
     require(firstGap >= 0 && secondGap >= 0 && std::abs(firstGap / secondGap - 34.0 / 14) < 0.0001,
             "narrow Watch safe width compresses only the two gaps in their original proportion");
-    require(std::abs(insetHigh - 168.3076923076923) < 0.0001,
+    require(std::abs(insetHigh - 179.4726923076923) < 0.0001,
             "inset Watch high-score column fits between the measured score and charge bounds");
-    near(cpu, 0x82fc, insetLeft - insetWatch.logicalSize.width / 2 + 30,
-         "Watch score retains the original left inset when gaps compress");
-    near(cpu, 0x833c, insetRight - insetWatch.logicalSize.width / 2 - 60,
-         "Watch charge retains the original right inset when gaps compress");
+    near(cpu, 0x82fc, insetLeft - insetWatch.logicalSize.width / 2 + 30 + 11.165,
+         "Watch score shares the whole-group translation after gap compression");
+    near(cpu, 0x833c, insetRight - insetWatch.logicalSize.width / 2 - 60 + 11.165,
+         "Watch charge shares the whole-group translation after gap compression");
+    centeredHUD(insetWatch);
+    for (const auto& asymmetric : {DisplayGeometry::make({208, 248}, 2, {52, 4, 34, 12}),
+                                   DisplayGeometry::make({208, 248}, 2, {52, 12, 34, 4})}) {
+        require(patch.apply(cpu, asymmetric, true), "Watch HUD supports asymmetric horizontal safe insets");
+        centeredHUD(asymmetric);
+        near(cpu, 0x82f8, band.minY() - asymmetric.logicalSize.height / 2,
+             "horizontal centering never changes the latest Watch vertical clearance");
+    }
     const auto minimumWatch = DisplayGeometry::make({480, 320}, 1, {0, 24, 0, 24});
     require(patch.apply(cpu, minimumWatch, true), "minimum safe Watch HUD width retains every original glyph");
     const double minimumHigh = real(cpu.read32(0x8304)) + 240;
-    require(minimumHigh == 24 + 30 + 112 && minimumHigh + 136 == 480 - 24 - 154,
+    const double minimumScore = real(cpu.read32(0x82fc)) + 240;
+    const double minimumChargeLeft = real(cpu.read32(0x833c)) + 240 - 94;
+    require(std::abs(minimumHigh - minimumScore - 112) < 0.0001 &&
+            std::abs(minimumChargeLeft - minimumHigh - 136) < 0.0001,
             "minimum safe width removes exactly the empty gaps without overlapping content");
+    centeredHUD(minimumWatch);
     const auto tooNarrow = DisplayGeometry::make({480, 320}, 1, {0, 25, 0, 25});
     const auto beforeReject = prefix(cpu);
     require(!patch.apply(cpu, tooNarrow, true) && cpu.fault.find("Watch safe region") != std::string::npos,
@@ -327,7 +373,7 @@ void watchHUDTests(const std::vector<uint8_t>& executable) {
     require(prefix(cpu) == beforeReject && GameDisplayPatch::watchHUDRect(tooNarrow).empty(),
             "undersized Watch layout rejects atomically");
     cpu.fault.clear();
-    const auto tooShort = DisplayGeometry::make({480, 320}, 1, {259, 0, 0, 0});
+    const auto tooShort = DisplayGeometry::make({480, 320}, 1, {243, 0, 0, 0});
     require(!patch.apply(cpu, tooShort, true) && cpu.fault.find("Watch safe region") != std::string::npos,
             "Watch safe height cannot clip either HUD row or its rounded-edge clearance");
     require(prefix(cpu) == beforeReject && GameDisplayPatch::watchHUDRect(tooShort).empty(),
@@ -439,7 +485,7 @@ void hapticsMenuTests(const std::vector<uint8_t>& executable) {
 
 void rejectionTests(const std::vector<uint8_t>& executable) {
     for (uint32_t address : {0x5cf0u, 0x11c90u, 0x14688u, 0x12b34u, 0x5a3cu,
-                             0x81e8u, 0x81f0u, 0x8338u, 0x11b54u, 0x11b6cu}) {
+                             0x81e8u, 0x81f0u, 0x8338u, 0x11b54u, 0x11b6cu, 0xd8b4u, 0xdb88u}) {
         GuestCPU cpu; loadMachO(cpu, executable);
         cpu.write8(address, uint8_t(cpu.read8(address) ^ 1));
         const auto changed = prefix(cpu);

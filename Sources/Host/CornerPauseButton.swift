@@ -9,7 +9,7 @@
 import SwiftUI
 
 /// The original p.png paper fold, redrawn as paths at the display's density.
-/// The Watch mirrors the fold into its safe top-left corner, keeping P upright.
+/// The Watch mirrors the fold into the physical top-left corner, keeping P upright.
 struct CornerPauseButton: View {
     enum Corner { case topLeading, topTrailing }
 
@@ -18,22 +18,131 @@ struct CornerPauseButton: View {
     let action: () -> Void
 
     private enum Metrics {
-        static let originalSide: CGFloat = 24
+        static let originalSide = GameLayout.cornerControlSide
         static let originalFoldMargin = originalSide / 2
         static let minimumTouchSide: CGFloat = 44
     }
 
-    var body: some View {
-        let side = max(Metrics.minimumTouchSide, Metrics.originalSide * viewScale)
+    static func artworkSide(viewScale: CGFloat) -> CGFloat {
+        max(Metrics.minimumTouchSide, Metrics.originalSide * viewScale)
             + Metrics.originalFoldMargin * viewScale
+    }
+
+    var body: some View {
+        let side = Self.artworkSide(viewScale: viewScale)
         Button(action: action) {
+            #if os(watchOS)
+            WatchCornerPauseArtwork(corner: corner)
+                .frame(width: side, height: Metrics.originalSide)
+                .contentShape(Rectangle())
+            #else
             CornerPauseArtwork(corner: corner)
                 .frame(width: side, height: side)
                 .contentShape(Rectangle())
+            #endif
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Pause game")
         .accessibilityIdentifier("pause-game")
+    }
+}
+
+#if os(watchOS)
+struct WatchPauseDecoration: View {
+    let viewScale: CGFloat
+
+    var body: some View {
+        WatchCornerPauseArtwork(corner: .topLeading, showsLetter: false)
+            .frame(width: CornerPauseButton.artworkSide(viewScale: viewScale),
+                   height: GameLayout.cornerControlSide + GameLayout.cornerControlSide / 12)
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+    }
+}
+
+/// Render the same original P inside the native toolbar's actual hit target.
+struct WatchPauseToolbarLabel: View {
+    var body: some View {
+        Canvas { context, size in
+            var letter = OriginalPauseLetter.path
+            let bounds = letter.boundingRect
+            let x = (size.width - bounds.width) / 2
+            letter = letter.applying(CGAffineTransform(translationX: x - bounds.minX, y: -bounds.minY))
+            context.fill(letter, with: .linearGradient(
+                Gradient(colors: [Color(red: 1, green: 194 / 255, blue: 29 / 255),
+                                  Color(red: 254 / 255, green: 146 / 255, blue: 53 / 255)]),
+                startPoint: .zero, endPoint: CGPoint(x: 0, y: bounds.height)),
+                style: FillStyle(eoFill: true))
+        }
+        .frame(width: GameLayout.cornerControlSide, height: GameLayout.cornerControlSide * 2)
+        .contentShape(Rectangle())
+        .accessibilityHidden(true)
+    }
+}
+#endif
+
+/// A shallow bevel uses the original paper, crease, colors and P. Its height is
+/// one original tile plus its glyph stroke, ending above the Watch clock's baseline.
+private struct WatchCornerPauseArtwork: View {
+    let corner: CornerPauseButton.Corner
+    var showsLetter = true
+
+    private enum Metrics {
+        static let side = GameLayout.cornerControlSide
+        static let fold = side / 2
+        static let paperFoot = side * 2 / 3
+        static let glyphStroke = side / 12
+    }
+
+    var body: some View {
+        Canvas { context, size in
+            var paperContext = context
+            paperContext.scaleBy(x: size.width / Metrics.side, y: size.height / Metrics.side)
+            let transform = corner == .topTrailing
+                ? CGAffineTransform(a: -1, b: 0, c: 0, d: 1, tx: Metrics.side, ty: 0)
+                : .identity
+
+            var fold = Path()
+            fold.move(to: CGPoint(x: Metrics.side, y: 0))
+            fold.addLine(to: CGPoint(x: Metrics.paperFoot, y: Metrics.side))
+            fold.addLine(to: CGPoint(x: Metrics.side - Metrics.glyphStroke * 2, y: Metrics.side))
+            fold.closeSubpath()
+            paperContext.fill(fold.applying(transform), with: .color(
+                Color(red: 109 / 255, green: 109 / 255, blue: 109 / 255)))
+
+            var paper = Path()
+            paper.move(to: .zero)
+            paper.addLine(to: CGPoint(x: Metrics.side, y: 0))
+            paper.addLine(to: CGPoint(x: Metrics.paperFoot, y: Metrics.side))
+            paper.addLine(to: CGPoint(x: 0, y: Metrics.side))
+            paper.closeSubpath()
+            paperContext.fill(paper.applying(transform), with: .color(
+                Color(red: 13 / 255, green: 38 / 255, blue: 0)))
+
+            var crease = Path()
+            crease.move(to: CGPoint(x: Metrics.side, y: 0))
+            crease.addLine(to: CGPoint(x: Metrics.paperFoot, y: Metrics.side))
+            paperContext.stroke(crease.applying(transform), with: .color(
+                Color(red: 56 / 255, green: 70 / 255, blue: 49 / 255)), lineWidth: 0.75)
+
+            guard showsLetter else { return }
+            // Scale the original outline uniformly so the shallower paper never
+            // squashes P. Inset it from the rounded corner and lower fold edge.
+            let scale = size.height / Metrics.side
+            var letter = OriginalPauseLetter.path.applying(CGAffineTransform(scaleX: scale, y: scale))
+            let bounds = letter.boundingRect
+            let inset = Metrics.glyphStroke * scale
+            let leading = size.height / 2 + inset
+            let x = corner == .topLeading ? leading : size.width - leading - bounds.width
+            let y = size.height - bounds.height - inset
+            letter = letter.applying(CGAffineTransform(translationX: x - bounds.minX, y: y - bounds.minY))
+            context.fill(letter, with: .linearGradient(
+                Gradient(colors: [Color(red: 1, green: 194 / 255, blue: 29 / 255),
+                                  Color(red: 254 / 255, green: 146 / 255, blue: 53 / 255)]),
+                startPoint: CGPoint(x: 0, y: y), endPoint: CGPoint(x: 0, y: y + bounds.height)),
+                style: FillStyle(eoFill: true))
+        }
+        .accessibilityHidden(true)
     }
 }
 
@@ -74,26 +183,7 @@ private struct CornerPauseArtwork: View {
             // Preserve the original rounded P outline and counter. The inset
             // keeps it within the paper and clear of a rounded display corner;
             // the fold itself still reaches both physical screen edges.
-            var letter = Path()
-            letter.move(to: CGPoint(x: 15, y: 14))
-            letter.addLine(to: CGPoint(x: 17, y: 14))
-            letter.addLine(to: CGPoint(x: 17, y: 9))
-            letter.addLine(to: CGPoint(x: 19, y: 9))
-            letter.addCurve(to: CGPoint(x: 23, y: 5),
-                            control1: CGPoint(x: 22, y: 9), control2: CGPoint(x: 23, y: 7))
-            letter.addCurve(to: CGPoint(x: 19, y: 1),
-                            control1: CGPoint(x: 23, y: 2), control2: CGPoint(x: 22, y: 1))
-            letter.addCurve(to: CGPoint(x: 15, y: 4),
-                            control1: CGPoint(x: 16, y: 1), control2: CGPoint(x: 15, y: 2))
-            letter.closeSubpath()
-            letter.move(to: CGPoint(x: 17, y: 3))
-            letter.addLine(to: CGPoint(x: 19, y: 3))
-            letter.addCurve(to: CGPoint(x: 21, y: 5),
-                            control1: CGPoint(x: 20.5, y: 3), control2: CGPoint(x: 21, y: 3.5))
-            letter.addCurve(to: CGPoint(x: 19, y: 7),
-                            control1: CGPoint(x: 21, y: 6.5), control2: CGPoint(x: 20.5, y: 7))
-            letter.addLine(to: CGPoint(x: 17, y: 7))
-            letter.closeSubpath()
+            var letter = OriginalPauseLetter.path
             letter = letter.applying(CGAffineTransform(a: 0.5, b: 0, c: 0, d: 0.5, tx: 6.5, ty: 7))
             if corner == .topLeading {
                 let bounds = letter.boundingRect
@@ -107,6 +197,32 @@ private struct CornerPauseArtwork: View {
                 style: FillStyle(eoFill: true))
         }
         .accessibilityHidden(true)
+    }
+}
+
+private enum OriginalPauseLetter {
+    static var path: Path {
+        var letter = Path()
+        letter.move(to: CGPoint(x: 15, y: 14))
+        letter.addLine(to: CGPoint(x: 17, y: 14))
+        letter.addLine(to: CGPoint(x: 17, y: 9))
+        letter.addLine(to: CGPoint(x: 19, y: 9))
+        letter.addCurve(to: CGPoint(x: 23, y: 5),
+                        control1: CGPoint(x: 22, y: 9), control2: CGPoint(x: 23, y: 7))
+        letter.addCurve(to: CGPoint(x: 19, y: 1),
+                        control1: CGPoint(x: 23, y: 2), control2: CGPoint(x: 22, y: 1))
+        letter.addCurve(to: CGPoint(x: 15, y: 4),
+                        control1: CGPoint(x: 16, y: 1), control2: CGPoint(x: 15, y: 2))
+        letter.closeSubpath()
+        letter.move(to: CGPoint(x: 17, y: 3))
+        letter.addLine(to: CGPoint(x: 19, y: 3))
+        letter.addCurve(to: CGPoint(x: 21, y: 5),
+                        control1: CGPoint(x: 20.5, y: 3), control2: CGPoint(x: 21, y: 3.5))
+        letter.addCurve(to: CGPoint(x: 19, y: 7),
+                        control1: CGPoint(x: 21, y: 6.5), control2: CGPoint(x: 20.5, y: 7))
+        letter.addLine(to: CGPoint(x: 17, y: 7))
+        letter.closeSubpath()
+        return letter
     }
 }
 #endif

@@ -22,21 +22,34 @@ indicator during verification; the final range avoids that failure and the
 system Crown accessory is hidden. Rotation during the original automatic ship
 entrance or death is discarded rather than queued for the next playable state.
 
-The Watch uses the native folded-paper Pause control at the safe top left. Its
-fold mirrors the existing iPhone artwork while P remains upright. The guest
-pause sprite and hit target are removed from the Watch surface; the native
-button still invokes the original pause routine. Resume restores Crown focus.
+The Watch uses the native folded-paper Pause control. **1.1 (4)** anchors it to
+the physical top-left corner rather than adding the Watch's top safe-area gap.
+The shallower angled fold is **26 points tall**, compared with about 49 points
+on the 46 mm Watch before this correction. Its original P stays upright and
+uniformly proportioned, with the artwork ending above the clock's text baseline.
+A Watch-only navigation container supplies the native leading toolbar button
+alongside the clock. The bar background is hidden; the paper decoration fills
+the physical corner. The native button keeps a larger invisible tap area for
+reliable activation, including below the visible fold. This is a visual size
+reduction, not a guarantee of touch pass-through in the system toolbar region.
+The guest pause sprite and hit target are removed from the Watch surface; the
+native button still invokes the original pause routine. Resume restores Crown
+focus. The container fixes physical left placement regardless of layout direction.
 
 Watch HUD placement is explicit, independent of aspect ratio. The original
 score, high score, stage/deaths, charge cells and boss gauge form the same two
-rows at the bottom of the safe region. Original glyph metrics remain unchanged.
-The original left inset supplies clearance above the rounded lower edge;
-narrower safe widths compress the original gaps between columns. Ship travel,
-gameplay sprites, and other platforms' HUD placement stay unchanged.
+rows near the full screen's bottom edge. **1.1 (4)** removes the extra Watch
+bottom safe-area gap: the original left inset plus one original glyph row
+supplies 46 logical units of clearance above the rounded lower edge, about
+20 points on the 46 mm Watch. Original glyph metrics remain unchanged. The
+complete HUD, including the slanted full boss gauge, is horizontally centered
+as one group within the horizontal safe bounds. Narrower safe widths compress
+the original gaps between columns. Ship travel, gameplay sprites, and other
+platforms' HUD placement stay unchanged.
 
 ## Verification
 
-On 26 October 2026, the following checks passed:
+The **1.1 (3)** steering checks on 26 October 2026 passed:
 
 - `script/test_watch_controls.sh`: **35 ASan/UBSan engine checks**. The actual
   normalized ship position moved `0.5 → 0.213242 → 0.726602`, with no held aim.
@@ -59,8 +72,24 @@ On 26 October 2026, the following checks passed:
 - The watchOS device build is development-signed **1.1 (3)**. Strict signature
   verification passed, and its provisioning profile includes the Series 12.
 
-These checks prove the original steering and host input bridge. Automated
-Simulator wheel attempts do not establish physical Crown delivery or feel.
-Physical Series 12 installation and Crown verification remain pending while
-the Watch is unreachable (`CoreDeviceError 4016`). Earlier physical-build
-history remains in [Verification.md](Verification.md).
+The **1.1 (4)** layout correction additionally passed:
+
+- **2,091 strict-compiler and ASan/UBSan checks** of the original-data display
+  patch. These cover full-surface bottom placement, group centering including
+  the full boss gauge, narrow and asymmetric safe bounds, preserved original
+  glyph/charge metrics, atomic rejection and exact non-Watch restoration.
+- The Series 12 46 mm Simulator visibly showed the compact corner fold above
+  the clock baseline and the centered bottom HUD. Tapping the visible P opened
+  the original Pause menu; Continue resumed gameplay. Native toolbar taps can
+  activate Pause below the visible paper, as noted above.
+- The shared iOS host compiled for iPhone 18 Pro Simulator without warnings.
+  This was a compile-only regression check.
+- The watchOS device build passed strict signature verification and Series 12
+  provisioning membership. CoreDevice installed **1.1 (4)** in place on the
+  physical Series 12, confirmed its bundle/version, and launched it without test
+  overrides (PID **958**). No uninstall or physical game-data reset was performed.
+
+These checks prove the original steering and host input bridge, layout and
+physical installation/launch. Automated Simulator wheel attempts do not
+establish physical Crown delivery or feel. Updated hardware gameplay remains a
+separate check. Earlier physical-build history is in [Verification.md](Verification.md).

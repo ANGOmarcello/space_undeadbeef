@@ -4,9 +4,14 @@ The subsequent measured 60 Hz performance pass, audio mixer replacement and
 its exact verification limits are recorded in [Performance.md](Performance.md).
 The following optional iPhone feedback step is recorded in [Haptics.md](Haptics.md).
 
-The **1.1 (3)** Watch Crown, Pause and bottom-HUD fixes are documented in
+The **1.1 (3)** Watch Crown fixes and **1.1 (4)** pause/HUD layout correction are documented in
 [WatchControls.md](WatchControls.md), with separate engine, session, Simulator,
 signing and physical-device verification boundaries.
+Build **1.1 (4)** was installed in place and launched on the physical Series 12
+on 26 October 2026 (PID 958). Its compact corner artwork, original Pause/Continue
+flow and centered bottom HUD were visually verified in the Watch Simulator;
+hardware Crown feel and the native toolbar's larger invisible hit region remain
+separate considerations documented there.
 
 Build **1.1 (2)** corrects menu/weapon/explosion event coverage and native haptics
 view association after the user reported no felt feedback. It passed 287 engine

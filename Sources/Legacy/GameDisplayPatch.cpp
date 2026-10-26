@@ -97,9 +97,11 @@ constexpr double originalLiteral(Value value) {
 }
 constexpr double HUDRowHeight = originalLiteral(Value::stageTop) - originalLiteral(Value::scoreTop);
 constexpr double HUDRoundedClearance = DisplayGeometry::OriginalWidth / 2 + originalLiteral(Value::scoreLeft);
+constexpr double HUDWatchBottomClearance = HUDRoundedClearance + HUDRowHeight;
 constexpr double HUDGlyphWidth = HUDRowHeight / 2;
 constexpr double HUDScoreWidth = (sizeof("SCORE ") - 1 + 8) * HUDGlyphWidth;
 constexpr double HUDHighScoreWidth = (sizeof("HI-SCORE ") - 1 + 8) * HUDGlyphWidth;
+constexpr double HUDStageWidth = (sizeof("STAGE 1-01 DIED 0") - 1) * HUDGlyphWidth;
 // Display::render draws sixteen original charge cells at six-unit pitch;
 // their source vertices extend four units horizontally on either side.
 constexpr double HUDChargeWidth = 15 * 6 + 2 * 4;
@@ -110,6 +112,8 @@ constexpr double HUDScoreGap = HUDHighScoreLeft - HUDRoundedClearance - HUDScore
 constexpr double HUDHighScoreGap = HUDChargeLeft - HUDHighScoreLeft - HUDHighScoreWidth;
 constexpr double HUDMinimumWidth = HUDRoundedClearance + HUDScoreWidth + HUDHighScoreWidth +
                                    HUDChargeWidth + HUDChargeRightInset;
+constexpr double HUDGaugeWidth = 100;
+constexpr double HUDGaugeSlant = double(2.67f); // Exact original float at 0xdb88.
 
 constexpr uint32_t TraceBoundaries[] = {
     0x11c88, 0x11dc0, 0x11ef8, 0x11fb8, 0x12078, 0x12138, 0x12288,
@@ -147,7 +151,8 @@ bool GameDisplayPatch::initialize(GuestCPU& cpu) {
     if (!expected(cpu, 0x81e8, bits(float(HUDGlyphWidth))) ||
         !expected(cpu, 0x81f0, bits(float(HUDRowHeight))) ||
         !expected(cpu, 0x8338, bits(-6)) || !expected(cpu, 0x11b54, bits(4)) ||
-        !expected(cpu, 0x11b6c, bits(-4))) return false;
+        !expected(cpu, 0x11b6c, bits(-4)) || !expected(cpu, 0xd8b4, bits(float(HUDGaugeWidth))) ||
+        !expected(cpu, 0xdb88, bits(float(HUDGaugeSlant)))) return false;
     if (cpu.read16(0x5a3c) != 0x491a || cpu.read16(0xc5ba) != 0x4a2b ||
         cpu.read16(0xc5ce) != 0x609a) return fail(cpu, "unexpected original geometry instructions");
     if (!fingerprint(cpu, 0x11c88, 0x12a68, UINT64_C(0xbf4efe41dcbd1ecd)) ||
@@ -199,11 +204,12 @@ bool GameDisplayPatch::initialize(GuestCPU& cpu) {
 Rect GameDisplayPatch::watchHUDRect(const DisplayGeometry& geometry) {
     if (!geometry.valid || !geometry.logicalRect.finite() || !geometry.safeUIRect.finite()) return {};
     const Rect safe = geometry.safeUIRect.intersection(geometry.logicalRect);
-    if (safe.width < HUDMinimumWidth || safe.height < HUDRoundedClearance + 2 * HUDRowHeight) return {};
-    // Reuse the original left text inset at the lower rounded edge. Keep the
-    // original sixteen-unit rows and font metrics, rather than scaling text.
-    return {safe.minX(), safe.maxY() - HUDRoundedClearance - 2 * HUDRowHeight,
-            safe.width, 2 * HUDRowHeight};
+    const double top = geometry.logicalRect.maxY() - HUDWatchBottomClearance - 2 * HUDRowHeight;
+    if (safe.width < HUDMinimumWidth || top < safe.minY()) return {};
+    // The full surface already includes Watch's bottom safe-area inset. Raise
+    // the HUD one original glyph row above its thirty-unit rounded clearance,
+    // retaining the horizontal/top safe bounds and original font metrics.
+    return {safe.minX(), top, safe.width, 2 * HUDRowHeight};
 }
 
 bool GameDisplayPatch::apply(GuestCPU& cpu, const DisplayGeometry& geometry, bool watchLayout) {
@@ -239,6 +245,21 @@ bool GameDisplayPatch::apply(GuestCPU& cpu, const DisplayGeometry& geometry, boo
     // contract, in their original 34:14 proportion, when Watch safe width falls.
     const double hudGapScale = watchLayout ? std::clamp((safe.width - HUDMinimumWidth) /
                                                        (HUDScoreGap + HUDHighScoreGap), 0.0, 1.0) : 1;
+    const double scoreLeft = left + HUDRoundedClearance;
+    const double highScoreLeft = scoreLeft + HUDScoreWidth + HUDScoreGap * hudGapScale;
+    const double chargeRight = right - 60, gaugeRight = right - 155;
+    double hudHorizontalOffset = 0;
+    if (watchLayout) {
+        // Center the complete original HUD as one group after gap compression.
+        // The full slanted boss gauge extends farther right than the charge
+        // cells; using only text or charge bounds leaves the group off-center.
+        const double minimum = std::min({scoreLeft, highScoreLeft,
+                                         chargeRight - HUDChargeWidth + 4, gaugeRight});
+        const double maximum = std::max({scoreLeft + HUDScoreWidth, scoreLeft + HUDStageWidth,
+                                         highScoreLeft + HUDHighScoreWidth, chargeRight + 4,
+                                         gaugeRight + HUDGaugeWidth + HUDGaugeSlant});
+        hudHorizontalOffset = (left + right) / 2 - (minimum + maximum) / 2;
+    }
     for (const Literal& literal : Literals) {
         double value = literal.original;
         switch (literal.value) {
@@ -249,13 +270,11 @@ bool GameDisplayPatch::apply(GuestCPU& cpu, const DisplayGeometry& geometry, boo
             case Value::scoreTop: value = hudTop; break;
             case Value::stageTop: value = hudTop + HUDRowHeight; break;
             case Value::chargeTop: value = hudTop + literal.original - originalLiteral(Value::scoreTop); break;
-            case Value::scoreLeft: value = left + 30; break;
-            case Value::highScoreLeft:
-                value = left + HUDRoundedClearance + HUDScoreWidth + HUDScoreGap * hudGapScale;
-                break;
-            case Value::chargeRight: value = right - 60; break;
+            case Value::scoreLeft: value = scoreLeft + hudHorizontalOffset; break;
+            case Value::highScoreLeft: value = highScoreLeft + hudHorizontalOffset; break;
+            case Value::chargeRight: value = chargeRight + hudHorizontalOffset; break;
             case Value::gaugeTop: value = hudTop + literal.original - originalLiteral(Value::scoreTop); break;
-            case Value::gaugeRight: value = right - 155; break;
+            case Value::gaugeRight: value = gaugeRight + hudHorizontalOffset; break;
             case Value::negativeHeight: value = -height; break;
             case Value::height: value = height; break;
             case Value::width: value = width; break;

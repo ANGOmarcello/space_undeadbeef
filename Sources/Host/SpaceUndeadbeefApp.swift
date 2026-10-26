@@ -20,8 +20,16 @@ struct SpaceUndeadbeefApp: App {
         .windowStyle(.hiddenTitleBar)
         #else
         WindowGroup {
+            #if os(watchOS)
+            NavigationStack {
+                GameView()
+                    .preferredColorScheme(.dark)
+            }
+            .environment(\.layoutDirection, .leftToRight)
+            #else
             GameView()
                 .preferredColorScheme(.dark)
+            #endif
         }
         #endif
     }

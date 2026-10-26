@@ -46,20 +46,29 @@ struct GameView: View {
                         .environment(\.layoutDirection, .leftToRight)
                 }
             }
-            #elseif os(watchOS)
-            .overlay(alignment: .topLeading) {
-                if session.canPause {
-                    CornerPauseButton(viewScale: size.width / session.logicalSize.width,
-                                      corner: .topLeading, action: session.pauseGame)
-                        .environment(\.layoutDirection, .leftToRight)
-                        .padding(.leading, insets.leading)
-                        .padding(.top, insets.top)
-                }
-            }
             #endif
             .offset(x: -insets.leading, y: -insets.top)
             .onChange(of: viewport, initial: true) { _, value in session.configure(value) }
         }
+        #if os(watchOS)
+        .overlay {
+            WatchCornerControls(session: session)
+                .ignoresSafeArea(.container)
+        }
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                if session.canPause {
+                    Button(action: session.pauseGame) {
+                        WatchPauseToolbarLabel()
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Pause game")
+                    .accessibilityIdentifier("pause-game")
+                }
+            }
+        }
+        .toolbarBackgroundVisibility(.hidden, for: .navigationBar)
+        #endif
         .onChange(of: scenePhase, initial: true) { _, phase in
             session.setActive(phase == .active)
             #if os(watchOS)
@@ -185,3 +194,20 @@ struct GameView: View {
     }
     #endif
 }
+
+#if os(watchOS)
+/// Paint the original fold at the physical edge. The native leading toolbar
+/// button owns input in this system-managed corner alongside the Watch clock.
+private struct WatchCornerControls: View {
+    let session: GameSession
+
+    var body: some View {
+        GeometryReader { geometry in
+            if session.canPause {
+                WatchPauseDecoration(viewScale: geometry.size.width / session.logicalSize.width)
+                    .environment(\.layoutDirection, .leftToRight)
+            }
+        }
+    }
+}
+#endif

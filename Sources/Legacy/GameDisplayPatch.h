@@ -28,8 +28,10 @@ public:
     // alone must never select this policy (for example, on iPad).
     bool apply(GuestCPU& cpu, const DisplayGeometry& geometry, bool watchLayout = false);
 
-    // Full-width band reserved for Watch HUD layout and verification. This
-    // never changes the playable arena or the original player travel bounds.
+    // Watch HUD layout/verification band uses the full surface bottom, with
+    // rounded-edge clearance plus one glyph row and horizontal/top safe bounds.
+    // Original HUD content centers as one group within its horizontal bounds.
+    // It never changes the playable arena or original player travel bounds.
     static Rect watchHUDRect(const DisplayGeometry& geometry);
 
     // Keep this inexpensive guard in the CPU hook's C++ fast path, before

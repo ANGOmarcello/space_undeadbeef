@@ -20,6 +20,7 @@ enum GameLayout {
     static let pointerStep = width / 24
     static let pointerDiameter = height / 40
     static let pointerStroke = pointerDiameter / 4
+    static let cornerControlSide: CGFloat = 24
 
     static func fittedSize(in available: CGSize) -> CGSize {
         let scale = max(0, min(available.width / width, available.height / height))
