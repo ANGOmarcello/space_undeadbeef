@@ -18,6 +18,13 @@ over Wi-Fi (PID 1023). CoreDevice confirmed the installed build, and a direct
 Watch screenshot showed the updated menu with **Continue 1-16** preserved.
 See the physical-update section in [WatchControls.md](WatchControls.md).
 
+Build **1.1 (8)** replaces the sparse Watch policy with iPhone's event cadence,
+including 250 ms explosion feedback and short Watch clicks for frequent effects.
+All 147 shared/Watch policy checks and Watch/iPhone Simulator builds pass. The
+signed Watch build passed signature/provisioning checks, was installed in place,
+read back as 1.1 (8), and normally launched on Series 12 (PID 1055). Revised wrist
+feel remains a user check. Details are in [Haptics.md](Haptics.md).
+
 Build **1.1 (6)** enabled the original Watch Haptics Options controls. Its
 Simulator UI showed default ON, preserved OFF through SAVE-EXIT/reopening, native
 ON-preview requests, and inactive suppression. After the signed update was

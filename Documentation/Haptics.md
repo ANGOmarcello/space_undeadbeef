@@ -6,6 +6,8 @@ and Respect Silent Mode. An explicit OFF remains OFF. Tests use isolated
 `SDB_SAVE_DIRECTORY` preferences and never real user settings. iPhone and Watch
 hosts offer native feedback through the same original Options controls. Each
 host bundle stores its own choice; the iPhone implementation is unchanged.
+Current Watch build **1.1 (8)** shares the iPhone event policy; the earlier
+Watch-specific quiet windows described under builds 6–7 are historical.
 
 ## Feedback delivery correction, build 1.1 (2)
 
@@ -143,3 +145,52 @@ No system audio or haptic settings are changed.
 No Apple TV was queried or activated for this Watch adaptation. The task's
 Simulator game process was stopped after verification; other apps, system
 settings and pre-existing Simulator boot state were left alone.
+
+## Watch cadence parity, build 1.1 (8)
+
+The user reported sparse Watch feedback compared with iPhone, especially for
+small impacts and explosions. Builds 6–7 deliberately imposed a 500 ms shared
+quiet window, 750 ms protection after volleys/damage, and a 1.5 second explosion
+interval. These app-imposed restrictions caused additional Watch-only dropouts;
+they were not watchOS rate limits.
+
+Watch now aliases the existing `GameHapticPolicy`, using exactly the iPhone's
+event selection, priorities, cooldowns and no-replay behavior. Explosions can
+return after 250 ms and the same gameplay quiet interval as iPhone, volleys use
+250 ms, primary fire 500 ms, damage 350 ms, targets 1 second and menu actions
+120 ms. The table in the iPhone section above defines the shared rules. The iPhone
+policy and native feedback implementation did not change.
+
+Frequent Watch events all request the short Click preset. The longer Start volley
+pattern was removed so it does not compete with rapid impacts. Player damage
+retains Direction down. Active-app, explicit OFF and no-queue guards remain.
+
+This matches detected-event coverage and requested timing, not physical texture.
+`CHHapticEngine` is explicitly unavailable on watchOS in the installed iPhone SDK,
+and WatchKit supplies presets without per-call intensity. Apple's
+[play documentation](https://developer.apple.com/documentation/watchkit/wkinterfacedevice/play(_:))
+says a request can interrupt an engaged engine and delay the next pattern by at
+least 100 ms; it does not specify a maximum playback rate. Distinct felt pulses
+for every overlapping effect cannot be guaranteed. The original engine coalesces
+same-kind events per frame, and each host chooses one event per update. Generic
+projectile contact without an Explosion or player-health decrease has no separate
+hook on either platform.
+
+Verification:
+
+- **147** Swift 6 warnings-as-errors policy checks pass: the original **117**
+  iPhone checks plus **30** Watch cadence regressions. Explicit expected events
+  cover repeated 250 ms explosions, volley/primary preemption, damage, matching
+  iPhone decisions, OFF and no replay. The obsolete sparse-Watch assertions were
+  removed because that policy was intentionally replaced.
+- Watch Simulator, signed Watch-device and iPhone 18 Pro Simulator builds pass.
+  These were compile-only regression checks; no Simulator interaction, app
+  preferences, boot state or system settings were changed for build 8. Original
+  event-observation integration checks remain recorded above; no engine hook changed.
+- Strict signature verification and exact Series 12 provisioning membership pass.
+  CoreDevice installed **1.1 (8)** in place, independently read back that version,
+  and launched normally (PID **1055**) with no test-save or audio overrides. Existing
+  progress and Options preferences were retained. Build 8's gameplay feel still
+  requires the user's wrist check; installation and cadence tests do not prove feel.
+
+Only the known Series 12 was targeted. No Apple TV discovery or activation occurred.

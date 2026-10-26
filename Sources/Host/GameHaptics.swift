@@ -122,82 +122,10 @@ struct GameHapticPolicy {
     }
 }
 
-/// Watch exposes fixed patterns without per-call intensity. Leave quiet time
-/// between patterns and discard events without a queue.
-struct WatchGameHapticPolicy {
-    static let menuInterval: TimeInterval = 0.25
-    static let gameplayInterval: TimeInterval = 0.50
-    static let primaryInterval: TimeInterval = 1.0
-    static let volleyInterval: TimeInterval = 0.75
-    static let damageInterval: TimeInterval = 0.75
-    static let explosionInterval: TimeInterval = 1.5
-    static let targetInterval: TimeInterval = 2.0
-
-    private var lastObservedTime: TimeInterval?
-    private var lastFeedbackTime: TimeInterval?
-    private var lastPrimaryTime: TimeInterval?
-    private var lastVolleyTime: TimeInterval?
-    private var lastDamageTime: TimeInterval?
-    private var lastExplosionTime: TimeInterval?
-    private var lastTargetTime: TimeInterval?
-
-    mutating func feedback(enabled: Bool, events: UInt, at time: TimeInterval) -> GameHapticEvent? {
-        guard enabled, time.isFinite, events & 63 != 0 else { return nil }
-        if let lastObservedTime, time < lastObservedTime { return nil }
-        lastObservedTime = time
-
-        // Give health-loss and volley-start patterns a conservative quiet budget
-        // before any new feedback, including menus. These are app rate limits,
-        // not system guarantees about a pattern's physical completion time.
-        guard ready(lastDamageTime, interval: Self.damageInterval, at: time) else { return nil }
-        guard ready(lastVolleyTime, interval: Self.volleyInterval, at: time) else { return nil }
-        if events & GameHapticEvent.menuSelection.rawValue != 0,
-           ready(lastFeedbackTime, interval: Self.menuInterval, at: time) {
-            return emitted(.menuSelection, at: time)
-        }
-        // Every emitted event, including a menu tick, starts this gameplay
-        // quiet interval. Weapon/lock/explosion alternation cannot bypass it.
-        guard ready(lastFeedbackTime, interval: Self.gameplayInterval, at: time) else { return nil }
-        if events & GameHapticEvent.damage.rawValue != 0 {
-            return emitted(.damage, at: time)
-        }
-        if events & GameHapticEvent.shot.rawValue != 0,
-           ready(lastVolleyTime, interval: Self.volleyInterval, at: time) {
-            return emitted(.shot, at: time)
-        }
-        if events & GameHapticEvent.primaryShot.rawValue != 0,
-           ready(lastPrimaryTime, interval: Self.primaryInterval, at: time) {
-            return emitted(.primaryShot, at: time)
-        }
-        if events & GameHapticEvent.explosion.rawValue != 0,
-           ready(lastExplosionTime, interval: Self.explosionInterval, at: time) {
-            return emitted(.explosion, at: time)
-        }
-        if events & GameHapticEvent.targetLock.rawValue != 0,
-           ready(lastTargetTime, interval: Self.targetInterval, at: time) {
-            return emitted(.targetLock, at: time)
-        }
-        return nil
-    }
-
-    private mutating func emitted(_ event: GameHapticEvent, at time: TimeInterval) -> GameHapticEvent {
-        lastFeedbackTime = time
-        switch event {
-        case .menuSelection: break
-        case .primaryShot: lastPrimaryTime = time
-        case .shot: lastVolleyTime = time
-        case .damage: lastDamageTime = time
-        case .explosion: lastExplosionTime = time
-        case .targetLock: lastTargetTime = time
-        }
-        return event
-    }
-
-    private func ready(_ previous: TimeInterval?, interval: TimeInterval, at time: TimeInterval) -> Bool {
-        guard let previous else { return true }
-        return time - previous >= interval
-    }
-}
+/// Match iPhone event coverage, timing and priority. Watch uses short system
+/// clicks for frequent effects, without extra platform-specific quiet windows.
+/// WatchKit may interrupt overlapping patterns; requests are never queued here.
+typealias WatchGameHapticPolicy = GameHapticPolicy
 
 @MainActor
 final class GameHaptics {
@@ -343,13 +271,10 @@ final class GameHaptics {
         let pattern: WKHapticType
         let nativeCall: String
         switch event {
-        case .shot:
-            pattern = .start
-            nativeCall = "play.start"
         case .damage:
             pattern = .directionDown
             nativeCall = "play.directionDown"
-        case .menuSelection, .primaryShot, .targetLock, .explosion:
+        case .menuSelection, .shot, .primaryShot, .targetLock, .explosion:
             pattern = .click
             nativeCall = "play.click"
         }

@@ -156,8 +156,9 @@ the three-section audio layout. Both native feedback hosts consume
 coalesced original menu, weapon, target-acquisition, explosion and actual
 player-health decrease events, independently of sound. View-associated UIKit
 generators use separate bounded cooldowns so lock ticks cannot suppress shots.
-WatchKit uses system patterns with slower shared and per-event limits, only while
-the Watch app is active. Its preset-pattern audibility is governed by watchOS.
+WatchKit uses short system patterns with the same event timing and priorities as
+iPhone, only while the Watch app is active. Its preset-pattern audibility is
+governed by watchOS, and overlapping patterns can be interrupted.
 See [Haptics.md](Haptics.md) for verification and persistence details.
 
 When `SDB_SAVE_DIRECTORY` is provided for a test, the preference keys use an

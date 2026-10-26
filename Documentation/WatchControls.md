@@ -132,3 +132,14 @@ The final development-signed **1.1 (7)** passed strict signature/profile checks,
 was installed in place on the same Series 12, read back as build 7, and launched
 normally (PID 1052). No test save/audio overrides or uninstall were used. Physical
 feel of the revised volley pattern remains a user check.
+
+## Watch cadence update to 1.1 (8)
+
+After the user reported sparse impact/explosion feedback, build 8 removes the
+extra Watch-only quiet windows and uses the same event policy as iPhone. Volleys
+return to short clicks for rapid effects; damage retains Direction down. Crown,
+Pause and HUD behavior are unchanged. The signed app was installed in place,
+independently read back as **1.1 (8)**, and normally launched on Series 12
+(PID **1055**), retaining saves and preferences. See
+[Haptics.md](Haptics.md#watch-cadence-parity-build-11-8) for the shared cadence,
+147 policy checks, platform limits and outstanding physical-feel boundary.
