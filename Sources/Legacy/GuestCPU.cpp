@@ -34,46 +34,12 @@ void GuestCPU::fail(const std::string& message) {
     if (fault.empty()) fault = message;
 }
 
-bool GuestCPU::range(uint32_t address, size_t size) {
-    if (address > memory.size() || size > memory.size() - address) {
-        std::ostringstream message;
-        message << "Guest memory access outside 32 MiB: 0x" << std::hex << address
-                << " (" << std::dec << size << " bytes), PC 0x" << std::hex
-                << instructionAddress_;
-        fail(message.str());
-        return false;
-    }
-    return true;
-}
-
-uint8_t GuestCPU::read8(uint32_t address) {
-    return range(address, 1) ? memory[address] : 0;
-}
-
-uint16_t GuestCPU::read16(uint32_t address) {
-    if (!range(address, 2)) return 0;
-    return uint16_t(memory[address]) | uint16_t(uint16_t(memory[address + 1]) << 8);
-}
-
-uint32_t GuestCPU::read32(uint32_t address) {
-    if (!range(address, 4)) return 0;
-    return uint32_t(memory[address]) | (uint32_t(memory[address + 1]) << 8) |
-           (uint32_t(memory[address + 2]) << 16) | (uint32_t(memory[address + 3]) << 24);
-}
-
-void GuestCPU::write8(uint32_t address, uint8_t value) {
-    if (range(address, 1)) memory[address] = value;
-}
-
-void GuestCPU::write16(uint32_t address, uint16_t value) {
-    if (!range(address, 2)) return;
-    memory[address] = uint8_t(value);
-    memory[address + 1] = uint8_t(value >> 8);
-}
-
-void GuestCPU::write32(uint32_t address, uint32_t value) {
-    if (!range(address, 4)) return;
-    for (unsigned byte = 0; byte != 4; ++byte) memory[address + byte] = uint8_t(value >> (byte * 8));
+void GuestCPU::memoryFault(uint32_t address, size_t size) {
+    std::ostringstream message;
+    message << "Guest memory access outside 32 MiB: 0x" << std::hex << address
+            << " (" << std::dec << size << " bytes), PC 0x" << std::hex
+            << instructionAddress_;
+    fail(message.str());
 }
 
 bool GuestCPU::load(uint32_t address, const void* bytes, size_t size) {
@@ -380,9 +346,9 @@ void GuestCPU::thumbInstruction(uint16_t op) {
         if (!range(address, bytes)) return;
         for (unsigned reg = 0; reg != 16; ++reg) if ((list & (1u << reg)) != 0) {
             if (pop) {
-                const uint32_t value = read32(address);
+                const uint32_t value = readWord(address);
                 if (reg == 15) branchExchange(value); else r[reg] = value;
-            } else write32(address, r[reg]);
+            } else writeWord(address, r[reg]);
             address += 4;
         }
         r[13] = pop ? r[13] + bytes : r[13] - bytes;
@@ -407,7 +373,7 @@ void GuestCPU::thumbInstruction(uint16_t op) {
         uint32_t address = r[base];
         if (!range(address, bytes)) return;
         for (unsigned reg = 0; reg != 8; ++reg) if ((list & (1u << reg)) != 0) {
-            if (loadRegisters) r[reg] = read32(address); else write32(address, r[reg]);
+            if (loadRegisters) r[reg] = readWord(address); else writeWord(address, r[reg]);
             address += 4;
         }
         // When the base is loaded, its loaded value wins over writeback.
@@ -537,8 +503,8 @@ void GuestCPU::armInstruction(uint32_t op) {
         const uint32_t address = pre ? adjusted : base;
         if (!loadRegister && operation != 1) {
             if ((rd & 1u) != 0 || rd >= 14 || !range(address, 8)) { unknown(op, 32); return; }
-            if (operation == 2) { r[rd] = read32(address); r[rd + 1] = read32(address + 4); }
-            else { write32(address, r[rd]); write32(address + 4, r[rd + 1]); }
+            if (operation == 2) { r[rd] = readWord(address); r[rd + 1] = readWord(address + 4); }
+            else { writeWord(address, r[rd]); writeWord(address + 4, r[rd + 1]); }
         } else if (loadRegister) {
             if (operation == 1) r[rd] = read16(address);
             else if (operation == 2) r[rd] = signExtend(read8(address), 8);
@@ -565,9 +531,9 @@ void GuestCPU::armInstruction(uint32_t op) {
         if (!range(address, bytes)) return;
         for (unsigned reg = 0; reg != 16; ++reg) if ((list & (1u << reg)) != 0) {
             if (loadRegisters) {
-                const uint32_t value = read32(address);
+                const uint32_t value = readWord(address);
                 if (reg == 15) branchExchange(value); else r[reg] = value;
-            } else write32(address, armRegister(reg, true));
+            } else writeWord(address, armRegister(reg, true));
             address += 4;
         }
         if (writeback && (!loadRegisters || (list & (1u << rn)) == 0)) r[rn] = up ? base + bytes : base - bytes;

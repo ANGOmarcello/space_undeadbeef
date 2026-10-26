@@ -44,12 +44,27 @@ public:
     // must advance PC, normally with returnFromHook(). It counts toward budgets.
     std::function<bool(GuestCPU&, uint32_t)> hook;
 
-    uint8_t read8(uint32_t address);
-    uint16_t read16(uint32_t address);
-    uint32_t read32(uint32_t address);
-    void write8(uint32_t address, uint8_t value);
-    void write16(uint32_t address, uint16_t value);
-    void write32(uint32_t address, uint32_t value);
+    uint8_t read8(uint32_t address) {
+        return range(address, 1) ? memory[address] : 0;
+    }
+    uint16_t read16(uint32_t address) {
+        if (!range(address, 2)) return 0;
+        return uint16_t(memory[address]) | uint16_t(uint16_t(memory[address + 1]) << 8);
+    }
+    uint32_t read32(uint32_t address) {
+        return range(address, 4) ? readWord(address) : 0;
+    }
+    void write8(uint32_t address, uint8_t value) {
+        if (range(address, 1)) memory[address] = value;
+    }
+    void write16(uint32_t address, uint16_t value) {
+        if (!range(address, 2)) return;
+        memory[address] = uint8_t(value);
+        memory[address + 1] = uint8_t(value >> 8);
+    }
+    void write32(uint32_t address, uint32_t value) {
+        if (range(address, 4)) writeWord(address, value);
+    }
     bool load(uint32_t address, const void* bytes, size_t size);
 
     // Executes one guest instruction or bridge. Returns false on a fault or
@@ -72,7 +87,25 @@ private:
     struct ShiftResult { uint32_t value; bool carry; };
     unsigned callDepth_ = 0;
     uint32_t instructionAddress_ = 0;
-    bool range(uint32_t address, size_t size);
+    // Only use these after validating the whole access or register-transfer
+    // span. No callback runs between span validation and its individual words.
+    uint32_t readWord(uint32_t address) const {
+        return uint32_t(memory[address]) | (uint32_t(memory[address + 1]) << 8) |
+               (uint32_t(memory[address + 2]) << 16) | (uint32_t(memory[address + 3]) << 24);
+    }
+    void writeWord(uint32_t address, uint32_t value) {
+        for (unsigned byte = 0; byte != 4; ++byte)
+            memory[address + byte] = uint8_t(value >> (byte * 8));
+    }
+    // Keep valid accesses cheap even when the caller is inlined. Diagnostic
+    // stream construction belongs on the out-of-bounds path only.
+    bool range(uint32_t address, size_t size) {
+        const size_t available = memory.size();
+        if (address <= available && size <= available - address) return true;
+        memoryFault(address, size);
+        return false;
+    }
+    void memoryFault(uint32_t address, size_t size);
     bool condition(unsigned conditionCode) const;
     void setNZ(uint32_t value);
     uint32_t add(uint32_t a, uint32_t b, bool carryIn, bool setFlags);

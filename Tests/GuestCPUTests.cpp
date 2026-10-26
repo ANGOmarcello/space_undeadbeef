@@ -74,6 +74,71 @@ void memoryTests() {
     require(!cpu.load(0x100, nullptr, 1), "null source fails safely");
 }
 
+void boundedMemoryTests() {
+    GuestCPU cpu;
+    cpu.memory.assign(3, 0x5a);
+    equal(cpu.read32(0), 0, "word access rejects a memory span smaller than one word");
+    require(!cpu.fault.empty(), "small memory word read faults without size underflow");
+    cpu.fault.clear();
+    const auto original = cpu.memory;
+    cpu.write32(0, 0xffffffffu);
+    require(!cpu.fault.empty() && cpu.memory == original, "small memory word write remains atomic");
+    cpu.fault.clear();
+    cpu.write16(2, 0xffff);
+    require(!cpu.fault.empty() && cpu.memory == original, "last-byte halfword write remains atomic");
+    cpu.fault.clear();
+    cpu.write16(1, 0x1234);
+    equal(cpu.read16(1), 0x1234, "unaligned halfword can end at exact memory boundary");
+    cpu.write8(2, 0xab);
+    equal(cpu.read8(2), 0xab, "last-byte access remains valid");
+    healthy(cpu, "valid accesses after preceding faults");
+    cpu.memory.clear();
+    require(cpu.load(0, nullptr, 0), "empty load into empty memory remains valid");
+    equal(cpu.read8(0), 0, "empty memory byte read returns zero");
+    require(!cpu.fault.empty(), "empty memory byte read faults");
+}
+
+void registerTransferBoundaryTests() {
+    GuestCPU cpu;
+    cpu.memory.resize(0x1000);
+    cpu.r[13] = 0x1000; cpu.r[0] = 0x12345678; cpu.r[1] = 0x89abcdef;
+    oneThumb(cpu, 0xb403); // PUSH {r0,r1}
+    equal(cpu.r[13], 0xff8, "PUSH whole span can end at exact memory boundary");
+    equal(cpu.read32(0xffc), 0x89abcdef, "PUSH writes last valid word");
+    cpu.r[0] = cpu.r[1] = 0;
+    oneThumb(cpu, 0xbc03); // POP {r0,r1}
+    equal(cpu.r[0], 0x12345678, "boundary POP restores first register");
+    equal(cpu.r[1], 0x89abcdef, "boundary POP restores last register");
+    equal(cpu.r[13], 0x1000, "boundary POP balances stack");
+
+    auto reject = [&](uint32_t opcode, bool isThumb, const char *message) {
+        cpu.fault.clear(); cpu.thumb = isThumb; cpu.r[15] = 0x100;
+        if (isThumb) cpu.write16(0x100, uint16_t(opcode)); else cpu.write32(0x100, opcode);
+        const auto memory = cpu.memory;
+        const auto registers = cpu.r;
+        require(!cpu.step() && !cpu.fault.empty(), message);
+        require(cpu.memory == memory, "invalid whole register-transfer span changes no memory");
+        for (unsigned reg = 0; reg < 15; ++reg)
+            equal(cpu.r[reg], registers[reg], "invalid whole span changes no data or base register");
+    };
+    cpu.r[2] = 0xffc;
+    reject(0xc203, true, "Thumb STM rejects partially accessible whole span");
+    reject(0xca03, true, "Thumb LDM rejects partially accessible whole span");
+    cpu.r[13] = 0xffc;
+    reject(0xbc03, true, "Thumb POP rejects partially accessible whole span");
+    reject(0xe8bd0003, false, "ARM LDM rejects partially accessible whole span");
+    cpu.r[3] = 0xffc;
+    reject(0xe1c300f0, false, "ARM STRD rejects partially accessible doubleword");
+    reject(0xe1c300d0, false, "ARM LDRD rejects partially accessible doubleword");
+
+    cpu.r[13] = 0xff8;
+    oneARM(cpu, 0xe8bd0003); // LDMIA sp!,{r0,r1}
+    equal(cpu.r[0], 0x12345678, "boundary ARM LDM restores first word");
+    equal(cpu.r[1], 0x89abcdef, "boundary ARM LDM restores last word");
+    equal(cpu.r[13], 0x1000, "boundary ARM LDM writeback reaches memory end");
+    healthy(cpu, "bounded register transfers preserve original behavior");
+}
+
 void thumbArithmeticTests() {
     GuestCPU cpu;
     cpu.v = true; cpu.c = true;
@@ -473,6 +538,8 @@ void callAndFaultTests() {
 
 int main() {
     memoryTests();
+    boundedMemoryTests();
+    registerTransferBoundaryTests();
     thumbArithmeticTests();
     thumbShiftTests();
     thumbMemoryTests();
