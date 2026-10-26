@@ -22,8 +22,10 @@ Build **1.1 (8)** replaces the sparse Watch policy with iPhone's event cadence,
 including 250 ms explosion feedback and short Watch clicks for frequent effects.
 All 147 shared/Watch policy checks and Watch/iPhone Simulator builds pass. The
 signed Watch build passed signature/provisioning checks, was installed in place,
-read back as 1.1 (8), and normally launched on Series 12 (PID 1055). Revised wrist
-feel remains a user check. Details are in [Haptics.md](Haptics.md).
+read back as 1.1 (8), and normally launched on Series 12 (PID 1055). The user then
+confirmed that smaller explosions and weapon effects feel **much closer** to
+iPhone in physical Watch gameplay. Exact strength/pattern parity and a separate
+pulse for every effect remain unproven. Details are in [Haptics.md](Haptics.md).
 
 Build **1.1 (6)** enabled the original Watch Haptics Options controls. Its
 Simulator UI showed default ON, preserved OFF through SAVE-EXIT/reopening, native

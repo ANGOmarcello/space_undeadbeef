@@ -190,7 +190,9 @@ Verification:
 - Strict signature verification and exact Series 12 provisioning membership pass.
   CoreDevice installed **1.1 (8)** in place, independently read back that version,
   and launched normally (PID **1055**) with no test-save or audio overrides. Existing
-  progress and Options preferences were retained. Build 8's gameplay feel still
-  requires the user's wrist check; installation and cadence tests do not prove feel.
+  progress and Options preferences were retained. The user then confirmed that
+  build 8's smaller explosions and weapon effects feel **much closer** to iPhone
+  during physical Watch gameplay. This confirms the reported improvement in
+  frequency, not exact pattern/strength parity or a separate pulse for every effect.
 
 Only the known Series 12 was targeted. No Apple TV discovery or activation occurred.

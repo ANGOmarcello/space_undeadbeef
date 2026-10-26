@@ -142,4 +142,7 @@ Pause and HUD behavior are unchanged. The signed app was installed in place,
 independently read back as **1.1 (8)**, and normally launched on Series 12
 (PID **1055**), retaining saves and preferences. See
 [Haptics.md](Haptics.md#watch-cadence-parity-build-11-8) for the shared cadence,
-147 policy checks, platform limits and outstanding physical-feel boundary.
+147 policy checks and platform limits. The user subsequently confirmed that
+smaller explosions and weapon effects feel **much closer** to iPhone during
+physical Watch gameplay. This is confirmation of improved feedback frequency;
+it does not establish exact pattern/strength parity for every effect.
