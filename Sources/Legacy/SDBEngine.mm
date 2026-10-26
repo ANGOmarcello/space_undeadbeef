@@ -71,7 +71,20 @@ struct Runtime {
     float color[4]={1,1,1,1};
     uint64_t frames=0,draws=0,audioEvents=0;
     float lastX=0,lastY=0;
-    bool touching=false;
+    bool touching=false,watchLayout=TARGET_OS_WATCH,steeringActive=false;
+    double steeringY=.5;
+
+    uint32_t gameObject() { return game?cpu.read32(game+0xc):0; }
+    uint32_t ship() {uint32_t g=gameObject();return g?cpu.read32(g+0x4c):0;}
+    uint32_t marker() {uint32_t g=gameObject();return g?cpu.read32(g+0x50):0;}
+    double shipTravelLimit(uint32_t player) {
+        double radius=real(cpu.read32(player+0xd4));
+        return std::isfinite(radius)&&radius>=0?std::max(0.,geometry.logicalSize.height/2-radius):0;
+    }
+    bool upsideDown() {
+        uint32_t camera=game?cpu.read32(game):0;
+        return camera&&real(cpu.read32(camera+0x2c))<real(cpu.read32(0x8f7c));
+    }
 
     uint32_t allocate(uint32_t size) {
         if(size>0x1600000) { cpu.fail("Guest allocation exceeds memory limit");return 0; }
@@ -248,9 +261,7 @@ struct Runtime {
     void draw(uint32_t mode,unsigned first,unsigned count) {
         if(count>4096) {cpu.fail("GL draw count exceeds limit");return;}
         ++draws;
-        #if TARGET_OS_IOS
-        if(textured&&texture==12)return; // Native folded-corner control owns this affordance.
-        #endif
+        if((TARGET_OS_IOS||watchLayout)&&textured&&texture==12)return; // Native pause control owns this affordance.
         std::vector<Vertex> points;points.reserve(count);
         for(unsigned i=0;i<count;++i)points.push_back(vertex(first+i));
         if(textured&&texture==3&&!titleDrawn&&textures.count(ExtendedTitle)) {
@@ -337,8 +348,38 @@ struct Runtime {
     if(_failure||_suspended||!_runtime->game)return NO;
     auto &r=*_runtime;return r.cpu.read32(r.cpu.read32(r.game+4)+0x20)==0;
 }
+- (BOOL)watchLayout {return _runtime->watchLayout;}
+- (void)setWatchLayout:(BOOL)watchLayout {
+    if(_failure||_runtime->watchLayout==bool(watchLayout))return;
+    [self cancelShipSteering];
+    _runtime->watchLayout=watchLayout;
+    [self applyViewportPatch];[self checkFault];[self update:0];
+}
+- (double)shipNormalizedY {
+    auto &r=*_runtime;uint32_t player=r.ship();
+    if(!player)return .5;
+    double limit=r.shipTravelLimit(player),position=real(r.cpu.read32(player+0xa0));
+    if(!(limit>0)||!std::isfinite(position))return .5;
+    return .5+(r.upsideDown()?-position:position)/(2*limit);
+}
+- (BOOL)shipAiming {auto &r=*_runtime;uint32_t marker=r.marker();return marker&&r.cpu.read8(marker+0x24)!=0;}
+- (BOOL)canSteerShip {auto &r=*_runtime;uint32_t player=r.ship();return self.canPause&&player&&r.cpu.read32(player+0x10)==2;}
+- (void)steerShipToNormalizedY:(double)fraction {
+    if(!self.canPause||!std::isfinite(fraction))return;
+    auto &r=*_runtime;uint32_t player=r.ship();
+    if(r.touching||!player||r.cpu.read32(player+0x10)!=2)return;
+    // Original Game::touchCancelled is a no-op. When the host already ended
+    // ownership of that touch, finish a stale marker with its original ended
+    // method. Unlike Game::touchEnded, this does not fire a charged volley.
+    uint32_t marker=r.marker();
+    if(marker&&r.cpu.read8(marker+0x24))r.cpu.call(0x4b3b,{marker});
+    [self checkFault];if(_failure)return;
+    r.steeringY=std::clamp(fraction,0.,1.);r.steeringActive=true;
+}
+- (void)cancelShipSteering {_runtime->steeringActive=false;}
 - (void)pauseGame {
     if(!self.canPause)return;
+    [self cancelShipSteering];
     _pendingHapticEvents=0;
     [self touchPhase:3 x:0 y:0];
     auto &r=*_runtime;
@@ -348,13 +389,13 @@ struct Runtime {
     [self checkFault];[self update:0];
 }
 - (void)applyViewportPatch {
-    auto &r=*_runtime;r.displayPatch.apply(r.cpu,r.geometry);
-    #if TARGET_OS_IOS
+    auto &r=*_runtime;r.displayPatch.apply(r.cpu,r.geometry,r.watchLayout);
     // Move the guest hit target with its replaced drawing. The native corner
     // button invokes the same original pause routine directly.
-    r.cpu.write32(0x14ef8,bits(float(r.geometry.logicalSize.height*2)));
-    r.cpu.write32(0x14ef8+4,bits(float(r.geometry.logicalSize.width*2)));
-    #endif
+    if(TARGET_OS_IOS||r.watchLayout) {
+        r.cpu.write32(0x14ef8,bits(float(r.geometry.logicalSize.height*2)));
+        r.cpu.write32(0x14ef8+4,bits(float(r.geometry.logicalSize.width*2)));
+    }
 }
 #if !TARGET_OS_WATCH
 - (id<MTLDevice>)metalDevice {return _metalRenderer.device;}
@@ -369,6 +410,7 @@ struct Runtime {
         {safe.origin.y,safe.origin.x,std::max(0.,double(size.height-CGRectGetMaxY(safe))),std::max(0.,double(size.width-CGRectGetMaxX(safe)))},
         16*1024*1024);
     if(!geometry.valid)return;
+    [self cancelShipSteering];
     [self touchPhase:3 x:0 y:0];
     _runtime->geometry=geometry;
     [self applyViewportPatch];
@@ -636,6 +678,9 @@ struct Runtime {
     // The modern preference wins over the legacy game's initial sound-OFF byte.
     c.write8(r.sound+1,_soundEnabled);
     if(_offersHaptics&&c.read16(0x2796)!=0x5053) {c.fail("Unsupported original player-health store");return;}
+    if(c.read32(0x562c)!=0x1c04b5b0||c.read32(0x291c)!=bits(80.f)||c.read16(0x4b3a)!=0x2324) {
+        c.fail("Unsupported original ship-steering routines");return;
+    }
     if(_offersHaptics&&(c.read32(0x286e)!=0x22e09912||c.read32(0x9b0e)!=0xaf01b590||
                        c.read32(0xe994)!=0x7843b5f0)) {c.fail("Unsupported original haptic event boundaries");return;}
     if(TARGET_OS_IOS||TARGET_OS_WATCH||_offersHaptics) {
@@ -965,7 +1010,21 @@ struct Runtime {
 - (void)advanceSimulation:(double)delta {
     if(_failure||_suspended)return;
     Runtime &r=*_runtime;
-    if(delta>0)r.cpu.call(0x8af3,{r.game,bits(1.f/60.f)});
+    if(delta>0) {
+        uint32_t player=r.steeringActive?r.ship():0;
+        if(r.steeringActive) {
+            if(!self.canPause||r.touching||!player||r.cpu.read32(player+0x10)!=2)r.steeringActive=false;
+            else {
+                double target=(r.steeringY*2-1)*r.shipTravelLimit(player);
+                if(r.upsideDown())target=-target;
+                // Same original spring target, stiffness and integration path
+                // used by Player::update for marker steering, without its aim.
+                r.cpu.call(0x562d,{player+0x98,bits(float(target)),r.cpu.read32(0x291c)});
+                [self checkFault];if(_failure)return;
+            }
+        }
+        r.cpu.call(0x8af3,{r.game,bits(1.f/60.f)});
+    }
     [self checkFault];
 }
 - (void)renderFrame {
@@ -996,7 +1055,7 @@ struct Runtime {
     if(_failure||_suspended)return;Runtime &r=*_runtime;
     auto guest=r.geometry.logicalToGuest({x,y});
     float gx=float(guest.x),gy=float(guest.y);
-    if(phase==0) {r.touching=true;r.cpu.call(0x8b3d,{r.game,bits(gx),bits(gy)});}
+    if(phase==0) {[self cancelShipSteering];r.touching=true;r.cpu.call(0x8b3d,{r.game,bits(gx),bits(gy)});}
     else if(phase==1&&r.touching)r.cpu.call(0x8b77,{r.game,bits(gx),bits(gy),bits(r.lastX),bits(r.lastY)});
     else if(phase==2&&r.touching) {r.cpu.call(0x8bdb,{r.game,bits(gx),bits(gy)});r.touching=false;}
     else if(phase==3&&r.touching) {r.cpu.call(0x8c15,{r.game});r.touching=false;}
@@ -1004,6 +1063,7 @@ struct Runtime {
 }
 - (void)setSuspended:(BOOL)suspended {
     if(suspended==_suspended)return;
+    [self cancelShipSteering];
     _pendingHapticEvents=0;
     if(suspended) {
         [self touchPhase:3 x:0 y:0];

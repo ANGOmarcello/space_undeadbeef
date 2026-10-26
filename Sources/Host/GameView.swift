@@ -12,10 +12,9 @@ struct GameView: View {
     @Environment(\.displayScale) private var displayScale
     @Environment(\.scenePhase) private var scenePhase
     #if os(watchOS)
-    @State private var crownPosition = 0.5
-    #else
-    @FocusState private var isFocused: Bool
+    @State private var crownPosition = 0.0
     #endif
+    @FocusState private var isFocused: Bool
 
     var body: some View {
         GeometryReader { geometry in
@@ -47,12 +46,25 @@ struct GameView: View {
                         .environment(\.layoutDirection, .leftToRight)
                 }
             }
+            #elseif os(watchOS)
+            .overlay(alignment: .topLeading) {
+                if session.canPause {
+                    CornerPauseButton(viewScale: size.width / session.logicalSize.width,
+                                      corner: .topLeading, action: session.pauseGame)
+                        .environment(\.layoutDirection, .leftToRight)
+                        .padding(.leading, insets.leading)
+                        .padding(.top, insets.top)
+                }
+            }
             #endif
             .offset(x: -insets.leading, y: -insets.top)
             .onChange(of: viewport, initial: true) { _, value in session.configure(value) }
         }
         .onChange(of: scenePhase, initial: true) { _, phase in
             session.setActive(phase == .active)
+            #if os(watchOS)
+            isFocused = phase == .active && session.canPause
+            #endif
         }
         .onDisappear { session.setActive(false) }
         #if os(iOS)
@@ -82,14 +94,23 @@ struct GameView: View {
         #elseif os(watchOS)
         screen(size: size)
             .gesture(dragGesture(size: size))
-            .focusable()
-            .digitalCrownRotation($crownPosition, from: 0, through: 1, by: 0.01,
-                                  sensitivity: .medium, isContinuous: false,
-                                  isHapticFeedbackEnabled: false)
-            .onChange(of: crownPosition) { _, position in session.setPointerY(position) }
-            .accessibilityAction(named: Text("Tap pointer")) { session.tapPointer() }
-            .accessibilityAction(named: Text("Hold or release touch")) { session.togglePointerTouch() }
-            .accessibilityHint("Drag to move. The Digital Crown moves the pointer vertically.")
+            .focusable(session.canPause)
+            .focused($isFocused)
+            .focusEffectDisabled()
+            .digitalCrownRotation($crownPosition,
+                                  from: GameCrownInput.rotationRange.lowerBound,
+                                  through: GameCrownInput.rotationRange.upperBound,
+                                  sensitivity: .medium, isContinuous: true,
+                                  isHapticFeedbackEnabled: false,
+                                  onChange: { _ in }, onIdle: session.endCrownSteering)
+            .digitalCrownAccessory(.hidden)
+            .onChange(of: crownPosition) { old, new in
+                session.steerWithCrown(delta: GameCrownInput.wrappedDelta(from: old, to: new))
+            }
+            .onChange(of: session.canPause, initial: true) { _, canPause in
+                isFocused = canPause && scenePhase == .active
+            }
+            .accessibilityHint("Turn the Digital Crown to steer up or down. Touch and drag to aim and fire.")
         #else
         screen(size: size)
             .gesture(dragGesture(size: size))
@@ -134,6 +155,7 @@ struct GameView: View {
                     .clipped()
                     .accessibilityIdentifier("original-game-frame")
             }
+            #if !os(watchOS)
             if session.showsPointer {
                 Circle()
                     .stroke(.white, lineWidth: GameLayout.pointerStroke)
@@ -143,6 +165,7 @@ struct GameView: View {
                               y: session.pointer.y / session.logicalSize.height * size.height)
                     .allowsHitTesting(false)
             }
+            #endif
         }
         .frame(width: size.width, height: size.height)
         .contentShape(Rectangle())

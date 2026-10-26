@@ -61,6 +61,11 @@ final class GameSession {
     @ObservationIgnored private var clock = GameFrameClock()
     @ObservationIgnored private var releasesTapAfterStep = false
     @ObservationIgnored private let haptics = GameHaptics()
+    @ObservationIgnored private var crownInput = GameCrownInput()
+
+    init(engine: SDBEngine? = nil) {
+        self.engine = engine
+    }
 
     func setActive(_ active: Bool) {
         if !active {
@@ -148,6 +153,7 @@ final class GameSession {
         let menu = Int(engine.gameMenuType)
         if gameMenuType != menu { gameMenuType = menu }
         if failure != engine.failure { failure = engine.failure }
+        if !engine.canSteerShip || menu != 0 || failure != nil { endCrownSteering() }
     }
 
     private func deliverHaptics(from engine: SDBEngine) {
@@ -176,6 +182,7 @@ final class GameSession {
     }
 
     func drag(to point: CGPoint) {
+        endCrownSteering()
         pointer = point
         showsPointer = false
         engine?.touchPhase(isTouching ? 1 : 0, x: point.x, y: point.y)
@@ -189,6 +196,7 @@ final class GameSession {
     }
 
     func cancelTouch() {
+        endCrownSteering()
         guard isTouching else { return }
         engine?.touchPhase(3, x: pointer.x, y: pointer.y)
         isTouching = false
@@ -208,8 +216,32 @@ final class GameSession {
         movePointer(dx: 0, dy: CGFloat(fraction) * logicalSize.height - pointer.y)
     }
 
+    /// Move through the original ship spring without holding a targeting touch.
+    /// A held finger keeps ownership; turning the Crown cannot cancel its aim.
+    func steerWithCrown(delta: Double) {
+        guard isActive, !isTouching, failure == nil, let engine,
+              engine.canSteerShip, engine.gameMenuType == 0 else {
+            endCrownSteering()
+            return
+        }
+        let ship = engine.shipNormalizedY
+        guard delta.isFinite, ship.isFinite else {
+            endCrownSteering()
+            return
+        }
+        guard let target = crownInput.target(for: delta, shipNormalizedY: ship) else { return }
+        engine.steerShip(toNormalizedY: target)
+    }
+
+    func endCrownSteering() {
+        guard crownInput.targetNormalizedY != nil else { return }
+        crownInput.reset()
+        engine?.cancelShipSteering()
+    }
+
     func beginPointerTouch() {
         guard !isTouching else { return }
+        endCrownSteering()
         showsPointer = true
         isTouching = true
         engine?.touchPhase(0, x: pointer.x, y: pointer.y)

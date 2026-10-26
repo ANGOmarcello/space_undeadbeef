@@ -4,6 +4,10 @@ The subsequent measured 60 Hz performance pass, audio mixer replacement and
 its exact verification limits are recorded in [Performance.md](Performance.md).
 The following optional iPhone feedback step is recorded in [Haptics.md](Haptics.md).
 
+The **1.1 (3)** Watch Crown, Pause and bottom-HUD fixes are documented in
+[WatchControls.md](WatchControls.md), with separate engine, session, Simulator,
+signing and physical-device verification boundaries.
+
 Build **1.1 (2)** corrects menu/weapon/explosion event coverage and native haptics
 view association after the user reported no felt feedback. It passed 287 engine
 sanitizer checks and 117 policy checks, then was development-signed, installed

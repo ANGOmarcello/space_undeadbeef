@@ -5,13 +5,16 @@
 //  Created by Angelo Cammalleri on 25.10.2026.
 //
 
-#if os(iOS)
+#if os(iOS) || os(watchOS)
 import SwiftUI
 
 /// The original p.png paper fold, redrawn as paths at the display's density.
-/// Its parent anchors the artwork to the full surface's physical top-right.
+/// The Watch mirrors the fold into its safe top-left corner, keeping P upright.
 struct CornerPauseButton: View {
+    enum Corner { case topLeading, topTrailing }
+
     let viewScale: CGFloat
+    var corner: Corner = .topTrailing
     let action: () -> Void
 
     private enum Metrics {
@@ -24,7 +27,7 @@ struct CornerPauseButton: View {
         let side = max(Metrics.minimumTouchSide, Metrics.originalSide * viewScale)
             + Metrics.originalFoldMargin * viewScale
         Button(action: action) {
-            CornerPauseArtwork()
+            CornerPauseArtwork(corner: corner)
                 .frame(width: side, height: side)
                 .contentShape(Rectangle())
         }
@@ -35,6 +38,8 @@ struct CornerPauseButton: View {
 }
 
 private struct CornerPauseArtwork: View {
+    let corner: CornerPauseButton.Corner
+
     var body: some View {
         Canvas { context, size in
             // Coordinates trace p.png after its original clockwise rotation.
@@ -45,6 +50,10 @@ private struct CornerPauseArtwork: View {
             fold.addLine(to: CGPoint(x: 24, y: 24))
             fold.addLine(to: CGPoint(x: 12, y: 24))
             fold.closeSubpath()
+            let cornerTransform = corner == .topLeading
+                ? CGAffineTransform(a: -1, b: 0, c: 0, d: 1, tx: 24, ty: 0)
+                : .identity
+            fold = fold.applying(cornerTransform)
             context.fill(fold, with: .color(Color(red: 109 / 255, green: 109 / 255, blue: 109 / 255)))
 
             var paper = Path()
@@ -52,11 +61,13 @@ private struct CornerPauseArtwork: View {
             paper.addLine(to: CGPoint(x: 24, y: 0))
             paper.addLine(to: CGPoint(x: 24, y: 24))
             paper.closeSubpath()
+            paper = paper.applying(cornerTransform)
             context.fill(paper, with: .color(Color(red: 13 / 255, green: 38 / 255, blue: 0)))
 
             var crease = Path()
             crease.move(to: .zero)
             crease.addLine(to: CGPoint(x: 24, y: 24))
+            crease = crease.applying(cornerTransform)
             context.stroke(crease, with: .color(Color(red: 56 / 255, green: 70 / 255, blue: 49 / 255)),
                            lineWidth: 0.75)
 
@@ -84,6 +95,11 @@ private struct CornerPauseArtwork: View {
             letter.addLine(to: CGPoint(x: 17, y: 7))
             letter.closeSubpath()
             letter = letter.applying(CGAffineTransform(a: 0.5, b: 0, c: 0, d: 0.5, tx: 6.5, ty: 7))
+            if corner == .topLeading {
+                let bounds = letter.boundingRect
+                letter = letter.applying(CGAffineTransform(
+                    translationX: 24 - bounds.minX - bounds.maxX, y: 0))
+            }
             context.fill(letter, with: .linearGradient(
                 Gradient(colors: [Color(red: 1, green: 194 / 255, blue: 29 / 255),
                                   Color(red: 254 / 255, green: 146 / 255, blue: 53 / 255)]),

@@ -12,11 +12,13 @@
 		04C2703AD2C7E689314A934AC4B55DEE /* GameDisplayPatch.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 35AC44181D691FD664A9727EDFB08F85 /* GameDisplayPatch.cpp */; };
 		04F8C4B495AD4F1697A0FF6F83E8297D /* GameView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E82BBC049976E47967423C440B483BB9 /* GameView.swift */; };
 		058838C4AC2E797FB1091831E9DDE7E7 /* CornerPauseButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 440ADD3C768C4393370691740A2B4F93 /* CornerPauseButton.swift */; };
+		06E573E6F460B1A805BA1AE0 /* GameCrownInput.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDCB4184E21C185C20D7EE9C /* GameCrownInput.swift */; };
 		0C38A2B522FD4E7986BF71D5 /* GameFrameClock.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2471065F24A6ED30AEFBE6C /* GameFrameClock.swift */; };
 		0CB6A63355813403D5672320A470E6A5 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F185905014327510815476BCAED7C567 /* Foundation.framework */; };
 		0CE74453C531DB4D3CEDA5BCD64834D7 /* MetalKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 64F08372F4D00A0A1B93B534A54DE985 /* MetalKit.framework */; };
 		0D1EE80CD0626FDBCAB03CDB /* SDBAudioMixer.mm in Sources */ = {isa = PBXBuildFile; fileRef = 41F13F8E999392ED36A915E9 /* SDBAudioMixer.mm */; };
 		105EFC8FCC1D7E5531DE3F104A00425F /* GameDisplayPatch.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 35AC44181D691FD664A9727EDFB08F85 /* GameDisplayPatch.cpp */; };
+		134E5377BED412021A52208F /* GameCrownInput.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDCB4184E21C185C20D7EE9C /* GameCrownInput.swift */; };
 		148D20CAC8BB31B9A0DEAD90E8E60873 /* GuestCPU.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 56C287E269143B6F09B5E19514FB0564 /* GuestCPU.cpp */; };
 		17C544C3705F085829F1E231CA338AD6 /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 05A6F7053D3B9416BC2E674589D0EC2E /* AVFoundation.framework */; };
 		191730E98EB20B67261CEA5437CD4B4F /* GuestCPU.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 56C287E269143B6F09B5E19514FB0564 /* GuestCPU.cpp */; };
@@ -74,6 +76,8 @@
 		9C18A0CA8638694B1AB9B8D8775D7F58 /* GameView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E82BBC049976E47967423C440B483BB9 /* GameView.swift */; };
 		9C9AAAB6D7D457BEF4377563044ECC7F /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 55E0A738368EFB60842A4D185E85AF63 /* Metal.framework */; };
 		9FCDF24D5F524B86A67BAA0359AEC568 /* ImageIO.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C52BF5AAC71FDE3A92372AE397E22579 /* ImageIO.framework */; };
+		A28CB7139F4916D53E305C93 /* GameCrownInput.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDCB4184E21C185C20D7EE9C /* GameCrownInput.swift */; };
+		B30C05506632E330AFC681F1 /* GameCrownInput.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDCB4184E21C185C20D7EE9C /* GameCrownInput.swift */; };
 		B39F55E85C65A3B741007D68 /* GameHaptics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8CD08C6AF0A585AC2E148A2D /* GameHaptics.swift */; };
 		B4D368D324A388CB64E587503EDB2ADE /* SpaceUndeadbeefApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 79D37D7410ED5F9DDF2D435077A41C2E /* SpaceUndeadbeefApp.swift */; };
 		B8F836B055905A9C457BA4DA /* GameFrameClock.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2471065F24A6ED30AEFBE6C /* GameFrameClock.swift */; };
@@ -174,6 +178,7 @@
 		C02D97A5C3D97B329F454DB89D3D58C9 /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.0.sdk/System/Library/Frameworks/QuartzCore.framework; sourceTree = DEVELOPER_DIR; };
 		C52BF5AAC71FDE3A92372AE397E22579 /* ImageIO.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ImageIO.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.0.sdk/System/Library/Frameworks/ImageIO.framework; sourceTree = DEVELOPER_DIR; };
 		C6BCB5B91EE7D2FC88DC21DBE69190C8 /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = Platforms/AppleTVOS.platform/Developer/SDKs/AppleTVOS26.0.sdk/System/Library/Frameworks/CoreGraphics.framework; sourceTree = DEVELOPER_DIR; };
+		CDCB4184E21C185C20D7EE9C /* GameCrownInput.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GameCrownInput.swift; sourceTree = "<group>"; };
 		D22E030EC4C46840E6024F412130C5AB /* tvOS-Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = "tvOS-Info.plist"; sourceTree = "<group>"; };
 		D35F6AADCE943A6864E52BD70912DB83 /* watchOS.xcassets */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = folder.assetcatalog; path = watchOS.xcassets; sourceTree = "<group>"; };
 		DD3331B7DA9A8E03B4EE737E97434ED1 /* GameSession.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GameSession.swift; sourceTree = "<group>"; };
@@ -350,6 +355,7 @@
 				79D37D7410ED5F9DDF2D435077A41C2E /* SpaceUndeadbeefApp.swift */,
 				A2471065F24A6ED30AEFBE6C /* GameFrameClock.swift */,
 				8CD08C6AF0A585AC2E148A2D /* GameHaptics.swift */,
+				CDCB4184E21C185C20D7EE9C /* GameCrownInput.swift */,
 			);
 			name = Host;
 			path = Host;
@@ -666,6 +672,7 @@
 				CDA30C8A68C81E6EE43897A1 /* GameFrameClock.swift in Sources */,
 				1F9F0A7A12398F1DD748D658 /* SDBAudioMixer.mm in Sources */,
 				E819B7C0BA47341B468408C5 /* GameHaptics.swift in Sources */,
+				06E573E6F460B1A805BA1AE0 /* GameCrownInput.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -685,6 +692,7 @@
 				66C0ADF8C71AD64F15C19050 /* GameFrameClock.swift in Sources */,
 				7497953637CF38709C8AC44A /* SDBAudioMixer.mm in Sources */,
 				6AE1A2653EF90F96FAE0A6F4 /* GameHaptics.swift in Sources */,
+				A28CB7139F4916D53E305C93 /* GameCrownInput.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -704,6 +712,7 @@
 				0C38A2B522FD4E7986BF71D5 /* GameFrameClock.swift in Sources */,
 				19BBD99142E772BC4D1AB834 /* SDBAudioMixer.mm in Sources */,
 				222C734917B012D1C8E085C4 /* GameHaptics.swift in Sources */,
+				134E5377BED412021A52208F /* GameCrownInput.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -731,6 +740,7 @@
 				B8F836B055905A9C457BA4DA /* GameFrameClock.swift in Sources */,
 				0D1EE80CD0626FDBCAB03CDB /* SDBAudioMixer.mm in Sources */,
 				B39F55E85C65A3B741007D68 /* GameHaptics.swift in Sources */,
+				B30C05506632E330AFC681F1 /* GameCrownInput.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -32,6 +32,20 @@ NS_ASSUME_NONNULL_BEGIN
 @property(nonatomic, readonly) NSString *menuVersion;
 @property(nonatomic, readonly) BOOL canPause;
 @property(nonatomic, readonly) NSInteger gameMenuType;
+/// Explicit Watch HUD/pause policy; defaults to the compiled Watch platform.
+/// Headless software-renderer verification may opt in without a Watch device.
+@property(nonatomic) BOOL watchLayout;
+/// Actual original ship position across its radius-inset vertical travel range.
+@property(nonatomic, readonly) double shipNormalizedY;
+/// False during original automatic entrance/death states as well as menus.
+@property(nonatomic, readonly) BOOL canSteerShip;
+/// Actual original marker hold state, independent of native pointer decoration.
+@property(nonatomic, readonly) BOOL shipAiming;
+/// Uses the original ship spring/physics without beginning an aiming touch.
+/// Input is ignored in menus, during a touch, or while the ship is not playable.
+- (void)steerShipToNormalizedY:(double)fraction NS_SWIFT_NAME(steerShip(toNormalizedY:));
+/// Ends Crown input; original momentum/damping remain in control of the ship.
+- (void)cancelShipSteering;
 - (void)pauseGame;
 - (void)configureViewport:(CGSize)size displayScale:(double)scale safeArea:(CGRect)safeArea;
 - (CGPoint)logicalPointForViewPoint:(CGPoint)point;

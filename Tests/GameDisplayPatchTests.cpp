@@ -241,6 +241,111 @@ void resizeTests(const std::vector<uint8_t>& executable) {
     require(prefix(cpu) == before, "unsupported menu leaves bounds and paths untouched");
 }
 
+void watchHUDTests(const std::vector<uint8_t>& executable) {
+    GuestCPU cpu; loadMachO(cpu, executable);
+    const auto baseline = prefix(cpu);
+    GameDisplayPatch patch;
+    require(patch.initialize(cpu), "Watch HUD captures the original geometry");
+    const auto watch = DisplayGeometry::make({208, 248}, 2, {28, 0, 0, 0});
+    require(patch.apply(cpu, watch), "Watch-shaped display retains default HUD without explicit policy");
+    const auto defaultLayout = prefix(cpu);
+    near(cpu, 0x82f8, watch.safeUIRect.minY() - watch.logicalSize.height / 2 + 8,
+         "portrait geometry alone keeps the original top HUD");
+    require(patch.apply(cpu, watch, true), "explicit Watch policy moves the original HUD");
+    const auto band = GameDisplayPatch::watchHUDRect(watch);
+    require(std::abs(band.y - 510.3076923076923) < 0.0001 && band.height == 32 && band.width == 480,
+            "46mm Watch reserves the measured two-row bottom band");
+    require(band.y >= watch.safeUIRect.minY() && band.maxY() <= watch.safeUIRect.maxY() - 30,
+            "HUD clears the bottom rounded edge by the original thirty-unit inset");
+    const auto withinBand = [&](sdb::display::Point p) {
+        // Guest anchors are IEEE float; the host geometry remains double.
+        constexpr double tolerance = 0.0001;
+        return p.x >= band.minX() - tolerance && p.x <= band.maxX() + tolerance &&
+               p.y >= band.minY() - tolerance && p.y <= band.maxY() + tolerance;
+    };
+    const auto point = [&](uint32_t vertical, uint32_t horizontal) {
+        return watch.guestToLogical({real(cpu.read32(vertical)), real(cpu.read32(horizontal))});
+    };
+    const auto score = point(0x82f8, 0x82fc);
+    const auto highScore = point(0x82f8, 0x8304);
+    const auto stage = point(0x830c, 0x82fc);
+    require(std::abs(score.y - band.y) < 0.0001 && std::abs(stage.y - score.y - 16) < 0.0001,
+            "Watch preserves the original sixteen-unit row separation");
+    for (const auto& text : {std::make_pair(score, 14u), std::make_pair(highScore, 17u),
+                             std::make_pair(stage, 17u)}) {
+        require(withinBand(text.first) &&
+                withinBand({text.first.x + text.second * 8, text.first.y + 16}),
+                "original score, high-score and stage/deaths glyph bounds stay in the bottom band");
+    }
+    const auto charge = point(0x8340, 0x833c);
+    for (unsigned cell = 0; cell < 16; ++cell) {
+        for (unsigned vertex = 0; vertex < 4; ++vertex) {
+            const double x = charge.x - cell * 6 + real(cpu.read32(0x11b50 + vertex * 8 + 4));
+            const double y = charge.y + real(cpu.read32(0x11b50 + vertex * 8));
+            require(withinBand({x, y}), "all sixteen original charge quads fit the bottom band");
+        }
+    }
+    const auto gauge = point(0xdba0, 0xdba4);
+    for (double amount : {0.0, 100.0}) {
+        require(withinBand({gauge.x + 2.67, gauge.y - 4}) &&
+                withinBand({gauge.x + amount + 2.67, gauge.y + 4}),
+                "empty and full original boss bars fit without overlapping another HUD row");
+    }
+    require(score.x + 14 * 8 <= highScore.x && highScore.x + 17 * 8 <= charge.x - 15 * 6 - 4,
+            "score, high-score and charge columns retain their original nonoverlapping widths");
+    const std::set<uint32_t> moved = {0x82f8, 0x830c, 0x8340, 0xdba0};
+    bool onlyHUD = true;
+    for (uint32_t address = 0; address < defaultLayout.size(); address += 4)
+        if (!moved.count(address) && cpu.read32(address) != word(defaultLayout, address)) onlyHUD = false;
+    require(onlyHUD, "Watch policy changes only the four HUD vertical anchors, preserving the entire game arena");
+    near(cpu, 0x81e8, 8, "Watch keeps original HUD glyph width");
+    near(cpu, 0x81f0, 16, "Watch keeps original HUD glyph height");
+    const auto insetWatch = DisplayGeometry::make({208, 248}, 2, {28, 8, 12, 8});
+    require(patch.apply(cpu, insetWatch, true), "Watch HUD fits real horizontal and bottom safe insets");
+    const double insetLeft = insetWatch.safeUIRect.minX();
+    const double insetRight = insetWatch.safeUIRect.maxX();
+    const double insetHigh = real(cpu.read32(0x8304)) + insetWatch.logicalSize.width / 2;
+    const double firstGap = insetHigh - (insetLeft + 30 + 112);
+    const double secondGap = insetRight - 154 - (insetHigh + 136);
+    require(firstGap >= 0 && secondGap >= 0 && std::abs(firstGap / secondGap - 34.0 / 14) < 0.0001,
+            "narrow Watch safe width compresses only the two gaps in their original proportion");
+    require(std::abs(insetHigh - 168.3076923076923) < 0.0001,
+            "inset Watch high-score column fits between the measured score and charge bounds");
+    near(cpu, 0x82fc, insetLeft - insetWatch.logicalSize.width / 2 + 30,
+         "Watch score retains the original left inset when gaps compress");
+    near(cpu, 0x833c, insetRight - insetWatch.logicalSize.width / 2 - 60,
+         "Watch charge retains the original right inset when gaps compress");
+    const auto minimumWatch = DisplayGeometry::make({480, 320}, 1, {0, 24, 0, 24});
+    require(patch.apply(cpu, minimumWatch, true), "minimum safe Watch HUD width retains every original glyph");
+    const double minimumHigh = real(cpu.read32(0x8304)) + 240;
+    require(minimumHigh == 24 + 30 + 112 && minimumHigh + 136 == 480 - 24 - 154,
+            "minimum safe width removes exactly the empty gaps without overlapping content");
+    const auto tooNarrow = DisplayGeometry::make({480, 320}, 1, {0, 25, 0, 25});
+    const auto beforeReject = prefix(cpu);
+    require(!patch.apply(cpu, tooNarrow, true) && cpu.fault.find("Watch safe region") != std::string::npos,
+            "undersized Watch HUD fails with a clear diagnostic before overlapping content");
+    require(prefix(cpu) == beforeReject && GameDisplayPatch::watchHUDRect(tooNarrow).empty(),
+            "undersized Watch layout rejects atomically");
+    cpu.fault.clear();
+    const auto tooShort = DisplayGeometry::make({480, 320}, 1, {259, 0, 0, 0});
+    require(!patch.apply(cpu, tooShort, true) && cpu.fault.find("Watch safe region") != std::string::npos,
+            "Watch safe height cannot clip either HUD row or its rounded-edge clearance");
+    require(prefix(cpu) == beforeReject && GameDisplayPatch::watchHUDRect(tooShort).empty(),
+            "undersized Watch safe height also rejects atomically");
+    cpu.fault.clear();
+    require(patch.apply(cpu, watch, true), "full Watch HUD restores after safe-inset changes");
+    require(patch.apply(cpu, watch, false) && prefix(cpu) == defaultLayout,
+            "turning Watch policy off restores its exact prior top layout");
+    const auto portraitPad = DisplayGeometry::make({1032, 1376}, 2);
+    require(patch.apply(cpu, portraitPad), "portrait iPad retains its default device policy");
+    near(cpu, 0x82f8, -portraitPad.logicalSize.height / 2 + 8,
+         "portrait iPad HUD remains at the top");
+    require(patch.apply(cpu, watch, true) && patch.apply(cpu, DisplayGeometry::make({480, 320}, 1)),
+            "Watch policy can resize and return to the original display");
+    require(prefix(cpu) == baseline, "Watch/default/original round trip restores every original loaded byte");
+    healthy(cpu, "Watch HUD geometry remains bounded");
+}
+
 void hapticsMenuTests(const std::vector<uint8_t>& executable) {
     GuestCPU cpu; loadMachO(cpu, executable);
     const auto baseline = prefix(cpu);
@@ -333,7 +438,8 @@ void hapticsMenuTests(const std::vector<uint8_t>& executable) {
 }
 
 void rejectionTests(const std::vector<uint8_t>& executable) {
-    for (uint32_t address : {0x5cf0u, 0x11c90u, 0x14688u, 0x12b34u, 0x5a3cu}) {
+    for (uint32_t address : {0x5cf0u, 0x11c90u, 0x14688u, 0x12b34u, 0x5a3cu,
+                             0x81e8u, 0x81f0u, 0x8338u, 0x11b54u, 0x11b6cu}) {
         GuestCPU cpu; loadMachO(cpu, executable);
         cpu.write8(address, uint8_t(cpu.read8(address) ^ 1));
         const auto changed = prefix(cpu);
@@ -355,6 +461,7 @@ int main(int argc, char** argv) {
     require(input.good(), std::string("original fixture opens: ") + path);
     const std::vector<uint8_t> executable{std::istreambuf_iterator<char>(input), std::istreambuf_iterator<char>()};
     resizeTests(executable);
+    watchHUDTests(executable);
     hapticsMenuTests(executable);
     rejectionTests(executable);
     std::cout << "PASS: " << checks << " display patch checks against original ARM Mach-O\n";

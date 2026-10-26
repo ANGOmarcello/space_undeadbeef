@@ -24,7 +24,13 @@ public:
     // creating the extended native audio Options table. Captures an immutable
     // baseline, and checks every edited literal, path table and menu table.
     bool initialize(GuestCPU& cpu);
-    bool apply(GuestCPU& cpu, const DisplayGeometry& geometry);
+    // The host opts into Watch HUD placement explicitly. A portrait viewport
+    // alone must never select this policy (for example, on iPad).
+    bool apply(GuestCPU& cpu, const DisplayGeometry& geometry, bool watchLayout = false);
+
+    // Full-width band reserved for Watch HUD layout and verification. This
+    // never changes the playable arena or the original player travel bounds.
+    static Rect watchHUDRect(const DisplayGeometry& geometry);
 
     // Keep this inexpensive guard in the CPU hook's C++ fast path, before
     // dispatching Objective-C API bridges. These are aligned instruction PCs;
