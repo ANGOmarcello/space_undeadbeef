@@ -4,6 +4,13 @@ The subsequent measured 60 Hz performance pass, audio mixer replacement and
 its exact verification limits are recorded in [Performance.md](Performance.md).
 The following optional iPhone feedback step is recorded in [Haptics.md](Haptics.md).
 
+Build **1.1 (2)** corrects menu/weapon/explosion event coverage and native haptics
+view association after the user reported no felt feedback. It passed 287 engine
+sanitizer checks and 117 policy checks, then was development-signed, installed
+and launched on the physical iPhone 14 Pro. Simulator logs verify native menu
+feedback requests on the visible game view. Physical tactile confirmation is
+separate; see the haptics record for details.
+
 Recorded on **25 October 2026**, using Xcode 27.2. All four application targets
 compiled successfully. Simulator builds and UI tests used ARM64; the native Mac
 host ran on Apple silicon with macOS 27.0. These are local development checks.

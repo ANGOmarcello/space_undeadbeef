@@ -153,8 +153,9 @@ when no preference exists. An explicit OFF choice is preserved.
 Four sections share the existing heading-to-SAVE-EXIT span, retaining the
 original font, colors, ON/OFF columns, choice offset and exit anchor. iPad and
 Watch retain the three-section audio layout. The native iPhone host consumes
-coalesced original laser-release, target-acquisition and actual player-health
-decrease events, independently of sound, with a global quarter-second cooldown.
+coalesced original menu, weapon, target-acquisition, explosion and actual
+player-health decrease events, independently of sound. View-associated UIKit
+generators use separate bounded cooldowns so lock ticks cannot suppress shots.
 See [Haptics.md](Haptics.md) for verification and persistence details.
 
 When `SDB_SAVE_DIRECTORY` is provided for a test, the preference keys use an

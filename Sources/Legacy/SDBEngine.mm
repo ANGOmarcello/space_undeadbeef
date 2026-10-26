@@ -25,6 +25,7 @@ constexpr uint32_t OriginalFont = 1, OriginalSmallFont = 2;
 using sdb::display::DisplayGeometry;
 constexpr uint32_t SilentOn=0x01d00000,SilentOff=0x01d00004,SilentOnDraw=0x01d00008,SilentOffDraw=0x01d0000c;
 constexpr uint32_t HapticsOn=0x01d00010,HapticsOff=0x01d00014,HapticsOnDraw=0x01d00018,HapticsOffDraw=0x01d0001c;
+constexpr NSUInteger HapticRelease=1,HapticTarget=2,HapticDamage=4,HapticMenu=8,HapticExplosion=16,HapticPrimary=32;
 uint32_t bits(float f) { uint32_t u; memcpy(&u,&f,4); return u; }
 float real(uint32_t u) { float f; memcpy(&f,&u,4); return f; }
 struct Texture { int width=0,height=0,contentWidth=0,contentHeight=0; uint32_t distanceField=0,glyphAtlas=0; std::vector<uint8_t> pixels; };
@@ -426,13 +427,14 @@ struct Runtime {
 - (void)setHapticsEnabled:(BOOL)enabled {
     if(!_offersHaptics)return;
     _hapticsEnabled=enabled;
-    _pendingHapticEvents=0;
+    _pendingHapticEvents=enabled?HapticMenu:0;
     [self storePreference:enabled key:@"feedback.hapticsEnabled"];
 }
 - (NSUInteger)consumeHapticEvents {
     NSUInteger events=_pendingHapticEvents;
     _pendingHapticEvents=0;
-    return _hapticsEnabled&&self.canPause?events:0;
+    if(!_hapticsEnabled||_suspended||_failure)return 0;
+    return self.canPause?events:(events&HapticMenu);
 }
 - (void)setRespectsSilentMode:(BOOL)respect {
     _respectsSilentMode=respect;[self storePreference:respect key:@"audio.respectsSilentMode"];
@@ -477,15 +479,22 @@ struct Runtime {
             // Observe the original effect request before its Sound-OFF guard.
             // The guest method still executes unchanged after this hook.
             if(pc==0xe994&&owner->_hapticsEnabled) {
-                if(cpu.r[1]==2)owner->_pendingHapticEvents|=1; // Player::fireLockonLaser.
-                else if(cpu.r[1]==3)owner->_pendingHapticEvents|=2; // Successful target acquisition.
+                if(cpu.r[1]==0)owner->_pendingHapticEvents|=HapticMenu; // Accepted executable menu button.
+                else if(cpu.r[1]==2)owner->_pendingHapticEvents|=HapticRelease; // Targeted lock-on volley.
+                else if(cpu.r[1]==3)owner->_pendingHapticEvents|=HapticTarget; // Successful target acquisition.
+                else if(cpu.r[1]==4)owner->_pendingHapticEvents|=HapticPrimary; // Actual primary Bluster construction.
+                else if(cpu.r[1]==5)owner->_pendingHapticEvents|=HapticExplosion; // Original Explosion construction.
             }
+            // These original boundaries run only after primary-shot append or
+            // after entry into the accepted native/guest pause callback.
+            if(pc==0x286e&&owner->_hapticsEnabled)owner->_pendingHapticEvents|=HapticPrimary;
+            if(pc==0x9b0e&&owner->_hapticsEnabled)owner->_pendingHapticEvents|=HapticMenu;
             if(pc==0x2796&&owner->_hapticsEnabled) {
                 // Observe the actual Player health store, not enemy explosions.
                 Runtime &runtime=*owner->_runtime;
                 uint32_t game=cpu.read32(runtime.game+0xc),player=cpu.read32(game+0x4c);
                 if(cpu.r[1]==0xd8&&cpu.r[2]==player&&
-                   int32_t(cpu.r[3])<int32_t(cpu.read32(player+0xd8)))owner->_pendingHapticEvents|=4;
+                   int32_t(cpu.r[3])<int32_t(cpu.read32(player+0xd8)))owner->_pendingHapticEvents|=HapticDamage;
             }
             if((pc>=0xee9c&&pc<0xf478)||pc==0xa80c||pc==0xa8a0||pc==0xa958||pc==0x8e04||pc==0xea14||pc==0xe86e||
                (pc>=SilentOn&&pc<=HapticsOffDraw))return [owner bridge:pc];
@@ -627,6 +636,8 @@ struct Runtime {
     // The modern preference wins over the legacy game's initial sound-OFF byte.
     c.write8(r.sound+1,_soundEnabled);
     if(_offersHaptics&&c.read16(0x2796)!=0x5053) {c.fail("Unsupported original player-health store");return;}
+    if(_offersHaptics&&(c.read32(0x286e)!=0x22e09912||c.read32(0x9b0e)!=0xaf01b590||
+                       c.read32(0xe994)!=0x7843b5f0)) {c.fail("Unsupported original haptic event boundaries");return;}
     if(TARGET_OS_IOS||TARGET_OS_WATCH||_offersHaptics) {
     // Extend the original Options table using its own font, layout, buttons, and animations.
     const uint32_t old=c.read32(0x14680);

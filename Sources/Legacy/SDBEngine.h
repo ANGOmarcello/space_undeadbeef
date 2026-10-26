@@ -19,8 +19,10 @@ NS_ASSUME_NONNULL_BEGIN
 @property(nonatomic) BOOL soundEnabled;
 @property(nonatomic) BOOL respectsSilentMode;
 @property(nonatomic) BOOL hapticsEnabled;
-/// Coalesced original events: laser release=1, target acquired=2, player damage=4.
-/// Consuming clears the events; no audio preference gates them.
+/// Coalesced original events: targeted volley=1, target acquired=2, damage=4,
+/// accepted menu/ON preview=8, explosion=16, primary Bluster/Bullet shot=32.
+/// Consuming clears events. Menu feedback survives menu transitions; gameplay
+/// events require active gameplay. Audio preferences never gate these events.
 - (NSUInteger)consumeHapticEvents;
 @property(nonatomic, readonly) CGSize logicalSize;
 @property(nonatomic, readonly) CGSize rasterSize;

@@ -17,8 +17,9 @@
 
 namespace {
 constexpr double Step = 1.0 / 60.0;
-constexpr NSUInteger LaserReleased = 1, TargetAcquired = 2, PlayerDamaged = 4;
-constexpr NSUInteger KnownEvents = LaserReleased | TargetAcquired | PlayerDamaged;
+constexpr NSUInteger WeaponReleased = 1, TargetAcquired = 2, PlayerDamaged = 4;
+constexpr NSUInteger MenuSelection = 8, Explosion = 16, PrimaryShot = 32;
+constexpr NSUInteger KnownEvents = WeaponReleased | TargetAcquired | PlayerDamaged | MenuSelection | Explosion | PrimaryShot;
 unsigned checks = 0;
 bool require(bool condition, const char *label) {
     ++checks;
@@ -62,51 +63,83 @@ uint64_t audioCount(SDBEngine *engine) {
     const char *value = std::strstr(engine.diagnostics.UTF8String, "audio=");
     return value ? std::strtoull(value + 6, nullptr, 10) : UINT64_MAX;
 }
+bool menuFeedback(SDBEngine *engine) {
+    NSUInteger events = [engine consumeHapticEvents];
+    return (events & MenuSelection) && !(events & ~KnownEvents) && [engine consumeHapticEvents] == 0;
+}
 
 int run(NSString *resources, NSString *directory) {
     SDBEngine *engine = fresh(resources);
     REQUIRE(healthy(engine, "initialize haptics-capable host"), "initialize original engine");
     REQUIRE(engine.hapticsEnabled && [engine consumeHapticEvents] == 0, "new installation defaults Haptics ON without title feedback");
+    REQUIRE(advance(engine, 120) && tap(engine, 470, 310) && engine.gameMenuType == 1 &&
+            [engine consumeHapticEvents] == 0, "empty title-space tap produces no accepted-menu feedback");
     REQUIRE(options(engine), "open actual original Options menu");
+    REQUIRE(menuFeedback(engine), "accepted title Options action survives transition to Options menu");
     REQUIRE(tap(engine, 180, 250) && engine.hapticsEnabled, "actual Options Haptics ON callback takes effect");
+    REQUIRE(menuFeedback(engine), "Haptics ON produces one coalesced preview in Options");
     REQUIRE(stored(directory, @"feedback.hapticsEnabled", YES), "ON persists before SAVE-EXIT");
     @autoreleasepool {
         SDBEngine *unsupported = [[SDBEngine alloc] initWithResourcePath:resources offersHaptics:NO];
         REQUIRE(healthy(unsupported, "host without haptics") && !unsupported.hapticsEnabled,
                 "host without haptics stays disabled even with stored ON preference");
         unsupported.hapticsEnabled = YES;
-        REQUIRE(!unsupported.hapticsEnabled && stored(directory, @"feedback.hapticsEnabled", YES),
+        REQUIRE(!unsupported.hapticsEnabled && stored(directory, @"feedback.hapticsEnabled", YES) &&
+                [unsupported consumeHapticEvents] == 0,
                 "unsupported host ignores enable without changing the stored preference");
     }
     engine = fresh(resources);
     REQUIRE(healthy(engine, "recreate after ON") && engine.hapticsEnabled, "ON survives engine recreation");
     REQUIRE(options(engine) && tap(engine, 300, 250) && !engine.hapticsEnabled,
             "actual Options Haptics OFF callback takes effect");
+    REQUIRE([engine consumeHapticEvents] == 0, "OFF clears pending accepted-menu feedback and previews");
     REQUIRE(stored(directory, @"feedback.hapticsEnabled", NO), "OFF persists before SAVE-EXIT");
     engine = fresh(resources);
     REQUIRE(healthy(engine, "recreate after OFF") && !engine.hapticsEnabled, "OFF survives engine recreation");
     REQUIRE(options(engine) && tap(engine, 180, 250) && engine.hapticsEnabled, "actual menu can restore Haptics ON");
+    REQUIRE(menuFeedback(engine), "OFF-to-ON callback previews feedback while still in Options");
     REQUIRE(tap(engine, 300, 130) && !engine.soundEnabled && engine.hapticsEnabled,
             "actual Sound OFF preserves independent Haptics ON");
+    REQUIRE(menuFeedback(engine), "accepted Sound OFF action still supplies independent menu feedback");
+    REQUIRE(tap(engine, 470, 310) && engine.gameMenuType == 5 && [engine consumeHapticEvents] == 0,
+            "empty Options-space tap produces no menu feedback with Sound OFF");
     REQUIRE(stored(directory, @"audio.soundEnabled", NO) && stored(directory, @"feedback.hapticsEnabled", YES),
             "Sound OFF and Haptics ON persist independently");
     REQUIRE(tap(engine, 240, 280) && engine.gameMenuType == 1, "actual SAVE-EXIT returns to title");
+    REQUIRE(menuFeedback(engine), "SAVE-EXIT menu selection survives return to title with Sound OFF");
     engine = fresh(resources);
     REQUIRE(healthy(engine, "recreate independent preferences") && !engine.soundEnabled && engine.hapticsEnabled,
             "Sound OFF and Haptics ON survive recreated engine");
     REQUIRE(advance(engine, 120) && [engine consumeHapticEvents] == 0, "title emits no gameplay feedback");
     REQUIRE(tap(engine, 160, 40) && engine.canPause, "actual Game Start enters ordinary gameplay");
+    REQUIRE(menuFeedback(engine), "Game Start selection survives transition into gameplay with Sound OFF");
     REQUIRE(audioCount(engine) == 0, "original Sound-OFF guard suppresses audio playback requests");
+    [engine pauseGame];
+    REQUIRE(advance(engine, 120) && engine.gameMenuType == 3 && menuFeedback(engine),
+            "accepted native Pause original callback emits feedback in Pause menu");
+    REQUIRE(tap(engine, 470, 310) && engine.gameMenuType == 3 && [engine consumeHapticEvents] == 0,
+            "empty Pause-space tap produces no feedback");
+    REQUIRE(tap(engine, 240, 130) && engine.canPause && menuFeedback(engine),
+            "accepted Pause Continue feedback survives return to gameplay");
 
-    unsigned releaseEvents = 0, lockEvents = 0, damageEvents = 0, releases = 0, gameplaySteps = 0;
+    // Restart through the public title flow so the sustained workload keeps its
+    // prior initial conditions after the independent Pause/menu assertions.
+    engine = fresh(resources);
+    REQUIRE(healthy(engine, "fresh active run") && advance(engine, 120) && tap(engine, 160, 40) &&
+            engine.canPause && menuFeedback(engine), "fresh original Game Start for active event workload");
+
+    unsigned releaseEvents = 0, lockEvents = 0, damageEvents = 0, primaryEvents = 0, explosionEvents = 0;
+    unsigned releases = 0, gameplaySteps = 0;
     NSUInteger allEvents = 0;
     auto collect = [&]() {
         NSUInteger events = [engine consumeHapticEvents];
         if ((events & ~KnownEvents) || [engine consumeHapticEvents] != 0) return false;
         allEvents |= events;
-        releaseEvents += bool(events & LaserReleased);
+        releaseEvents += bool(events & WeaponReleased);
         lockEvents += bool(events & TargetAcquired);
         damageEvents += bool(events & PlayerDamaged);
+        primaryEvents += bool(events & PrimaryShot);
+        explosionEvents += bool(events & Explosion);
         return true;
     };
     // This is the same ordinary hold/release/scan workload used by the runtime
@@ -136,11 +169,15 @@ int run(NSString *resources, NSString *directory) {
             if (engine.soundEnabled || !engine.hapticsEnabled) return 1;
         }
     }
+    std::printf("Observed active events: release=%u primary=%u target=%u explosion=%u damage=%u mask=%lu.\n",
+                releaseEvents, primaryEvents, lockEvents, explosionEvents, damageEvents, (unsigned long)allEvents);
     REQUIRE(gameplaySteps > 600, "workload executes sustained ordinary gameplay");
-    REQUIRE((allEvents & (LaserReleased | TargetAcquired)) == (LaserReleased | TargetAcquired),
-            "real original laser release and acquired target events survive Sound OFF");
+    REQUIRE((allEvents & (WeaponReleased | TargetAcquired | PrimaryShot)) == (WeaponReleased | TargetAcquired | PrimaryShot),
+            "real original primary shots, weapon releases and target events survive Sound OFF");
     REQUIRE(releaseEvents <= releases && lockEvents <= gameplaySteps && damageEvents <= gameplaySteps,
             "gameplay event counts remain bounded by original releases and updates");
+    REQUIRE(primaryEvents <= gameplaySteps && explosionEvents <= gameplaySteps,
+            "actual primary and explosion events coalesce at most once per update");
     REQUIRE(audioCount(engine) == 0, "haptic observation does not bypass the original Sound-OFF audio guard");
 
     // A separate fresh run leaves the player untouched so incoming enemies can
@@ -165,6 +202,13 @@ int run(NSString *resources, NSString *directory) {
             "passive damage observation preserves Sound OFF");
     std::printf("PASS passive original gameplay=%u updates, damage=%u, finalMenu=%ld; no player input or guest state patches.\n",
                 passiveSteps, passiveDamageEvents, (long)engine.gameMenuType);
+    REQUIRE(explosionEvents > 0, "actual original explosion construction supplies independent feedback with Sound OFF");
+    REQUIRE(advance(engine, 120) && engine.gameMenuType == 2 && [engine consumeHapticEvents] == 0,
+            "original Game Over entrance settles without unsolicited menu feedback");
+    REQUIRE(tap(engine, 470, 310) && engine.gameMenuType == 2 && [engine consumeHapticEvents] == 0,
+            "empty Game Over-space tap produces no feedback");
+    REQUIRE(engine.gameMenuType == 2 && tap(engine, 240, 130) && engine.canPause && menuFeedback(engine),
+            "accepted Game Over Continue feedback survives menu-to-game transition");
 
     engine.hapticsEnabled = NO;
     for (unsigned frame = 0; frame < 240; ++frame) {
@@ -176,8 +220,8 @@ int run(NSString *resources, NSString *directory) {
     engine = fresh(resources);
     REQUIRE(healthy(engine, "final OFF recreation") && !engine.hapticsEnabled && !engine.soundEnabled,
             "gameplay OFF and independent audio preference survive final recreation");
-    std::printf("PASS %u haptic integration checks; original gameplay=%u updates, release=%u/%u release inputs, target=%u, damage=%u, audio=0 with Sound OFF.\n",
-                checks, gameplaySteps, releaseEvents, releases, lockEvents, damageEvents);
+    std::printf("PASS %u haptic integration checks; original gameplay=%u updates, release=%u/%u release inputs, primary=%u, target=%u, explosion=%u, damage=%u, audio=0 with Sound OFF.\n",
+                checks, gameplaySteps, releaseEvents, releases, primaryEvents, lockEvents, explosionEvents, damageEvents);
     if (!damageEvents) std::printf("Player damage was not observed in this input run; the guarded damage observer needs separate event coverage.\n");
     std::printf("No physical haptic device was invoked; no universal gameplay event or hardware-feedback claim.\n");
     return 0;

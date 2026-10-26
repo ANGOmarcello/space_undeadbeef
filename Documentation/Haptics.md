@@ -1,59 +1,74 @@
 # Optional iPhone haptics — 26 October 2026
 
-Haptics default to ON when no preference exists and are controlled through ON/OFF
-in the original Options screen. An explicit OFF choice remains OFF. The choice
-persists immediately as `feedback.hapticsEnabled` in the
-host's UserDefaults, independently of sound and Respect Silent Mode. Tests use
-the existing isolated `SDB_SAVE_DIRECTORY` preference file and never real user
-settings.
+Haptics default to ON when no preference exists. The original Options ON/OFF
+controls persist `feedback.hapticsEnabled` immediately, independently of sound
+and Respect Silent Mode. An explicit OFF remains OFF. Tests use isolated
+`SDB_SAVE_DIRECTORY` preferences and never real user settings. Only iPhone
+hosts offer or emit feedback; the existing menu layout is retained.
 
-Only the iPhone native host offers or emits feedback. The original menu's font,
-colors, animations, button handling and ON/OFF columns are reused. Four sections
-share the existing heading-to-SAVE-EXIT span, preserving the original choice
-offset and exit anchor. iPad and Watch retain their prior audio Options layout;
-Mac retains its original layout.
+## Feedback delivery correction, build 1.1 (2)
 
-The host reuses a soft UIKit feedback generator. Each frame consumes one bitset
-after all due simulation steps. Damage has priority over laser release, then
-target acquisition; a shared 0.25-second cooldown allows at most four pulses per
-second. Low intensities are 0.25, 0.15 and 0.10 respectively. There is no deferred
-queue or menu feedback. Pause, inactivity, failure and OFF discard events.
-OFF/pause cannot reset the cooldown.
+The user reported no felt feedback in the first installed build. Source review
+confirmed menu feedback was filtered out, ordinary Bluster shots and explosions
+were unobserved, and a shared cooldown could suppress a weapon event after a
+lock tick. The original soft impacts also used very low intensities.
 
-Original gameplay is observed without skipping or replacing instructions:
+The native host now retains selection, light-impact and medium-impact generators
+associated with its visible Metal game view. It attaches them once per view,
+removes their interactions on teardown and suppresses offscreen/inactive feedback.
+This follows [Apple's view-association guidance](https://developer.apple.com/documentation/applepencil/playing-haptic-feedback-in-your-app)
+and [the UIKit view initializer](https://developer.apple.com/documentation/uikit/uiimpactfeedbackgenerator/init(style:view:)).
+The API correction does not alone prove why the earlier build felt silent.
+Audio-session settings and input hit testing are unchanged.
 
-- `SoundEffect::play` entry `0xe994`, before its sound-enabled guard: entry 2 is
-  a successful lock-on laser volley, entry 3 a newly acquired target batch.
-  Empty releases and unrelated explosions do not generate these events.
-- `Player::update` at `0x2796`: the guarded original health-store instruction is
-  observed only for the actual player, health offset `0xd8`, and a decreased
-  value. Enemy explosions are not interpreted as player damage.
+Accepted menu selections now produce a selection tick, including native Pause
+and an immediate Haptics ON preview. OFF clears pending feedback immediately.
+Weapon, target, damage and explosion events use stronger light/medium impacts.
+The host coalesces each frame's events and discards throttled events without a
+backlog. Separate bounded cooldowns prevent weaker events from starving weapons:
 
-Verification:
+| Event | Native feedback | Cooldown |
+| --- | --- | --- |
+| Accepted menu action / ON preview | Selection tick | 120 ms |
+| Targeted volley | Medium impact, intensity 0.85 | 250 ms; can preempt a recent ordinary shot |
+| Primary Bluster/Bullet shot | Light impact, intensity 0.70 | 500 ms after any weapon |
+| Player damage | Medium impact, intensity 1.0 | 350 ms; preempts weaker feedback |
+| Explosion | Medium impact, intensity 0.65 | 250 ms and a quiet gameplay interval |
+| New target | Light impact, intensity 0.35 | 1 second and a quiet gameplay interval |
 
-- `script/test_haptics_policy.sh`: 83 pure checks cover priority, exact cooldown
-  boundaries, sustained 60 Hz event bursts, OFF/toggles, unknown masks, invalid
-  timestamps, long uptime and discarded events.
-- `script/test_haptics.sh`: 269 public-engine checks pass with address/undefined
-  sanitizers. Real Options ON/OFF and immediate persistence survive engine
-  recreation. With Sound OFF, 3,000 ordinary gameplay updates produce 12 laser
-  releases and 264 target events with zero audio requests. A fresh passive run
-  observes one real damage event, followed by ordinary Game Over after 846 steps.
-- Guarded Options geometry passes 1,662 sanitizer checks, including 12/15-row
-  layouts, wide/tall safe areas, round trips, original metadata/callback
-  preservation and invalid/truncated tables.
-- iPhone 18 Pro Simulator visually verifies the new default ON in Options with
-  fresh isolated preferences. Earlier checks also cover ON/OFF selection,
-  immediate persistence across relaunch, SAVE-EXIT and Game Start. The updated
-  iOS Simulator and signed device builds pass; prior Mac/Watch builds and
-  iOS/Watch Swift 6 host typechecks passed.
-- The development-signed 1.1 (1) build was installed and launched successfully
-  on the connected physical iPhone 14 Pro running iOS 27.0.1. CoreDevice confirmed
-  the installed bundle/version and launched process. Signing validation passed,
-  including the iPhone's provisioning membership. No test save/mute environment
-  overrides were passed to the physical app. This is installation/launch proof,
-  not a tactile or gameplay/performance check.
+Original instructions and gameplay remain unchanged. SoundEffect entry `0xe994`
+is observed before its sound-enabled guard: entry 0 means an accepted executable
+menu action, 2 a targeted volley, 3 a target acquisition, 4 an actual Bluster
+construction and 5 an actual Explosion construction. Guarded `Player::update`
+boundaries observe decreased player health (`0x2796`) and a successful Bullet
+append (`0x286e`). The original pause callback at `0x9b0e` covers the native P
+button. Dormant Bullet code is guarded but not claimed as exercised; the ordinary
+weapon test uses the game's actual Bluster path. Empty-space taps emit no menu
+event. Gameplay events are filtered in menus while accepted selections survive
+menu transitions.
 
-Simulator and offline checks establish event/persistence behavior, not tactile
-quality. The subtle intensities still need a physical iPhone feel check.
-No Apple TV device discovery or testing was performed for this step.
+## Verification
+
+- `script/test_haptics_policy.sh`: 117 pure checks pass, including separate
+  budgets, priority preemption, exact boundaries, OFF, no queued replay and
+  sustained 60 Hz bursts.
+- `script/test_haptics.sh`: 287 address/undefined-sanitizer checks pass. With
+  Sound OFF, 3,000 ordinary updates yield 12 targeted volleys, 19 Bluster shots,
+  264 target acquisitions and 108 explosions before host throttling, with zero
+  audio requests. A passive run observes actual damage and ordinary Game Over.
+  Accepted title/Options/ON-preview/SAVE-EXIT/Start/Pause/Continue selections work;
+  empty-space taps and OFF suppress events. Preference/recreation checks pass.
+- iPhone 18 Pro Simulator shows the existing Options with default ON. Opt-in
+  `SDB_HAPTICS_LOG=1` confirms `enabled=1 attached=1 inWindow=1`, native
+  `selectionChanged` calls for menu actions/ON preview, and disabled state after
+  OFF. Simulator hardware capability is correctly reported as false; these logs
+  establish API requests, not a physical pulse.
+- Final signed-device and Simulator builds pass. iOS/watchOS Swift 6 host
+  typechecks pass. The signed profile includes the target iPhone and its code
+  signature validates. Build 1.1 (2) was installed and launched on the physical
+  iPhone 14 Pro, iOS 27.0.1, without test preference/audio overrides. CoreDevice
+  confirms the installed version/build. Physical tactile confirmation remains
+  a user check; the earlier report of no felt feedback is retained above.
+
+No system haptic, audio, accessibility or other-app settings were changed.
+No Apple TV device discovery or testing was performed for this correction.

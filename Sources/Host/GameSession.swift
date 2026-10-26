@@ -8,6 +8,9 @@
 import CoreGraphics
 import Foundation
 import Observation
+#if os(iOS)
+import UIKit
+#endif
 
 enum GameLayout {
     static let width: CGFloat = 480
@@ -116,9 +119,7 @@ final class GameSession {
             }
         }
         engine.renderFrame()
-        let events = engine.consumeHapticEvents()
-        haptics.update(enabled: isActive && engine.hapticsEnabled && engine.gameMenuType == 0 && engine.failure == nil,
-                       events: events)
+        deliverHaptics(from: engine)
         refreshState(from: engine)
         if failure != nil { setActive(false) }
         return steps
@@ -149,12 +150,23 @@ final class GameSession {
         if failure != engine.failure { failure = engine.failure }
     }
 
+    private func deliverHaptics(from engine: SDBEngine) {
+        // The engine filters gameplay events while in menus, but preserves
+        // accepted selections and the Haptics ON preview in every active menu.
+        let events = engine.consumeHapticEvents()
+        haptics.update(enabled: isActive && engine.hapticsEnabled && engine.failure == nil, events: events)
+    }
+
+    #if os(iOS)
+    func attachHaptics(to view: UIView) { haptics.attach(to: view) }
+    func detachHaptics(from view: UIView) { haptics.detach(from: view) }
+    #endif
+
     func pauseGame() {
         guard let engine, canPause else { return }
         cancelTouch()
         engine.pauseGame()
-        _ = engine.consumeHapticEvents()
-        haptics.reset()
+        deliverHaptics(from: engine)
         refreshState(from: engine)
         if failure != nil { setActive(false) }
     }
