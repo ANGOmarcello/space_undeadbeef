@@ -11,7 +11,7 @@ The restoration adds no network service. The native host replaces the original D
 | Original game progress | Application Support / host bundle identifier / `savedata.dat` | Original 256-byte `PSH0` packing and validation execute in guest code; host writes are atomic. |
 | Sound choice | `NSUserDefaults`, `audio.soundEnabled` | Boolean, defaults to ON; the original Options ON/OFF controls persist changes immediately. |
 | Silent-mode policy | `NSUserDefaults`, `audio.respectsSilentMode` | Boolean, defaults to ON; exposed inside the original Options screen on iOS/watchOS. |
-| iPhone haptics | `NSUserDefaults`, `feedback.hapticsEnabled` | Boolean, defaults to OFF; original Options ON/OFF controls persist immediately, independently of sound. |
+| iPhone haptics | `NSUserDefaults`, `feedback.hapticsEnabled` | Boolean, defaults to ON when absent; explicit OFF is preserved. Original Options ON/OFF controls persist immediately, independently of sound. Hosts without haptics keep it disabled. |
 
 Modern audio preferences are applied after loading the legacy save. A historical
 save's sound byte therefore does not replace an explicit modern choice. Each host

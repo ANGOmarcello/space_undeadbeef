@@ -148,7 +148,8 @@ SAVE-EXIT remains in place. The session uses the ambient category when respectin
 silent mode and the playback category when that policy is OFF. macOS retains
 normal system audio output; it has no equivalent iPhone hardware silent switch.
 
-On iPhone the same Options table also offers optional soft haptics, default OFF.
+On iPhone the same Options table also offers optional soft haptics, default ON
+when no preference exists. An explicit OFF choice is preserved.
 Four sections share the existing heading-to-SAVE-EXIT span, retaining the
 original font, colors, ON/OFF columns, choice offset and exit anchor. iPad and
 Watch retain the three-section audio layout. The native iPhone host consumes

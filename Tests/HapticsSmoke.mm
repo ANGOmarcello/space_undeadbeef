@@ -66,10 +66,18 @@ uint64_t audioCount(SDBEngine *engine) {
 int run(NSString *resources, NSString *directory) {
     SDBEngine *engine = fresh(resources);
     REQUIRE(healthy(engine, "initialize haptics-capable host"), "initialize original engine");
-    REQUIRE(!engine.hapticsEnabled && [engine consumeHapticEvents] == 0, "new installation defaults Haptics OFF");
+    REQUIRE(engine.hapticsEnabled && [engine consumeHapticEvents] == 0, "new installation defaults Haptics ON without title feedback");
     REQUIRE(options(engine), "open actual original Options menu");
     REQUIRE(tap(engine, 180, 250) && engine.hapticsEnabled, "actual Options Haptics ON callback takes effect");
     REQUIRE(stored(directory, @"feedback.hapticsEnabled", YES), "ON persists before SAVE-EXIT");
+    @autoreleasepool {
+        SDBEngine *unsupported = [[SDBEngine alloc] initWithResourcePath:resources offersHaptics:NO];
+        REQUIRE(healthy(unsupported, "host without haptics") && !unsupported.hapticsEnabled,
+                "host without haptics stays disabled even with stored ON preference");
+        unsupported.hapticsEnabled = YES;
+        REQUIRE(!unsupported.hapticsEnabled && stored(directory, @"feedback.hapticsEnabled", YES),
+                "unsupported host ignores enable without changing the stored preference");
+    }
     engine = fresh(resources);
     REQUIRE(healthy(engine, "recreate after ON") && engine.hapticsEnabled, "ON survives engine recreation");
     REQUIRE(options(engine) && tap(engine, 300, 250) && !engine.hapticsEnabled,

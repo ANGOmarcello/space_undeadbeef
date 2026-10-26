@@ -463,7 +463,8 @@ struct Runtime {
         }
         _soundEnabled=[self preference:@"audio.soundEnabled"]?[[self preference:@"audio.soundEnabled"] boolValue]:YES;
         _respectsSilentMode=[self preference:@"audio.respectsSilentMode"]?[[self preference:@"audio.respectsSilentMode"] boolValue]:YES;
-        _hapticsEnabled=_offersHaptics&&[[self preference:@"feedback.hapticsEnabled"] boolValue];
+        NSNumber *hapticsPreference=[self preference:@"feedback.hapticsEnabled"];
+        _hapticsEnabled=_offersHaptics&&(hapticsPreference?hapticsPreference.boolValue:YES);
         _wantedMusicEntry=-1;_wantedMusicLoop=YES;
         [self configureAudioSession];
         _audioMixer=[SDBAudioMixer new];

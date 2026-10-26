@@ -62,10 +62,18 @@ than a promise that temporary output will remain available indefinitely.
 
 ## Limits
 
-Physical iPhone and Apple TV installation remain unverified. Hardware silent-mode
+At this earlier check, physical iPhone and Apple TV installation remained unverified. Hardware silent-mode
 behavior, audible output, sustained performance, thermal behavior, and universal
 instruction and graphics conformance were not established. The Watch Crown
 remains untested by the agent.
+
+On 26 October 2026 the updated development-signed iOS 1.1 (1) build was installed
+and launched on the physical iPhone 14 Pro, iOS 27.0.1. Code-signature validation
+and profile membership passed. CoreDevice confirmed the exact installed bundle
+and version, and successful process launch without test overrides. The new
+haptics default ON was visually verified with fresh isolated preferences in the
+iPhone 18 Pro Simulator. Hardware gameplay, tactile quality and sustained
+physical-device performance remain separate checks. No Apple TV was queried.
 Full game parity, every stage and boss, and original-device timing comparison
 remain open. No App Store submission or public distribution was performed.
 
