@@ -114,3 +114,21 @@ A direct physical-device screenshot confirmed the filled main menu, its
 sent, so this update establishes installation, launch and title rendering;
 it does not add a new physical Crown or sustained frame-rate measurement.
 Only the known Series 12 was targeted; no Apple TV discovery was performed.
+
+## Optional Watch haptics — 26 October 2026
+
+Build 1.1 (6) adds the original Haptics ON/OFF Options section on Watch. The user
+confirmed feeling its OFF→ON preview on the physical Series 12 after an in-place
+installation and normal launch (PID 1050). The game uses WatchKit presets rather
+than a SwiftUI feedback counter. Crown ticks remain disabled; steering and
+corner Pause/HUD geometry are unchanged.
+
+Build 7 differentiates targeted rocket/laser volleys from short menu/ordinary-fire
+clicks, with a conservative quiet interval. Pattern mappings, persistence,
+rate limits, system-controlled audibility and exact verification boundaries are
+recorded in [Haptics.md](Haptics.md#watch-adaptation-builds-11-67).
+
+The final development-signed **1.1 (7)** passed strict signature/profile checks,
+was installed in place on the same Series 12, read back as build 7, and launched
+normally (PID 1052). No test save/audio overrides or uninstall were used. Physical
+feel of the revised volley pattern remains a user check.

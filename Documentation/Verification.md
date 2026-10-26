@@ -2,7 +2,7 @@
 
 The subsequent measured 60 Hz performance pass, audio mixer replacement and
 its exact verification limits are recorded in [Performance.md](Performance.md).
-The following optional iPhone feedback step is recorded in [Haptics.md](Haptics.md).
+Optional iPhone and Watch feedback is recorded in [Haptics.md](Haptics.md).
 
 The **1.1 (3)** Watch Crown fixes and **1.1 (4)** pause/HUD layout correction are documented in
 [WatchControls.md](WatchControls.md), with separate engine, session, Simulator,
@@ -17,6 +17,16 @@ The subsequent **1.1 (5)** update was installed and launched on that Series 12
 over Wi-Fi (PID 1023). CoreDevice confirmed the installed build, and a direct
 Watch screenshot showed the updated menu with **Continue 1-16** preserved.
 See the physical-update section in [WatchControls.md](WatchControls.md).
+
+Build **1.1 (6)** enabled the original Watch Haptics Options controls. Its
+Simulator UI showed default ON, preserved OFF through SAVE-EXIT/reopening, native
+ON-preview requests, and inactive suppression. After the signed update was
+installed and normally launched on Series 12 (PID 1050), the user confirmed the
+OFF→ON click but reported uniform short pulses. Build 7 differentiates volley
+feedback. Its 683 policy checks and Watch/iPhone Simulator builds pass; the signed
+Watch build was installed, independently read back as 1.1 (7), and launched normally
+(PID 1052). Revised gameplay-pattern feel remains unconfirmed. See
+[Haptics.md](Haptics.md) for the final policy and delivery record.
 
 Build **1.1 (2)** corrects menu/weapon/explosion event coverage and native haptics
 view association after the user reported no felt feedback. It passed 287 engine

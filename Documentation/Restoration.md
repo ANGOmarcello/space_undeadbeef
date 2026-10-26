@@ -148,14 +148,16 @@ SAVE-EXIT remains in place. The session uses the ambient category when respectin
 silent mode and the playback category when that policy is OFF. macOS retains
 normal system audio output; it has no equivalent iPhone hardware silent switch.
 
-On iPhone the same Options table also offers optional soft haptics, default ON
+On iPhone and Watch the same Options table also offers optional haptics, default ON
 when no preference exists. An explicit OFF choice is preserved.
 Four sections share the existing heading-to-SAVE-EXIT span, retaining the
-original font, colors, ON/OFF columns, choice offset and exit anchor. iPad and
-Watch retain the three-section audio layout. The native iPhone host consumes
+original font, colors, ON/OFF columns, choice offset and exit anchor. iPad retains
+the three-section audio layout. Both native feedback hosts consume
 coalesced original menu, weapon, target-acquisition, explosion and actual
 player-health decrease events, independently of sound. View-associated UIKit
 generators use separate bounded cooldowns so lock ticks cannot suppress shots.
+WatchKit uses system patterns with slower shared and per-event limits, only while
+the Watch app is active. Its preset-pattern audibility is governed by watchOS.
 See [Haptics.md](Haptics.md) for verification and persistence details.
 
 When `SDB_SAVE_DIRECTORY` is provided for a test, the preference keys use an

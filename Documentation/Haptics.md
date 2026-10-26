@@ -1,10 +1,11 @@
-# Optional iPhone haptics — 26 October 2026
+# Optional iPhone and Watch haptics — 26 October 2026
 
 Haptics default to ON when no preference exists. The original Options ON/OFF
 controls persist `feedback.hapticsEnabled` immediately, independently of sound
 and Respect Silent Mode. An explicit OFF remains OFF. Tests use isolated
-`SDB_SAVE_DIRECTORY` preferences and never real user settings. Only iPhone
-hosts offer or emit feedback; the existing menu layout is retained.
+`SDB_SAVE_DIRECTORY` preferences and never real user settings. iPhone and Watch
+hosts offer native feedback through the same original Options controls. Each
+host bundle stores its own choice; the iPhone implementation is unchanged.
 
 ## Feedback delivery correction, build 1.1 (2)
 
@@ -75,3 +76,70 @@ menu transitions.
 
 No system haptic, audio, accessibility or other-app settings were changed.
 No Apple TV device discovery or testing was performed for this correction.
+
+## Watch adaptation, builds 1.1 (6–7)
+
+WatchKit plays preset patterns while the app is active. The Watch now offers the
+existing Haptics ON/OFF section, defaults ON when absent, preserves an explicit
+OFF, and previews ON with a click. OFF immediately clears pending events. The
+host coalesces each frame and discards throttled events without a replay queue.
+
+| Event | Watch pattern | Per-kind interval |
+| --- | --- | --- |
+| Accepted menu action / ON preview | Click | 250 ms after any feedback |
+| Targeted rocket/laser volley | Start | 750 ms |
+| Ordinary Bluster/Bullet shot | Click | 1 second |
+| Player damage | Direction down | 750 ms |
+| Explosion | Click | 1.5 seconds |
+| New target | Click | 2 seconds |
+
+Gameplay events also wait at least 500 ms after any feedback. Volleys and damage
+reserve 750 ms before **any** subsequent pattern, including menu ticks. These are
+conservative app limits, not documented pattern durations or a guarantee about
+when the hardware finishes. Cooldown timestamps survive OFF, pause and inactive
+transitions. Crown rotation keeps its existing disabled system ticks.
+
+The distinct Start pattern marks the weapon action beginning; Direction down
+marks health decreasing. WatchKit has no per-call intensity/duration control, so
+this does not reproduce iPhone's variable-strength impacts. Apple's
+[play guidance](https://developer.apple.com/documentation/watchkit/wkinterfacedevice/play(_:))
+warns that rapid requests interrupt the current pattern. No repeated-pulse
+sequence or delayed playback was added.
+
+Watch patterns can include an audible system tone. The game Sound option controls
+original game audio; watchOS Silent Mode and system haptics settings govern these
+native patterns. WatchKit exposes no per-call mute option. See Apple's
+[haptics guidance](https://developer.apple.com/design/human-interface-guidelines/playing-haptics).
+No system audio or haptic settings are changed.
+
+### Watch verification
+
+- The Series 12 46 mm Simulator visibly showed the original Options layout and
+  default Haptics ON. OFF survived SAVE-EXIT and reopening Options. Native request
+  logs stopped while OFF; switching ON immediately requested `play.click` with
+  `enabled=1 active=1`. Returning Home produced `state=inactive`, with no further
+  feedback requests. All Simulator preferences were isolated from real app data.
+- `script/test_haptics.sh` again passed 287 ASan/UBSan checks of original event
+  observation, Sound OFF, persistence, default ON, explicit OFF and no queued
+  replay. No physical haptic was invoked by those tests.
+- Build 1.1 (6) passed Watch Simulator and signed-device builds, strict signature
+  verification and Series 12 provisioning membership. CoreDevice installed it in
+  place, read back 1.1 (6), and launched normally (PID 1050) with no test save or
+  audio overrides. The user confirmed feeling the Watch OFF→ON click, but reported
+  that feedback felt uniformly like one short pulse. Build 7 consequently gives
+  targeted volleys their own Start pattern and a protected quiet interval.
+
+- Final build 1.1 (7) passed 683 Swift 6 warnings-as-errors policy checks: the
+  original 117 iPhone checks plus 566 Watch checks, including the protected
+  volley interval, exact boundaries and sustained mixed 60 Hz event bursts.
+  Watch Simulator, physical-device and iPhone 18 Pro Simulator regression builds
+  passed. The iPhone check was compile-only; its feedback implementation is unchanged.
+- Strict signature verification and exact Series 12 provisioning membership
+  passed for build 7. CoreDevice installed it in place, independently read back
+  version 1.1 (7), and launched normally (PID 1052), preserving existing app data.
+  Physical menu feedback was confirmed on build 6; build 7's distinct volley and
+  other gameplay-pattern feel have not yet been confirmed by the user.
+
+No Apple TV was queried or activated for this Watch adaptation. The task's
+Simulator game process was stopped after verification; other apps, system
+settings and pre-existing Simulator boot state were left alone.
