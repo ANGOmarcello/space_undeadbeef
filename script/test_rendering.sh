@@ -24,6 +24,7 @@ xcrun clang++ -std=c++17 -O2 -fobjc-arc -Wall -Wextra -Werror \
   "$PROJECT_ROOT/Sources/Legacy/GuestCPU.cpp" \
   "$PROJECT_ROOT/Sources/Legacy/GameDisplayPatch.cpp" \
   "$PROJECT_ROOT/Sources/Legacy/SDBMetalRenderer.mm" \
+  "$PROJECT_ROOT/Sources/Legacy/SDBAudioMixer.mm" \
   -framework Foundation -framework CoreGraphics -framework ImageIO \
   -framework AVFoundation -framework Metal -framework CoreImage -framework QuartzCore \
   -o "$TASK_TEMP/RendererTests"

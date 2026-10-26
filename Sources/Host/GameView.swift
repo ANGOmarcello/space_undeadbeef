@@ -120,8 +120,8 @@ struct GameView: View {
     private func screen(size: CGSize) -> some View {
         ZStack {
             #if !os(watchOS)
-            if session.usesMetalRenderer, let engine = session.engine {
-                MetalGameSurface(engine: engine, revision: session.frameRevision)
+            if session.usesMetalRenderer {
+                MetalGameSurface(session: session)
                     .allowsHitTesting(false)
             }
             #endif

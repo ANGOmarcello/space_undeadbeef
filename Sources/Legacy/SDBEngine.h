@@ -32,6 +32,10 @@ NS_ASSUME_NONNULL_BEGIN
 - (BOOL)presentToDrawable:(id<CAMetalDrawable>)drawable;
 #endif
 - (void)update:(double)delta;
+/// Advances one original fixed 60 Hz step without generating an intermediate frame.
+- (void)advanceSimulation:(double)delta;
+/// Renders the current state once, independently of the number of simulation steps.
+- (void)renderFrame;
 - (void)touchPhase:(NSInteger)phase x:(double)x y:(double)y;
 - (void)setSuspended:(BOOL)suspended;
 @end

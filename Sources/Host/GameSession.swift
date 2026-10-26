@@ -13,7 +13,7 @@ enum GameLayout {
     static let width: CGFloat = 480
     static let height: CGFloat = 320
     static let size = CGSize(width: width, height: height)
-    static let simulationStep = 1.0 / 60.0
+    static let simulationStep = GameFrameClock.simulationStep
     static let pointerStep = width / 24
     static let pointerDiameter = height / 40
     static let pointerStroke = pointerDiameter / 4
@@ -43,8 +43,8 @@ final class GameSession {
     private(set) var frame: CGImage?
     private(set) var logicalSize = GameLayout.size
     private(set) var rasterViewSize = GameLayout.size
-    private(set) var frameRevision: UInt64 = 0
     private(set) var usesMetalRenderer = false
+    private(set) var isActive = false
     private(set) var canPause = false
     private(set) var gameMenuType = 0
     private(set) var failure: String?
@@ -54,23 +54,22 @@ final class GameSession {
 
     @ObservationIgnored private(set) var engine: SDBEngine?
     @ObservationIgnored private var viewport: GameViewport?
-    @ObservationIgnored private var timer: Timer?
-    @ObservationIgnored private var lastTime = 0.0
-    @ObservationIgnored private var accumulatedTime = 0.0
+    @ObservationIgnored private var softwareTimer: Timer?
+    @ObservationIgnored private var clock = GameFrameClock()
     @ObservationIgnored private var releasesTapAfterStep = false
 
     func setActive(_ active: Bool) {
         if !active {
+            isActive = false
             cancelTouch()
             engine?.setSuspended(true)
             canPause = false
-            timer?.invalidate()
-            timer = nil
-            lastTime = 0
-            accumulatedTime = 0
+            softwareTimer?.invalidate()
+            softwareTimer = nil
+            clock.reset()
             return
         }
-        guard timer == nil, failure == nil else { return }
+        guard !isActive, failure == nil else { return }
         if engine == nil {
             guard let path = Bundle.main.resourceURL?.appendingPathComponent("Original").path else {
                 failure = "The original game resources could not be found."
@@ -84,31 +83,39 @@ final class GameSession {
         guard failure == nil else { return }
         engine?.setSuspended(false)
         if let engine { refreshState(from: engine) }
-        lastTime = ProcessInfo.processInfo.systemUptime
+        guard failure == nil else { return }
+        clock.reset(at: ProcessInfo.processInfo.systemUptime)
+        isActive = true
+        // MetalKit drives supported views directly. Watch and other software
+        // fallbacks still need a timer to publish their CPU-rendered CGImage.
+        guard !usesMetalRenderer else { return }
         let timer = Timer(timeInterval: GameLayout.simulationStep, repeats: true) { [weak self] _ in
-            MainActor.assumeIsolated { self?.tick() }
+            MainActor.assumeIsolated {
+                _ = self?.drawDisplayFrame(at: ProcessInfo.processInfo.systemUptime)
+            }
         }
-        self.timer = timer
+        softwareTimer = timer
         RunLoop.main.add(timer, forMode: .common)
     }
 
-    private func tick() {
-        guard let engine else { return }
-        let now = ProcessInfo.processInfo.systemUptime
-        // Keep the original 60 Hz simulation independent of host redraw cadence.
-        // A suspended scene resumes without simulating its time in the background.
-        accumulatedTime += min(now - lastTime, GameLayout.simulationStep * 4)
-        lastTime = now
-        while accumulatedTime >= GameLayout.simulationStep {
-            engine.update(GameLayout.simulationStep)
-            accumulatedTime -= GameLayout.simulationStep
+    /// Called by MetalKit immediately before presentation, or by the software
+    /// fallback timer. Catch-up advances original game logic, then renders once.
+    @discardableResult
+    func drawDisplayFrame(at time: TimeInterval) -> Int {
+        guard isActive, failure == nil, let engine else { return 0 }
+        let steps = clock.steps(at: time)
+        guard steps > 0 else { return 0 }
+        for _ in 0..<steps {
+            engine.advanceSimulation(GameLayout.simulationStep)
             if releasesTapAfterStep {
                 endTouch()
                 releasesTapAfterStep = false
             }
         }
+        engine.renderFrame()
         refreshState(from: engine)
         if failure != nil { setActive(false) }
+        return steps
     }
 
     func configure(_ viewport: GameViewport) {
@@ -125,12 +132,15 @@ final class GameSession {
     }
 
     private func refreshState(from engine: SDBEngine) {
-        usesMetalRenderer = engine.usesMetalRenderer
-        if !usesMetalRenderer { frame = engine.frame }
-        canPause = engine.canPause
-        gameMenuType = Int(engine.gameMenuType)
-        failure = engine.failure
-        frameRevision &+= 1
+        let metal = engine.usesMetalRenderer
+        if usesMetalRenderer != metal { usesMetalRenderer = metal }
+        if !metal { frame = engine.frame }
+        else if frame != nil { frame = nil }
+        let pause = engine.canPause
+        if canPause != pause { canPause = pause }
+        let menu = Int(engine.gameMenuType)
+        if gameMenuType != menu { gameMenuType = menu }
+        if failure != engine.failure { failure = engine.failure }
     }
 
     func pauseGame() {

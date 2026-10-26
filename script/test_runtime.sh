@@ -21,7 +21,7 @@ xcrun clang++ -std=c++17 -O1 -g -Wall -Wextra -Wpedantic -Werror \
 "$TASK_TEMP/GameDisplayPatchTests" "$PROJECT_ROOT/Resources/Original/psh"
 xcrun clang++ -std=c++17 -O1 -g -fobjc-arc \
   -fsanitize=address,undefined -fno-omit-frame-pointer \
-  -I Sources/Legacy Sources/Legacy/GuestCPU.cpp Sources/Legacy/GameDisplayPatch.cpp Sources/Legacy/SDBMetalRenderer.mm Sources/Legacy/SDBEngine.mm Tests/RuntimeSmoke.mm \
+  -I Sources/Legacy Sources/Legacy/GuestCPU.cpp Sources/Legacy/GameDisplayPatch.cpp Sources/Legacy/SDBMetalRenderer.mm Sources/Legacy/SDBAudioMixer.mm Sources/Legacy/SDBEngine.mm Tests/RuntimeSmoke.mm \
   -framework Foundation -framework CoreGraphics -framework ImageIO -framework AVFoundation -framework Metal -framework CoreImage -framework QuartzCore \
   -o "$TASK_TEMP/RuntimeSmoke"
 SDB_SMOKE_SOUND=1 "$TASK_TEMP/RuntimeSmoke" "$PROJECT_ROOT/Resources/Original" "$TASK_TEMP/captures" 160 40 600

@@ -9,12 +9,14 @@
 #include "GameDisplayPatch.h"
 #include "TextDistanceField.h"
 #import "SDBMetalRenderer.h"
+#import "SDBAudioMixer.h"
 #include <algorithm>
 #include <cmath>
 #include <cstring>
 #include <map>
 #include <memory>
 #include <sstream>
+#include <string_view>
 #include <vector>
 
 namespace {
@@ -174,10 +176,23 @@ struct Runtime {
                 int ix=int(tx),iy=int(ty),jx=std::min(ix+1,t->width-1),jy=std::min(iy+1,t->height-1);
                 float fx=tx-ix,fy=ty-iy;
                 auto sample=[&](int sx,int sy,int ch) {return t->pixels[4*(sy*t->width+sx)+ch]/255.f;};
+                // Interpolate the four channels together; the weights and
+                // sample order remain the original GL_LINEAR calculation.
+                #if defined(__clang__)
+                typedef uint8_t Byte4 __attribute__((ext_vector_type(4)));
+                typedef float Float4 __attribute__((ext_vector_type(4)));
+                auto rgbaAt=[&](int sx,int sy) {
+                    Byte4 bytes;memcpy(&bytes,t->pixels.data()+4*(sy*t->width+sx),4);
+                    return __builtin_convertvector(bytes,Float4)/255.f;
+                };
+                Float4 texel=(1-fy)*((1-fx)*rgbaAt(ix,iy)+fx*rgbaAt(jx,iy))+
+                    fy*((1-fx)*rgbaAt(ix,jy)+fx*rgbaAt(jx,jy));
+                #else
                 float texel[4];
                 for(int ch=0;ch<4;++ch)
                     texel[ch]=(1-fy)*((1-fx)*sample(ix,iy,ch)+fx*sample(jx,iy,ch))+
                         fy*((1-fx)*sample(ix,jy,ch)+fx*sample(jx,jy,ch));
+                #endif
                 if(t->distanceField) {
                         float value=texel[3];
                         auto alphaAtUV=[&](float su,float sv) {
@@ -286,8 +301,8 @@ struct Runtime {
     NSString *_savePath;
     NSString *_failure;
     CGImageRef _frame;
-    NSMutableDictionary<NSNumber*,NSURL*> *_buffers;
-    NSMutableDictionary<NSNumber*,AVAudioPlayer*> *_players;
+    SDBAudioMixer *_audioMixer;
+    NSMutableDictionary<NSNumber*,SDBAudioVoice*> *_players;
     NSMutableDictionary<NSNumber*,NSNumber*> *_sourceBuffers;
     NSMutableDictionary<NSNumber*,NSNumber*> *_sourceLoops;
     NSMutableDictionary<NSNumber*,NSNumber*> *_sourceGains;
@@ -405,6 +420,7 @@ struct Runtime {
 - (void)setRespectsSilentMode:(BOOL)respect {
     _respectsSilentMode=respect;[self storePreference:respect key:@"audio.respectsSilentMode"];
     [self configureAudioSession];
+    if(!_suspended&&_audioMixer&&![_audioMixer prepare])_failure=_audioMixer.failure;
 }
 - (void)checkFault {
     if(!_runtime->cpu.fault.empty())_failure=@(_runtime->cpu.fault.c_str());
@@ -412,7 +428,7 @@ struct Runtime {
 - (instancetype)initWithResourcePath:(NSString *)path {
     if((self=[super init])) {
         _runtime=std::make_unique<Runtime>();_resourcePath=[path copy];
-        _buffers=[NSMutableDictionary dictionary];_players=[NSMutableDictionary dictionary];
+        _players=[NSMutableDictionary dictionary];
         _sourceBuffers=[NSMutableDictionary dictionary];_sourceLoops=[NSMutableDictionary dictionary];_sourceGains=[NSMutableDictionary dictionary];
         _pausedSources=[NSMutableSet set];
         _muted=NSProcessInfo.processInfo.environment[@"SDB_MUTE_AUDIO"]!=nil;
@@ -427,6 +443,9 @@ struct Runtime {
         _soundEnabled=[self preference:@"audio.soundEnabled"]?[[self preference:@"audio.soundEnabled"] boolValue]:YES;
         _respectsSilentMode=[self preference:@"audio.respectsSilentMode"]?[[self preference:@"audio.respectsSilentMode"] boolValue]:YES;
         _wantedMusicEntry=-1;_wantedMusicLoop=YES;
+        [self configureAudioSession];
+        _audioMixer=[SDBAudioMixer new];
+        _audioMixer.outputVolume=_muted?0:1;
         _metalRenderer=[[SDBMetalRenderer alloc] init];
         _runtime->metal=_metalRenderer.supported&&NSProcessInfo.processInfo.environment[@"SDB_CPU_RENDERER"]==nil;
         __unsafe_unretained SDBEngine *owner=self;
@@ -437,7 +456,6 @@ struct Runtime {
             return false;
         };
         [self loadOriginal];[self checkFault];
-        [self configureAudioSession];
         if(!_failure)[self update:0];
     }
     return self;
@@ -563,8 +581,10 @@ struct Runtime {
         uint32_t index=[entry[@"entry"] unsignedIntValue];if(index>=12)continue;
         uint32_t p=r.sound+12+16*index;
         c.write32(p,r.allocate(8));c.write32(p+4,8);c.write32(p+8,index+1);c.write32(p+12,bits([entry[@"volume"] floatValue]));
-        _buffers[@(index+1)]=[NSURL fileURLWithPath:[_resourcePath stringByAppendingPathComponent:entry[@"name"]]];
+        NSURL *url=[NSURL fileURLWithPath:[_resourcePath stringByAppendingPathComponent:entry[@"name"]]];
+        if(![_audioMixer loadBuffer:index+1 URL:url]) {c.fail(_audioMixer.failure.UTF8String?:"Original audio could not load");return;}
     }
+    if(![_audioMixer prepare]) {c.fail(_audioMixer.failure.UTF8String?:"Original audio graph could not prepare");return;}
     if(!c.fault.empty())return;
     r.game=r.allocate(24);if(!c.fault.empty())return;c.call(0x8dfb,{r.game});
     if(!c.fault.empty())return;
@@ -768,7 +788,9 @@ struct Runtime {
     }
     auto it=r.imports.find(pc);if(it==r.imports.end())return NO;
     const std::string &s=it->second;
-    auto is=[&](const char *name) {return s==name;};
+    // Keep literal lengths at the call site: the old char-pointer predicate
+    // repeatedly scanned import names in every math and graphics bridge call.
+    auto is=[&](std::string_view name) {return std::string_view(s)==name;};
     if(is("__Znwm")||is("__Znam")||is("_malloc"))return done(r.allocate(c.r[0]));
     if(is("_calloc")) {uint64_t n=uint64_t(c.r[0])*c.r[1];return done(n>0x1600000?0:r.allocate((uint32_t)n));}
     if(is("__ZdlPv")||is("__ZdaPv")||is("_free")) {r.release(c.r[0]);return done();}
@@ -857,10 +879,17 @@ struct Runtime {
         else if(is("_alSourcei")) {if(c.r[1]==0x1009)_sourceBuffers[source]=@(c.r[2]);else if(c.r[1]==0x1007)_sourceLoops[source]=@(c.r[2]);}
         else if(is("_alSourcef")&&c.r[1]==0x100a) {_sourceGains[source]=@(real(c.r[2]));_players[source].volume=_muted?0:real(c.r[2]);}
         else if(is("_alSourcePlay")) {
-            ++r.audioEvents;NSURL *url=_buffers[_sourceBuffers[source]];
-            if(url) {NSError *error=nil;AVAudioPlayer *player=[[AVAudioPlayer alloc] initWithContentsOfURL:url error:&error];
-                if(player) {player.numberOfLoops=[_sourceLoops[source] boolValue]?-1:0;player.volume=_muted?0:(_sourceGains[source]?[_sourceGains[source] floatValue]:1);_players[source]=player;if(!_suspended&&_soundEnabled)[player play];}
-                else c.fail(std::string("Audio could not decode original WAV: ")+error.localizedDescription.UTF8String);
+            ++r.audioEvents;
+            SDBAudioVoice *player=[_audioMixer voiceForSource:c.r[0]];
+            if(!player||![player configureBuffer:[_sourceBuffers[source] unsignedIntValue] loop:[_sourceLoops[source] boolValue]])
+                c.fail(_audioMixer.failure.UTF8String?:"Original audio selected an invalid voice");
+            else {
+                player.volume=_muted?0:(_sourceGains[source]?[_sourceGains[source] floatValue]:1);
+                _players[source]=player;
+                if(!_suspended&&_soundEnabled) {
+                    [_audioMixer wakeIfNeeded];
+                    if(![player play])c.fail(_audioMixer.failure.UTF8String?:"Original audio could not play");
+                }
             }
         } else if(is("_alSourceStop")) {[_players[source] stop];[_players removeObjectForKey:source];}
         else if(!(is("_alListener3f")||is("_alcCloseDevice")||is("_alcDestroyContext")||is("_alDeleteSources")))c.fail("Unbridged audio call: "+s);
@@ -870,10 +899,18 @@ struct Runtime {
 }
 
 - (void)update:(double)delta {
+    [self advanceSimulation:delta];
+    [self renderFrame];
+}
+- (void)advanceSimulation:(double)delta {
     if(_failure||_suspended)return;
     Runtime &r=*_runtime;
     if(delta>0)r.cpu.call(0x8af3,{r.game,bits(1.f/60.f)});
-    [self checkFault];if(_failure)return;
+    [self checkFault];
+}
+- (void)renderFrame {
+    if(_failure||_suspended)return;
+    Runtime &r=*_runtime;
     if(!r.metal)std::fill(r.pixels.begin(),r.pixels.end(),0);
     r.metalVertices.clear();r.metalDraws.clear();r.titleDrawn=false;
     r.matrix=Matrix();r.stack.clear();r.colorArray=false;
@@ -914,6 +951,7 @@ struct Runtime {
         if(!_failure) {_runtime->cpu.call(0x8e13,{_runtime->game});[self checkFault];}
     } else {
         _suspended=NO;
+        if(![_audioMixer prepare])_runtime->cpu.fail(_audioMixer.failure.UTF8String?:"Original audio graph could not resume");
         if(_soundEnabled) {
             for(NSNumber *source in _pausedSources)[_players[source] play];
             NSNumber *music=@(_runtime->cpu.read32(_runtime->sound+0xec));

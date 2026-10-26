@@ -3,7 +3,12 @@
 
 #if !TARGET_OS_WATCH
 #import <CoreImage/CoreImage.h>
+#include <algorithm>
+#include <array>
+#include <atomic>
 #include <cmath>
+#include <cstring>
+#include <memory>
 
 namespace {
 constexpr NSUInteger MaximumInFlightCommands = 3;
@@ -13,6 +18,15 @@ constexpr NSUInteger MaximumDrawCount = 16384;
 constexpr NSUInteger MaximumPixelDimension = 8192;
 constexpr NSUInteger MaximumPixelCount = 16 * 1024 * 1024;
 constexpr MTLPixelFormat FrameFormat = MTLPixelFormatBGRA8Unorm;
+
+// A command's completion owns the usage marker independently of the renderer.
+// Buffers are not overwritten until the GPU has finished their own submission.
+struct VertexBufferUsage {
+    std::array<std::atomic<bool>, MaximumInFlightCommands> busy;
+    VertexBufferUsage() {
+        for (auto &slot : busy) slot.store(false, std::memory_order_relaxed);
+    }
+};
 
 NSString *const ShaderSource = @R"metal(
 #include <metal_stdlib>
@@ -104,6 +118,10 @@ bool BlendFactor(uint32_t value, MTLBlendFactor &factor) {
     // Completion handlers retain this small state and semaphore, never self.
     NSMutableDictionary<NSString *, NSString *> *_completionState;
     dispatch_semaphore_t _commandSlots;
+    id<MTLBuffer> _vertexBuffers[MaximumInFlightCommands];
+    NSUInteger _vertexBufferCapacities[MaximumInFlightCommands];
+    NSUInteger _nextVertexBuffer;
+    std::shared_ptr<VertexBufferUsage> _vertexBufferUsage;
     CIContext *_imageContext;
     CGColorSpaceRef _colorSpace;
     CGImageRef _cachedFrame;
@@ -117,6 +135,7 @@ bool BlendFactor(uint32_t value, MTLBlendFactor &factor) {
     _pipelines = [NSMutableDictionary dictionary];
     _completionState = [NSMutableDictionary dictionary];
     _commandSlots = dispatch_semaphore_create(MaximumInFlightCommands);
+    _vertexBufferUsage = std::make_shared<VertexBufferUsage>();
     _device = MTLCreateSystemDefaultDevice();
     if (!_device) { _failure = @"Metal is unavailable on this device."; return self; }
     _queue = [_device newCommandQueue];
@@ -232,15 +251,17 @@ bool BlendFactor(uint32_t value, MTLBlendFactor &factor) {
     return pipeline;
 }
 
-- (void)completeCommand:(id<MTLCommandBuffer>)command {
+- (void)completeCommand:(id<MTLCommandBuffer>)command vertexSlot:(NSUInteger)vertexSlot {
     dispatch_semaphore_t slots = _commandSlots;
     NSMutableDictionary<NSString *, NSString *> *state = _completionState;
+    const auto usage = _vertexBufferUsage;
     [command addCompletedHandler:^(id<MTLCommandBuffer> completed) {
         if (completed.status == MTLCommandBufferStatusError) {
             @synchronized (state) {
                 state[@"error"] = completed.error.localizedDescription ?: @"Metal command execution failed.";
             }
         }
+        if (vertexSlot != NSNotFound) usage->busy[vertexSlot].store(false, std::memory_order_release);
         dispatch_semaphore_signal(slots);
     }];
 }
@@ -272,6 +293,41 @@ bool BlendFactor(uint32_t value, MTLBlendFactor &factor) {
         if (![self pipelineForDraw:draw]) return NO;
     }
     if (dispatch_semaphore_wait(_commandSlots, DISPATCH_TIME_NOW)) return NO;
+    NSUInteger vertexSlot = NSNotFound;
+    id<MTLBuffer> buffer = nil;
+    if (vertexCount) {
+        for (NSUInteger i = 0; i < MaximumInFlightCommands; ++i) {
+            const NSUInteger candidate = (_nextVertexBuffer + i) % MaximumInFlightCommands;
+            if (!_vertexBufferUsage->busy[candidate].exchange(true, std::memory_order_acq_rel)) {
+                vertexSlot = candidate;
+                _nextVertexBuffer = (candidate + 1) % MaximumInFlightCommands;
+                break;
+            }
+        }
+        if (vertexSlot == NSNotFound) {
+            dispatch_semaphore_signal(_commandSlots);
+            _failure = @"Metal vertex-buffer slots are unexpectedly exhausted.";
+            return NO;
+        }
+        const NSUInteger length = vertexCount * sizeof(SDBMetalVertex);
+        if (_vertexBufferCapacities[vertexSlot] < length) {
+            NSUInteger capacity = std::max(NSUInteger(4096), _vertexBufferCapacities[vertexSlot]);
+            while (capacity < length) capacity = std::min(capacity * 2, MaximumVertexCount * sizeof(SDBMetalVertex));
+            id<MTLBuffer> grown = [_device newBufferWithLength:capacity options:MTLResourceStorageModeShared];
+            if (grown) {
+                _vertexBuffers[vertexSlot] = grown;
+                _vertexBufferCapacities[vertexSlot] = capacity;
+            }
+        }
+        buffer = _vertexBuffers[vertexSlot];
+        if (!buffer || _vertexBufferCapacities[vertexSlot] < length) {
+            _vertexBufferUsage->busy[vertexSlot].store(false, std::memory_order_release);
+            dispatch_semaphore_signal(_commandSlots);
+            _failure = @"Unable to allocate a Metal vertex buffer.";
+            return NO;
+        }
+        std::memcpy(buffer.contents, vertices, length);
+    }
     id<MTLTexture> target = _latestTexture;
     if (!target || target.width != pixelWidth || target.height != pixelHeight) {
         MTLTextureDescriptor *descriptor = [MTLTextureDescriptor
@@ -280,10 +336,9 @@ bool BlendFactor(uint32_t value, MTLBlendFactor &factor) {
         descriptor.usage = MTLTextureUsageRenderTarget | MTLTextureUsageShaderRead;
         target = [_device newTextureWithDescriptor:descriptor];
     }
-    id<MTLBuffer> buffer = vertexCount ? [_device newBufferWithBytes:vertices
-        length:vertexCount * sizeof(SDBMetalVertex) options:MTLResourceStorageModeShared] : nil;
     id<MTLCommandBuffer> command = [_queue commandBuffer];
     if (!target || (vertexCount && !buffer) || !command) {
+        if (vertexSlot != NSNotFound) _vertexBufferUsage->busy[vertexSlot].store(false, std::memory_order_release);
         dispatch_semaphore_signal(_commandSlots);
         _failure = @"Unable to allocate Metal frame resources.";
         return NO;
@@ -296,6 +351,7 @@ bool BlendFactor(uint32_t value, MTLBlendFactor &factor) {
     pass.colorAttachments[0].clearColor = MTLClearColorMake(0, 0, 0, 1);
     id<MTLRenderCommandEncoder> encoder = [command renderCommandEncoderWithDescriptor:pass];
     if (!encoder) {
+        if (vertexSlot != NSNotFound) _vertexBufferUsage->busy[vertexSlot].store(false, std::memory_order_release);
         dispatch_semaphore_signal(_commandSlots);
         _failure = @"Unable to encode a Metal game frame.";
         return NO;
@@ -324,7 +380,7 @@ bool BlendFactor(uint32_t value, MTLBlendFactor &factor) {
         [encoder drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:draw.firstVertex vertexCount:draw.vertexCount];
     }
     [encoder endEncoding];
-    [self completeCommand:command];
+    [self completeCommand:command vertexSlot:vertexSlot];
     [command commit];
     _latestTexture = target;
     _latestRender = command;
@@ -355,7 +411,7 @@ bool BlendFactor(uint32_t value, MTLBlendFactor &factor) {
          destinationSlice:0 destinationLevel:0 destinationOrigin:MTLOriginMake(0, 0, 0)];
     [blit endEncoding];
     [command presentDrawable:drawable];
-    [self completeCommand:command];
+    [self completeCommand:command vertexSlot:NSNotFound];
     [command commit];
     return YES;
 }

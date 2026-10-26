@@ -76,6 +76,11 @@ the camera, menu, and sound with that dt, while TaskManager uses the game-speed
 float at GameManager offset 20. Its normal default is also `1/60`. A modern display
 callback must preserve this simulation cadence when presentation refresh differs.
 
+The host now advances fixed simulation steps separately from rendering and uses
+the MetalKit display callback on Metal platforms. Persistent decoded audio and
+buffer reuse remove work from this frame path. See [Performance.md](Performance.md)
+for the measured changes, memory tradeoff and verification boundaries.
+
 ## Graphics and input
 
 The original logical viewport is 320 by 480, centered at zero, with x in

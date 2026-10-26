@@ -241,6 +241,16 @@ int main(int argc, const char *argv[]) {
         SDBMetalRenderer *gpu = [SDBMetalRenderer new];
         if (!gpu.supported) printf("SKIP GPU parity: %s; CPU checks continue.\n", gpu.failure.UTF8String ?: "Metal unavailable");
 
+        // Distinct RGB and alpha values catch channel swaps or dropped alpha
+        // when the software sampler interpolates all four components together.
+        Texture rgba;
+        rgba.width = rgba.height = 2;
+        rgba.pixels = {64,96,128,0, 128,64,96,255, 96,128,64,128, 64,96,128,64};
+        auto colorVertices = quad(runtime);
+        if (!renderCPU(runtime, rgba, colorVertices) || !pixel(runtime, 5, 5, 0, 0, 255) ||
+            !pixel(runtime, 75, 5, 128, 64, 96) || !pixel(runtime, 75, 35, 16, 24, 223) ||
+            !compareGPU(runtime, gpu, "independent RGBA bilinear channels", rgba, colorVertices)) return 1;
+
         Texture edge;
         edge.width = edge.height = 2; edge.distanceField = 1;
         edge.pixels = {255,255,255,0, 255,255,255,255, 255,255,255,0, 255,255,255,255};
