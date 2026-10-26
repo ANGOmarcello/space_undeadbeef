@@ -8,8 +8,9 @@ Build **1.1 (2)** corrects menu/weapon/explosion event coverage and native hapti
 view association after the user reported no felt feedback. It passed 287 engine
 sanitizer checks and 117 policy checks, then was development-signed, installed
 and launched on the physical iPhone 14 Pro. Simulator logs verify native menu
-feedback requests on the visible game view. Physical tactile confirmation is
-separate; see the haptics record for details.
+feedback requests on the visible game view. The user then confirmed feeling the
+Haptics OFF→ON confirmation tick on that phone. Weapon, target, damage, explosion
+and other menu feedback remain unconfirmed by feel; see the haptics record for details.
 
 Recorded on **25 October 2026**, using Xcode 27.2. All four application targets
 compiled successfully. Simulator builds and UI tests used ARM64; the native Mac
@@ -130,6 +131,17 @@ temporary screen-sharing stream was stopped after verification; the game was lef
 running. This establishes physical installation and gameplay, while the hardware
 audio, Crown, and sustained-performance limits above remain separate.
 
+On **26 October 2026**, the latest source was built and development-signed as
+Watch version **1.1 (2)** and installed in place on the same physical Series 12,
+watchOS 27.0.1. The standalone bundle remained
+`dev.cammalleri.SpaceUndeadbeef.watch`. Signature validation and provisioning
+membership passed. CoreDevice confirmed the installed version/build and
+successful foreground launch (PID 895) without test environment overrides.
+This establishes the updated physical installation and launch; the earlier
+gameplay capture remains version 1.0, and updated hardware performance, audio
+and Crown behavior still require a gameplay check. Only the known Watch was
+targeted; no Apple TV discovery or testing was performed.
+
 
 ## Version 1.1 display modernization
 
@@ -174,8 +186,9 @@ native macOS. The title extension was simplified to the original muted peach sky
 and one continuing cloud after user review. Original texture-border normalization
 and padding extrusion remove the marked right-edge and bottom sampling lines.
 The native Mac window was zoomed and restored while preserving a filled surface.
-The physical Watch gameplay proof in the earlier section remains for version 1.0;
-version 1.1's hardware performance and Crown interaction require a device run.
+The physical Watch gameplay capture in the earlier section remains for version
+1.0; the subsequent 1.1 (2) physical installation/launch is recorded above.
+Version 1.1's hardware performance and Crown interaction require a gameplay run.
 
 
 The final tvOS remote test also completed successfully: one passed test, zero

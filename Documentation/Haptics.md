@@ -67,8 +67,11 @@ menu transitions.
   typechecks pass. The signed profile includes the target iPhone and its code
   signature validates. Build 1.1 (2) was installed and launched on the physical
   iPhone 14 Pro, iOS 27.0.1, without test preference/audio overrides. CoreDevice
-  confirms the installed version/build. Physical tactile confirmation remains
-  a user check; the earlier report of no felt feedback is retained above.
+  confirms the installed version/build. The user then confirmed feeling the
+  Haptics OFF→ON confirmation tick in the original Options screen. This establishes
+  physical feedback for that interaction only. Weapon, target, damage, explosion
+  and other menu feedback remain unconfirmed by feel; the earlier report of no
+  felt feedback is retained above.
 
 No system haptic, audio, accessibility or other-app settings were changed.
 No Apple TV device discovery or testing was performed for this correction.
