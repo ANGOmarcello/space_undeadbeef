@@ -37,6 +37,9 @@ axes; input uses the inverse of this presentation mapping.
 Retina rendering uses a Metal backend on supported platforms and the native
 software renderer on Watch. Original textures remain authoritative. Added title
 background material is stored separately from `Resources/Original`.
+The added left margin uses the median dark blue of the original edge strip, with
+only a short color transition at the join. It adds no diagonal light rays; rays
+inside the original title composition remain intact.
 
 ## Implementation
 

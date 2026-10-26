@@ -687,6 +687,19 @@ struct Runtime {
         return rgb;
     };
     const double fineTransition=coreHeight/40;
+    // The left extension should stay quiet. Derive its dark fill from the
+    // original edge strip, then match only a short transition at the join.
+    // This removes invented diagonal rays while retaining the original core.
+    std::array<double,3> leftFill{};
+    for(unsigned channel=0;channel<3;++channel) {
+        std::vector<double> values;
+        const unsigned stripWidth=unsigned(coreHeight/40);
+        for(unsigned y=0;y<unsigned(coreHeight);++y)for(unsigned x=0;x<stripWidth;++x)
+            values.push_back(sample(original,original.pixels,y,coreWidth-1-x)[channel]);
+        auto middle=values.begin()+values.size()/2;
+        std::nth_element(values.begin(),middle,values.end());leftFill[channel]=*middle;
+    }
+    const double leftTransition=coreHeight/20;
     for(unsigned y=0;y<h;++y)for(unsigned x=0;x<w;++x) {
         const size_t pixel=4*(size_t(y)*pw+x);
         t.pixels[pixel+3]=255;
@@ -696,6 +709,13 @@ struct Runtime {
         const double distance=std::hypot(logicalX-boundaryX,logicalY-boundaryY);
         const auto edge=sample(original,original.pixels,boundaryY-coreTop-.5,
             coreWidth-.5-(boundaryX-coreLeft));
+        if(logicalX<coreLeft) {
+            const double fraction=std::clamp((coreLeft-logicalX)/leftTransition,0.,1.);
+            const double edgeWeight=1-fraction*fraction*(3-2*fraction);
+            for(unsigned channel=0;channel<3;++channel)
+                t.pixels[pixel+channel]=uint8_t(std::lround(leftFill[channel]+edgeWeight*(edge[channel]-leftFill[channel])));
+            continue;
+        }
         if(distance==0) {
             // Hidden beneath the opaque original quad. Matching this side of
             // the sampling boundary too prevents GL_LINEAR from blending an
