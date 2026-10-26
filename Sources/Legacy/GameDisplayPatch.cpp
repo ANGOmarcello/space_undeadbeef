@@ -114,6 +114,9 @@ constexpr double HUDMinimumWidth = HUDRoundedClearance + HUDScoreWidth + HUDHigh
                                    HUDChargeWidth + HUDChargeRightInset;
 constexpr double HUDGaugeWidth = 100;
 constexpr double HUDGaugeSlant = double(2.67f); // Exact original float at 0xdb88.
+constexpr double HUDGaugeOverhang = HUDGaugeWidth + HUDGaugeSlant + originalLiteral(Value::gaugeRight) -
+                                    originalLiteral(Value::chargeRight) - 4;
+constexpr double HUDMinimumInkWidth = HUDMinimumWidth - HUDRoundedClearance - HUDChargeRightInset + HUDGaugeOverhang;
 
 constexpr uint32_t TraceBoundaries[] = {
     0x11c88, 0x11dc0, 0x11ef8, 0x11fb8, 0x12078, 0x12138, 0x12288,
@@ -241,13 +244,24 @@ bool GameDisplayPatch::apply(GuestCPU& cpu, const DisplayGeometry& geometry, boo
     const double right = safe.maxX() - width / 2;
     const double hudTop = watchLayout ? watchHUD.minY() - height / 2
                                      : top + originalLiteral(Value::scoreTop) + DisplayGeometry::OriginalHeight / 2;
-    // Preserve the original widths and outer insets. Only the two blank gaps
-    // contract, in their original 34:14 proportion, when Watch safe width falls.
-    const double hudGapScale = watchLayout ? std::clamp((safe.width - HUDMinimumWidth) /
-                                                       (HUDScoreGap + HUDHighScoreGap), 0.0, 1.0) : 1;
-    const double scoreLeft = left + HUDRoundedClearance;
+    // A persistent side bar can narrow any host's safe region. Contract only
+    // the two original blank gaps, in their 34:14 proportion, before moving
+    // outer margins; glyphs, charge cells and the boss gauge retain their size.
+    const double hudGapScale = std::clamp((safe.width - HUDMinimumWidth) /
+                                          (HUDScoreGap + HUDHighScoreGap), 0.0, 1.0);
+    double scoreLeft = left + HUDRoundedClearance;
+    double chargeRight = right - 60, gaugeRight = right - 155;
+    if (!watchLayout && safe.width < HUDMinimumWidth) {
+        const double marginScale = std::clamp((safe.width - HUDMinimumInkWidth) /
+                                               (HUDMinimumWidth - HUDMinimumInkWidth), 0.0, 1.0);
+        scoreLeft = left + HUDRoundedClearance * marginScale;
+        // Keep the full slanted gauge inside the right edge even after the
+        // charge cells' original fifty-six-unit blank margin is contracted.
+        const double shift = (HUDChargeRightInset - HUDGaugeOverhang) * (1 - marginScale);
+        chargeRight += shift;
+        gaugeRight += shift;
+    }
     const double highScoreLeft = scoreLeft + HUDScoreWidth + HUDScoreGap * hudGapScale;
-    const double chargeRight = right - 60, gaugeRight = right - 155;
     double hudHorizontalOffset = 0;
     if (watchLayout) {
         // Center the complete original HUD as one group after gap compression.
@@ -299,7 +313,13 @@ bool GameDisplayPatch::apply(GuestCPU& cpu, const DisplayGeometry& geometry, boo
         // resizing the core artwork here would stretch its composition.
         if (row.kind == MenuKind::titleArtwork) { x = 0; y = 0; }
         else if (row.kind == MenuKind::pause) { x = top + 12; y = right - 12; }
-        else if (row.kind == MenuKind::version) { x = safe.maxY() - height / 2 - 44; }
+        else if (row.kind == MenuKind::version) {
+            // The logo is baked into the unchanged centered title artwork.
+            // Keep both version coordinates in that same artwork space, so
+            // side bars and extra viewport height cannot move it into the logo
+            // or underline while other menu controls follow the safe area.
+            x = row.x; y = row.y;
+        }
         put(destination, x); put(destination + 4, y);
         put(destination + 8, w); put(destination + 12, h);
     };

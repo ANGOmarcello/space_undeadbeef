@@ -78,6 +78,7 @@ struct GameView: View {
         .onDisappear { session.setActive(false) }
         #if os(iOS)
         .persistentSystemOverlays(.hidden)
+        .modifier(GameStatusBarVisibility())
         #endif
     }
 
@@ -194,6 +195,20 @@ struct GameView: View {
     }
     #endif
 }
+
+#if os(iOS)
+/// Keep the original full-screen corner control clear of system status content.
+private struct GameStatusBarVisibility: ViewModifier {
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if #available(iOS 27.0, *) {
+            content.toolbarVisibility(.hidden, for: .statusBar)
+        } else {
+            content.statusBarHidden()
+        }
+    }
+}
+#endif
 
 #if os(watchOS)
 /// Paint the original fold at the physical edge. The native leading toolbar

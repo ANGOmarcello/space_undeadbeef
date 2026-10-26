@@ -392,6 +392,149 @@ void watchHUDTests(const std::vector<uint8_t>& executable) {
     healthy(cpu, "Watch HUD geometry remains bounded");
 }
 
+void sideBarHUDTests(const std::vector<uint8_t>& executable) {
+    GuestCPU cpu; loadMachO(cpu, executable);
+    const auto baseline = prefix(cpu);
+    GameDisplayPatch patch;
+    require(patch.initialize(cpu), "side-bar HUD validates the original executable");
+    const auto original = DisplayGeometry::make({480, 320}, 1);
+    const auto watch = DisplayGeometry::make({208, 248}, 2, {52, 8, 34, 8});
+    const double minimumInk = 112 + 136 + 98 + double(2.67f) + 1;
+    // Duo point sizes match the installed outer/inner device profiles. Insets
+    // intentionally exercise either bar edge and are not device constants.
+    const std::vector<DisplayGeometry> variants = {
+        DisplayGeometry::make({678, 466}, 3, {0, 0, 0, 72}),
+        DisplayGeometry::make({678, 466}, 3, {0, 72, 0, 0}),
+        DisplayGeometry::make({951, 669}, 3, {0, 0, 0, 72}),
+        DisplayGeometry::make({951, 669}, 3, {0, 72, 0, 0}),
+        DisplayGeometry::make({480, 320}, 1, {0, 0, 0, 48}),
+        DisplayGeometry::make({480, 320}, 1, {0, 0, 0, 80}),
+        DisplayGeometry::make({480, 320}, 1, {0, 80, 0, 0}),
+        DisplayGeometry::make({480, 320}, 1, {0, 0, 0, 480 - minimumInk})
+    };
+    for (const auto& geometry : variants) {
+        require(geometry.valid && geometry.safeUIRect.width >= minimumInk - 0.0001,
+                "side-bar fixture retains room for the complete original HUD ink");
+        require(patch.apply(cpu, geometry), "non-Watch side-bar HUD reflows without a fault");
+        const double halfWidth = geometry.logicalSize.width / 2;
+        const auto x = [&](uint32_t address) { return real(cpu.read32(address)) + halfWidth; };
+        const double score = x(0x82fc), highScore = x(0x8304), charge = x(0x833c);
+        const double firstGap = highScore - score - 14 * real(cpu.read32(0x81e8));
+        double chargeLeft = charge, chargeRight = charge;
+        for (unsigned cell = 0; cell < 16; ++cell) {
+            for (unsigned vertex = 0; vertex < 4; ++vertex) {
+                const double edge = charge + cell * real(cpu.read32(0x8338)) +
+                                    real(cpu.read32(0x11b50 + vertex * 8 + 4));
+                chargeLeft = std::min(chargeLeft, edge);
+                chargeRight = std::max(chargeRight, edge);
+            }
+        }
+        const double secondGap = chargeLeft - highScore - 17 * real(cpu.read32(0x81e8));
+        require(firstGap >= -0.0001 && secondGap >= -0.0001,
+                "full eight-digit score and high-score never overlap a charge cell");
+        require(std::abs(firstGap * 14 - secondGap * 34) < 0.002,
+                "both original blank gaps contract in their 34:14 proportion");
+        const double gauge = x(0xdba4);
+        const double fullGauge = gauge + real(cpu.read32(0xd8b4)) + real(cpu.read32(0xdb88));
+        const double minimum = std::min({score, highScore, chargeLeft, gauge});
+        const double maximum = std::max({score + 17 * 8, highScore + 17 * 8, chargeRight, fullGauge});
+        require(minimum >= geometry.safeUIRect.minX() - 0.0001 &&
+                maximum <= geometry.safeUIRect.maxX() + 0.0001,
+                "every original HUD glyph, charge vertex and full boss gauge remains inside asymmetric safe bounds");
+        if (geometry.safeUIRect.width >= 432) {
+            near(cpu, 0x82fc, geometry.safeUIRect.minX() - halfWidth + 30,
+                 "ordinary side bars retain the original left HUD margin");
+            near(cpu, 0x833c, geometry.safeUIRect.maxX() - halfWidth - 60,
+                 "ordinary side bars retain the original charge anchor");
+        } else {
+            require(std::abs(firstGap) < 0.0001 && std::abs(secondGap) < 0.0001,
+                    "narrower safe regions remove blank gaps before contracting outer margins");
+            require(score - geometry.safeUIRect.minX() < 30 &&
+                    geometry.safeUIRect.maxX() - chargeRight < 56,
+                    "narrow safe regions contract only the original outer blank margins");
+        }
+        near(cpu, 0x82f8, geometry.safeUIRect.minY() - geometry.logicalSize.height / 2 + 8,
+             "non-Watch HUD retains its original safe top anchor");
+        near(cpu, 0x830c, geometry.safeUIRect.minY() - geometry.logicalSize.height / 2 + 24,
+             "non-Watch second row retains its original sixteen-unit separation");
+        near(cpu, 0x81e8, 8, "side-bar adaptation never shrinks original HUD glyph width");
+        near(cpu, 0x81f0, 16, "side-bar adaptation never shrinks original HUD glyph height");
+        near(cpu, 0x14d90 + 4, real(word(baseline, 0x14d90 + 4)),
+             "version label retains its original horizontal gap from the unchanged baked logo");
+        unsigned versionCharacters = 0;
+        const uint32_t version = cpu.read32(0x14d90 + 36);
+        while (versionCharacters < 32 && cpu.read8(version + versionCharacters)) ++versionCharacters;
+        require(versionCharacters < 32, "original version label is bounded and terminated");
+        const double versionLeft = x(0x14d90 + 4);
+        const double versionRight = versionLeft + versionCharacters * real(cpu.read32(0x14d90 + 56));
+        if (geometry.safeUIRect.width >= 400) {
+            require(versionLeft >= geometry.safeUIRect.minX() && versionRight <= geometry.safeUIRect.maxX(),
+                    "unchanged original version glyph bounds stay clear of either Duo side bar");
+        }
+        near(cpu, 0x14d54 + 4, 0, "title artwork remains horizontally centered");
+        near(cpu, 0x14d54 + 8, 320, "side-bar adaptation never scales the baked title height");
+        near(cpu, 0x14d54 + 12, 480, "side-bar adaptation never scales the baked title width");
+        protectedData(cpu, baseline);
+        const auto sideBarLayout = prefix(cpu);
+        require(patch.apply(cpu, watch, true) && patch.apply(cpu, geometry),
+                "Watch-to-Duo transitions apply each policy from the immutable original");
+        require(prefix(cpu) == sideBarLayout, "Watch-to-Duo round trip restores exactly the same side-bar layout");
+        require(patch.apply(cpu, original) && prefix(cpu) == baseline,
+                "Duo-to-original round trip restores every original loaded byte");
+    }
+    for (const auto& geometry : {original, DisplayGeometry::make({960, 320}, 2),
+                                  DisplayGeometry::make({1032, 1376}, 2)}) {
+        require(patch.apply(cpu, geometry), "full-width HUD continues to apply");
+        const double left = geometry.safeUIRect.minX() - geometry.logicalSize.width / 2;
+        const double right = geometry.safeUIRect.maxX() - geometry.logicalSize.width / 2;
+        near(cpu, 0x82fc, left + 30, "full-width score anchor remains original");
+        near(cpu, 0x8304, left + 176, "full-width high-score anchor remains original");
+        near(cpu, 0x833c, right - 60, "full-width charge anchor remains original");
+        near(cpu, 0xdba4, right - 155, "full-width boss anchor remains original");
+    }
+    healthy(cpu, "side-bar HUD and version tests remain bounded");
+}
+
+void titleVersionTests(const std::vector<uint8_t>& executable) {
+    GuestCPU cpu; loadMachO(cpu, executable);
+    const auto baseline = prefix(cpu);
+    GameDisplayPatch patch;
+    require(patch.initialize(cpu), "artwork-relative version validates the original executable");
+    constexpr uint32_t version = 0x14d90, stride = 60;
+    const auto original = DisplayGeometry::make({480, 320}, 1);
+    const auto originalAnchor = original.guestToLogical({real(word(baseline, version)),
+                                                        real(word(baseline, version + 4))});
+    // The untouched title quad is centered, with the same original 480x320
+    // composition at every aspect. Both version coordinates must follow it.
+    for (const auto& geometry : {
+            DisplayGeometry::make({1032, 1376}, 2, {24, 0, 20, 0}),
+            DisplayGeometry::make({1376, 1032}, 2, {24, 0, 20, 0}),
+            DisplayGeometry::make({800, 600}, 2, {24, 0, 20, 0}),
+            DisplayGeometry::make({1000, 500}, 2, {15, 0, 15, 0}),
+            DisplayGeometry::make({800, 600}, 2, {70, 0, 25, 0}),
+            DisplayGeometry::make({800, 600}, 2, {25, 0, 70, 0}),
+            DisplayGeometry::make({951, 669}, 3, {0, 0, 0, 72}),
+            DisplayGeometry::make({678, 466}, 3, {0, 72, 0, 0})}) {
+        require(geometry.valid && patch.apply(cpu, geometry),
+                "portrait, landscape and resized-window title geometry applies");
+        require(std::equal(baseline.begin() + version, baseline.begin() + version + stride,
+                           cpu.memory.begin() + version),
+                "version row retains all original artwork-space coordinates, glyph metrics and fields");
+        const auto anchor = geometry.guestToLogical({real(cpu.read32(version)), real(cpu.read32(version + 4))});
+        const auto relative = geometry.logicalToOriginal(anchor);
+        require(std::abs(relative.x - originalAnchor.x) < 0.0001 &&
+                std::abs(relative.y - originalAnchor.y) < 0.0001,
+                "both version coordinates preserve their exact relation to the baked logo and underline");
+        near(cpu, 0x14d54, 0, "title quad remains vertically centered with the version label");
+        near(cpu, 0x14d54 + 4, 0, "title quad remains horizontally centered with the version label");
+        const auto current = prefix(cpu);
+        require(patch.apply(cpu, original) && prefix(cpu) == baseline && patch.apply(cpu, geometry),
+                "title resize round trip restores the original executable before reapplying the current geometry");
+        require(prefix(cpu) == current, "tall and wide title layouts remain deterministic across resize");
+    }
+    healthy(cpu, "artwork-relative version checks remain bounded");
+}
+
 void hapticsMenuTests(const std::vector<uint8_t>& executable) {
     GuestCPU cpu; loadMachO(cpu, executable);
     const auto baseline = prefix(cpu);
@@ -508,6 +651,8 @@ int main(int argc, char** argv) {
     const std::vector<uint8_t> executable{std::istreambuf_iterator<char>(input), std::istreambuf_iterator<char>()};
     resizeTests(executable);
     watchHUDTests(executable);
+    sideBarHUDTests(executable);
+    titleVersionTests(executable);
     hapticsMenuTests(executable);
     rejectionTests(executable);
     std::cout << "PASS: " << checks << " display patch checks against original ARM Mach-O\n";

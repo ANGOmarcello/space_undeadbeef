@@ -244,7 +244,7 @@ bool runCase(const Case& variant, NSString *resources, NSString *output) {
 int main(int argc, const char *argv[]) {
     @autoreleasepool {
         if (argc < 3) {
-            fprintf(stderr, "Usage: ViewportSmoke ORIGINAL_RESOURCE_DIRECTORY TASK_TEMP_OUTPUT [wide|watch|ipad]\n");
+            fprintf(stderr, "Usage: ViewportSmoke ORIGINAL_RESOURCE_DIRECTORY TASK_TEMP_OUTPUT [wide|watch|ipad|duo-outer|duo-inner|ipad-window|ipad-landscape]\n");
             return 64;
         }
         NSString *resources = [NSString stringWithUTF8String:argv[1]];
@@ -257,7 +257,11 @@ int main(int argc, const char *argv[]) {
         const Case variants[] = {
             {"wide", CGSizeMake(874, 402), 3, CGRectMake(62, 0, 750, 402)},
             {"watch", CGSizeMake(208, 248), 2, CGRectMake(0, 28, 208, 220)},
-            {"ipad", CGSizeMake(1032, 1376), 2, CGRectMake(0, 0, 1032, 1376)}
+            {"ipad", CGSizeMake(1032, 1376), 2, CGRectMake(0, 0, 1032, 1376)},
+            {"duo-outer", CGSizeMake(678, 466), 3, CGRectMake(0, 0, 606, 466)},
+            {"duo-inner", CGSizeMake(951, 669), 3, CGRectMake(72, 0, 879, 669)},
+            {"ipad-window", CGSizeMake(375, 700), 2, CGRectMake(0, 28, 375, 652)},
+            {"ipad-landscape", CGSizeMake(1376, 1032), 2, CGRectMake(0, 24, 1376, 988)}
         };
         unsigned completed = 0;
         for (const Case& variant : variants) {

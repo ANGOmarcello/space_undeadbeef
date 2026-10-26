@@ -236,3 +236,61 @@ iOS, native macOS and Watch Simulator builds succeeded. Credits and Options were
 visually reviewed in the iPhone 18 Pro Simulator and native Mac app, including
 the large Mac view where neighboring-cell hairlines were visible before the fix.
 The Watch result here is build proof; no new physical-device run is claimed.
+
+## iPhone Duo and iPad adaptation — 26 October 2026
+
+Audited against Apple's Xcode 27.2 app-resizability and SwiftUI guidance,
+including current-view geometry, safe areas, orientation, scene lifecycle and
+idiom use. The iOS target declares a launch screen, all four iPad orientations
+and no full-screen resizing opt-out. The full-bleed GeometryReader bridge
+intentionally restores the drawable surface while passing a separate safe UI
+rectangle to the original engine. Phone-only haptics is a capability policy,
+not a layout decision.
+
+The actual iPhone Duo Simulator preserved the same engine and stage through
+folding, unfolding and rotation. The arena filled both displays and actual
+corner P taps opened Pause. A persistent side bar exposed overlapping high-score
+digits and charge cells. The fix contracts original blank HUD gaps and, below
+432 logical safe units, the outer blank margins; original glyphs, sixteen charge
+cells and the complete slanted boss gauge keep their sizes. Tested HUD ink fits
+down to 349.67 logical safe units; narrower regions are not a layout guarantee.
+
+The separate version label now retains both original coordinates relative to
+the unchanged, centered title artwork. This corrects side-bar overlap with the
+logo and vertical overlap with its underline on taller viewports.
+
+On the 13-inch iPad Pro M5 Simulator, portrait and landscape gameplay worked.
+System status content initially covered the corner P. The iOS host now requests
+a hidden status bar through the current SwiftUI API, with an availability-guarded
+fallback. Actual P taps reached the original pause menu in both orientations;
+rotation retained the game. Final title rendering was reviewed on iPad landscape
+and the latest regular iPhone 18 Pro. No artwork or font replacement was needed.
+
+The final iOS Simulator build succeeded. Strict-warning builds with ASan and
+UBSan passed 7,423 original-data display checks and 4,712 geometry checks.
+Coverage includes asymmetric bars, Duo outer/inner sizes, iPad portrait/landscape
+and window dimensions, original glyph/gauge bounds, artwork-relative version
+placement, and exact Watch/Duo/original layout restoration.
+
+The existing headless `ViewportSmoke.mm` also passed all seven cases on the Mac
+Metal renderer: wide iPhone, Watch-sized surface, portrait iPad, Duo outer/inner,
+a 375×700-point iPad window and landscape iPad. Each checks native raster size,
+opaque filled gameplay, actual Start, the same live engine across resize and
+restoration, Pause/Continue and an isolated 256-byte save. The Watch-sized Metal
+fixture is not a watchOS renderer or Crown test. These integration cases do not
+depend on Device Hub focus or change real application preferences.
+
+The final visual checks used the game's own Device Hub window after coordinating
+with the concurrent Coca chat. The iPad game also rendered correctly in a floating
+Stage Manager window (480×395 logical viewport), with working Start and native
+Pause, readable HUD and a filled surface. The Simulator's original Windowed Apps
+setting was restored and visually confirmed. Continuous dragging through every
+possible window size is not established by this check; the narrower window case
+above is engine integration proof.
+
+The final Duo build was then checked interactively with the status bar hidden:
+title and HUD spacing were clear, the literal corner P opened Pause, and folding,
+unfolding and rotation kept stage 1-03, score 15 and one death in the same paused
+game. Initial headless captures had returned black on both Duo displays; the
+active Device Hub window supplied the final visual proof. Physical Duo/iPad
+installation and sustained hardware performance were not tested.
