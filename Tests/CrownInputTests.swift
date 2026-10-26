@@ -77,6 +77,10 @@ enum CrownInputTests {
         let session = GameSession(engine: engine)
         session.setActive(true)
         var time = ProcessInfo.processInfo.systemUptime
+        require(session.drawDisplayFrame(at: time) == 0,
+                "The first software callback anchors its own epoch without simulating activation time")
+        require(session.drawDisplayFrame(at: time) == 0,
+                "A duplicate software epoch callback cannot advance the original game")
         require(!engine.canSteerShip, "The original entrance precedes the playable ship state")
         session.steerWithCrown(delta: 0.4)
         // The original entrance animation reports gameplay before the ship
@@ -153,6 +157,8 @@ enum CrownInputTests {
         session.steerWithCrown(delta: -0.8)
         session.setActive(true)
         time = ProcessInfo.processInfo.systemUptime
+        require(session.drawDisplayFrame(at: time) == 0,
+                "Software resume starts a fresh callback epoch without inactive or setup time")
         let resumed = engine.shipNormalizedY
         session.steerWithCrown(delta: 0.01)
         step(60)

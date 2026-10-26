@@ -156,15 +156,7 @@ struct GameView: View {
                     .allowsHitTesting(false)
             }
             #endif
-            if let frame = session.frame {
-                Image(decorative: frame, scale: 1, orientation: .up)
-                    .resizable()
-                    .interpolation(.none)
-                    .frame(width: session.rasterViewSize.width, height: session.rasterViewSize.height)
-                    .frame(width: size.width, height: size.height, alignment: .topLeading)
-                    .clipped()
-                    .accessibilityIdentifier("original-game-frame")
-            }
+            SoftwareGameSurface(session: session, size: size)
             #if !os(watchOS)
             if session.showsPointer {
                 Circle()
@@ -194,6 +186,25 @@ struct GameView: View {
             .onEnded { _ in session.endTouch() }
     }
     #endif
+}
+
+/// Only this leaf observes the changing software frame. Publishing a Watch
+/// image must not also rebuild the enclosing gestures, Crown or toolbar.
+private struct SoftwareGameSurface: View {
+    let session: GameSession
+    let size: CGSize
+
+    var body: some View {
+        if let frame = session.frame {
+            Image(decorative: frame, scale: 1, orientation: .up)
+                .resizable()
+                .interpolation(.none)
+                .frame(width: session.rasterViewSize.width, height: session.rasterViewSize.height)
+                .frame(width: size.width, height: size.height, alignment: .topLeading)
+                .clipped()
+                .accessibilityIdentifier("original-game-frame")
+        }
+    }
 }
 
 #if os(iOS)

@@ -59,6 +59,7 @@ final class GameSession {
     @ObservationIgnored private(set) var engine: SDBEngine?
     @ObservationIgnored private var viewport: GameViewport?
     @ObservationIgnored private var softwareTimer: Timer?
+    @ObservationIgnored private var softwareMetrics = GameFrameMetrics(renderer: .software)
     @ObservationIgnored private var clock = GameFrameClock()
     @ObservationIgnored private var releasesTapAfterStep = false
     @ObservationIgnored private let haptics = GameHaptics()
@@ -78,6 +79,7 @@ final class GameSession {
             canPause = false
             softwareTimer?.invalidate()
             softwareTimer = nil
+            softwareMetrics = GameFrameMetrics(renderer: .software)
             clock.reset()
             return
         }
@@ -96,14 +98,29 @@ final class GameSession {
         engine?.setSuspended(false)
         if let engine { refreshState(from: engine) }
         guard failure == nil else { return }
-        clock.reset(at: ProcessInfo.processInfo.systemUptime)
+        // A software Timer has its own delivery phase. Anchor its epoch at the
+        // first callback, rather than letting activation/setup time place every
+        // later callback on the clock's early-delivery allowance boundary.
+        // Metal retains its display-driven activation epoch. Subsequent clock
+        // steps keep the same bounded catch-up and scheduling-time debt.
+        clock.reset(at: usesMetalRenderer ? ProcessInfo.processInfo.systemUptime : nil)
         isActive = true
         // MetalKit drives supported views directly. Watch and other software
         // fallbacks still need a timer to publish their CPU-rendered CGImage.
         guard !usesMetalRenderer else { return }
+        softwareMetrics = GameFrameMetrics(renderer: .software)
         let timer = Timer(timeInterval: GameLayout.simulationStep, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated {
-                _ = self?.drawDisplayFrame(at: ProcessInfo.processInfo.systemUptime)
+                guard let self else { return }
+                let started = ProcessInfo.processInfo.systemUptime
+                let steps = self.drawDisplayFrame(at: started)
+                if self.softwareMetrics.enabled {
+                    self.softwareMetrics.record(started: started,
+                        finished: ProcessInfo.processInfo.systemUptime,
+                        simulationSteps: steps,
+                        producedFrame: steps > 0 && self.failure == nil && self.frame != nil,
+                        menuType: self.gameMenuType)
+                }
             }
         }
         softwareTimer = timer

@@ -23,7 +23,7 @@ final class HostUITests: XCTestCase {
         let app = XCUIApplication()
         app.launchEnvironment["SDB_MUTE_AUDIO"] = "1"
         app.launchEnvironment["SDB_UI_TEST"] = "1"
-        app.launchEnvironment["SDB_SAVE_DIRECTORY"] = NSTemporaryDirectory().appending("space-undeadbeef-ui-tests")
+        app.launchEnvironment["SDB_SAVE_DIRECTORY"] = "~/tmp/space-undeadbeef-ui-\(UUID().uuidString)"
         app.launch()
         let canvas = app.descendants(matching: .any).matching(identifier: "game-canvas").firstMatch
         XCTAssertTrue(canvas.waitForExistence(timeout: 15))
@@ -100,5 +100,86 @@ final class HostUITests: XCTestCase {
         #endif
         XCTAssertTrue(canvas.exists)
         app.terminate()
+    }
+
+    /// Actual host callbacks during an ordinary game, with original death/title
+    /// transitions and real Start inputs. Logs measure host work, not scanout.
+    @MainActor
+    func testPerformanceGameplay() throws {
+        let app = XCUIApplication()
+        let save = "~/tmp/space-performance-\(UUID().uuidString)"
+        app.launchEnvironment["SDB_UI_TEST"] = "1"
+        app.launchEnvironment["SDB_MUTE_AUDIO"] = "1"
+        app.launchEnvironment["SDB_PERFORMANCE_LOG"] = "1"
+        app.launchEnvironment["SDB_SAVE_DIRECTORY"] = save
+        print("SDB_UI_TEST isolatedSave=\(save)")
+        app.launch()
+        defer { app.terminate() }
+        let canvas = app.descendants(matching: .any).matching(identifier: "game-canvas").firstMatch
+        XCTAssertTrue(canvas.waitForExistence(timeout: 15))
+        func waitForMenu(_ type: Int) {
+            let predicate = NSPredicate(format: "value CONTAINS %@", "menuType \(type)")
+            expectation(for: predicate, evaluatedWith: canvas)
+            waitForExpectations(timeout: 10)
+        }
+        func menuType() -> Int? {
+            (canvas.value as? String)?.components(separatedBy: "menuType ").last.flatMap(Int.init)
+        }
+        #if !os(tvOS)
+        func point(_ x: Double, _ y: Double) -> XCUICoordinate {
+            let size = canvas.frame.size
+            let width = max(480, 320 * size.width / size.height)
+            let height = max(320, 480 * size.height / size.width)
+            return canvas.coordinate(withNormalizedOffset: CGVector(
+                dx: (x + (width - 480) / 2) / width,
+                dy: (y + (height - 320) / 2) / height))
+        }
+        #endif
+        waitForMenu(1)
+        capture(app, "performance-01-title")
+        #if os(tvOS)
+        // Relative to the original center, matching the existing remote flow.
+        for _ in 0..<4 { XCUIRemote.shared.press(.left) }
+        for _ in 0..<5 { XCUIRemote.shared.press(.up) }
+        XCUIRemote.shared.press(.select)
+        #else
+        point(160, 40).tap()
+        #endif
+        waitForMenu(0)
+        capture(app, "performance-02-gameplay-start")
+        let deadline = ProcessInfo.processInfo.systemUptime + 30
+        var gameplaySweeps = 0
+        while ProcessInfo.processInfo.systemUptime < deadline {
+            XCTAssertFalse(app.staticTexts["runtime-failure"].exists, "Original guest execution failed")
+            XCTAssertTrue(canvas.exists)
+            if menuType() == 1 {
+                // Preserve original death behavior; start another ordinary game.
+                #if os(tvOS)
+                XCUIRemote.shared.press(.select)
+                #else
+                point(160, 40).tap()
+                #endif
+                waitForMenu(0)
+            }
+            if menuType() == 0 {
+                #if os(tvOS)
+                XCUIRemote.shared.press(.playPause)
+                Thread.sleep(forTimeInterval: 0.6)
+                for _ in 0..<3 { XCUIRemote.shared.press(.right) }
+                for _ in 0..<3 { XCUIRemote.shared.press(.down) }
+                XCUIRemote.shared.press(.playPause)
+                // Return to Start's pointer position for a possible title return.
+                for _ in 0..<3 { XCUIRemote.shared.press(.left) }
+                for _ in 0..<3 { XCUIRemote.shared.press(.up) }
+                #else
+                point(100, 160).press(forDuration: 0.6, thenDragTo: point(350, 80))
+                point(350, 80).press(forDuration: 0.4, thenDragTo: point(100, 240))
+                #endif
+                gameplaySweeps += 1
+            }
+            Thread.sleep(forTimeInterval: 0.35)
+        }
+        XCTAssertGreaterThan(gameplaySweeps, 0, "The original game never accepted the performance workload")
+        capture(app, "performance-03-final")
     }
 }

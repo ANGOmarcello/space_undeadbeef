@@ -28,7 +28,7 @@ struct MetalGameSurface: View {
 private final class MetalSurfaceCoordinator: NSObject, MTKViewDelegate {
     private var session: GameSession
     private var engine: SDBEngine
-    private var metrics = MetalFrameMetrics()
+    private var metrics = GameFrameMetrics(renderer: .metal)
 
     init(session: GameSession, engine: SDBEngine) {
         self.session = session
@@ -77,7 +77,7 @@ private final class MetalSurfaceCoordinator: NSObject, MTKViewDelegate {
         updateDrawableSize(view)
         let shouldPause = !isActive
         if view.isPaused != shouldPause {
-            metrics = MetalFrameMetrics()
+            metrics = GameFrameMetrics(renderer: .metal)
             view.isPaused = shouldPause
         }
     }
@@ -117,61 +117,9 @@ private final class MetalSurfaceCoordinator: NSObject, MTKViewDelegate {
         }
         if metrics.enabled {
             metrics.record(started: started, finished: ProcessInfo.processInfo.systemUptime,
-                           simulationSteps: steps, submitted: submitted)
+                           simulationSteps: steps, producedFrame: submitted,
+                           menuType: session.gameMenuType)
         }
-    }
-}
-
-/// Opt-in aggregate diagnostics. Successful submissions are not measurements of
-/// physical display scanout; callback work includes obtaining the drawable.
-private struct MetalFrameMetrics {
-    let enabled = ProcessInfo.processInfo.environment["SDB_PERFORMANCE_LOG"] == "1"
-    private static let reportInterval = 2.0
-    private static let lateInterval = GameFrameClock.simulationStep * 1.5
-    private var began: TimeInterval?
-    private var previous: TimeInterval?
-    private var callbacks = 0
-    private var simulations = 0
-    private var submissions = 0
-    private var lateCallbacks = 0
-    private var longestGap = 0.0
-    private var totalWork = 0.0
-    private var longestWork = 0.0
-
-    mutating func record(started: TimeInterval, finished: TimeInterval,
-                         simulationSteps: Int, submitted: Bool) {
-        guard enabled else { return }
-        if began == nil {
-            began = started
-            previous = started
-            return
-        }
-        if let previous {
-            let gap = started - previous
-            longestGap = max(longestGap, gap)
-            if gap > Self.lateInterval { lateCallbacks += 1 }
-        }
-        previous = started
-        callbacks += 1
-        simulations += simulationSteps
-        submissions += submitted ? 1 : 0
-        let work = max(0, finished - started)
-        totalWork += work
-        longestWork = max(longestWork, work)
-        guard let began, started - began >= Self.reportInterval else { return }
-        let elapsed = started - began
-        NSLog("SDB_PERFORMANCE host callbacks=%.1fHz simulations=%.1fHz submissions=%.1fHz late=%ld maxGap=%.2fms workMean=%.2fms workMax=%.2fms",
-              Double(callbacks) / elapsed, Double(simulations) / elapsed,
-              Double(submissions) / elapsed, lateCallbacks, longestGap * 1000,
-              totalWork / Double(callbacks) * 1000, longestWork * 1000)
-        self.began = started
-        callbacks = 0
-        simulations = 0
-        submissions = 0
-        lateCallbacks = 0
-        longestGap = 0
-        totalWork = 0
-        longestWork = 0
     }
 }
 

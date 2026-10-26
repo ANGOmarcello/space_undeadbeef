@@ -33,6 +33,39 @@ enum FrameTimingTests {
                          "Submillisecond 60 Hz callback jitter repeated or skipped a game pose")
         }
 
+        // A Timer may start close to the activation epoch's allowance boundary.
+        // Its ordinary delivery jitter then alternates zero/two simulation
+        // steps, preserving game time but discarding many intermediate poses.
+        // Starting the software epoch at its first actual callback avoids that
+        // phase sensitivity without changing the allowance or clock algorithm.
+        var activationAnchored = GameFrameClock()
+        activationAnchored.reset(at: uptime)
+        var callbackAnchored = GameFrameClock()
+        callbackAnchored.reset()
+        let initialTimerPhase = GameFrameClock.simulationStep - GameFrameClock.schedulingLeeway
+        var controlZeroSteps = 0, controlCatchUps = 0, controlSteps = 0, alignedSteps = 0
+        for callback in 0...6_000 {
+            let jitter = callback.isMultiple(of: 2) ? -0.0004 : 0.0004
+            let timestamp = uptime + initialTimerPhase +
+                Double(callback) * GameFrameClock.simulationStep + jitter
+            let control = activationAnchored.steps(at: timestamp)
+            controlZeroSteps += control == 0 ? 1 : 0
+            controlCatchUps += control > 1 ? 1 : 0
+            controlSteps += control
+            let aligned = callbackAnchored.steps(at: timestamp)
+            precondition(aligned == (callback == 0 ? 0 : 1),
+                         "A software callback epoch must preserve one pose per jittered 60 Hz delivery")
+            alignedSteps += aligned
+            precondition(Double(alignedSteps) * GameFrameClock.simulationStep <=
+                         timestamp - (uptime + initialTimerPhase - 0.0004) +
+                         GameFrameClock.schedulingLeeway + 0.0000001,
+                         "Software epoch alignment must not invent simulation time")
+        }
+        precondition(controlZeroSteps > 1_000 && controlCatchUps > 1_000,
+                     "The control must reproduce phase-induced zero/two-step callback alternation")
+        precondition(controlSteps == 6_000 && alignedSteps == controlSteps,
+                     "Callback alignment must preserve the same fixed-rate simulation total")
+
         var borrowed = GameFrameClock()
         borrowed.reset(at: 0)
         let earlyRefresh = GameFrameClock.simulationStep - 0.0005
@@ -108,6 +141,6 @@ enum FrameTimingTests {
         }
         precondition(longRunSteps == 36_000,
                      "Large timestamps or high refresh rates drifted over ten minutes")
-        print("PASS: 30/60/120 Hz, 60 Hz submillisecond cadence, bounded lead with debt, faster display rate, jitter, bounded catch-up, suspend/resume and ten-minute uptime")
+        print("PASS: 30/60/120 Hz, 60 Hz submillisecond cadence, software callback epoch alignment, bounded lead with debt, faster display rate, jitter, bounded catch-up, suspend/resume and ten-minute uptime")
     }
 }
