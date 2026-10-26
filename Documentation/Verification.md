@@ -2,6 +2,7 @@
 
 The subsequent measured 60 Hz performance pass, audio mixer replacement and
 its exact verification limits are recorded in [Performance.md](Performance.md).
+The following optional iPhone feedback step is recorded in [Haptics.md](Haptics.md).
 
 Recorded on **25 October 2026**, using Xcode 27.2. All four application targets
 compiled successfully. Simulator builds and UI tests used ARM64; the native Mac

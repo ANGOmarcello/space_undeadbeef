@@ -1,5 +1,8 @@
 // Created by Angelo Cammalleri on 25.10.2026.
 import XCTest
+#if os(iOS)
+import UIKit
+#endif
 
 final class HostUITests: XCTestCase {
     override func setUp() {
@@ -54,14 +57,25 @@ final class HostUITests: XCTestCase {
         }
         point(160, 120).tap()
         capture(app, "02-original-options")
-        point(180, 150).tap()
+        #if os(iOS)
+        let compactOptions = UIDevice.current.userInterfaceIdiom == .phone
+        #else
+        let compactOptions = false
+        #endif
+        point(180, compactOptions ? 130 : 150).tap()
         capture(app, "03-sound-on")
-        point(300, 230).tap()
+        point(300, compactOptions ? 190 : 230).tap()
         Thread.sleep(forTimeInterval: 0.4)
         capture(app, "03b-ignore-silent-mode")
-        point(180, 230).tap()
+        point(180, compactOptions ? 190 : 230).tap()
         Thread.sleep(forTimeInterval: 0.4)
         capture(app, "03c-respect-silent-mode")
+        if compactOptions {
+            point(180, 250).tap()
+            capture(app, "03d-haptics-on")
+            point(300, 250).tap()
+            capture(app, "03e-haptics-off")
+        }
         point(240, 280).tap()
         Thread.sleep(forTimeInterval: 1)
         point(160, 40).tap()

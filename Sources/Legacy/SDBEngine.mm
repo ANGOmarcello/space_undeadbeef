@@ -24,6 +24,7 @@ constexpr uint32_t ExtendedTitle = 1000;
 constexpr uint32_t OriginalFont = 1, OriginalSmallFont = 2;
 using sdb::display::DisplayGeometry;
 constexpr uint32_t SilentOn=0x01d00000,SilentOff=0x01d00004,SilentOnDraw=0x01d00008,SilentOffDraw=0x01d0000c;
+constexpr uint32_t HapticsOn=0x01d00010,HapticsOff=0x01d00014,HapticsOnDraw=0x01d00018,HapticsOffDraw=0x01d0001c;
 uint32_t bits(float f) { uint32_t u; memcpy(&u,&f,4); return u; }
 float real(uint32_t u) { float f; memcpy(&f,&u,4); return f; }
 struct Texture { int width=0,height=0,contentWidth=0,contentHeight=0; uint32_t distanceField=0,glyphAtlas=0; std::vector<uint8_t> pixels; };
@@ -311,6 +312,9 @@ struct Runtime {
     BOOL _suspended;
     BOOL _soundEnabled;
     BOOL _respectsSilentMode;
+    BOOL _offersHaptics;
+    BOOL _hapticsEnabled;
+    NSUInteger _pendingHapticEvents;
     NSString *_testPreferencesPath;
     NSMutableDictionary *_testPreferences;
     NSString *_audioSessionError;
@@ -334,6 +338,7 @@ struct Runtime {
 }
 - (void)pauseGame {
     if(!self.canPause)return;
+    _pendingHapticEvents=0;
     [self touchPhase:3 x:0 y:0];
     auto &r=*_runtime;
     // Invoke the original P-button callback, including its pause-menu transition
@@ -417,6 +422,18 @@ struct Runtime {
     }
 }
 - (BOOL)respectsSilentMode {return _respectsSilentMode;}
+- (BOOL)hapticsEnabled {return _hapticsEnabled;}
+- (void)setHapticsEnabled:(BOOL)enabled {
+    if(!_offersHaptics)return;
+    _hapticsEnabled=enabled;
+    _pendingHapticEvents=0;
+    [self storePreference:enabled key:@"feedback.hapticsEnabled"];
+}
+- (NSUInteger)consumeHapticEvents {
+    NSUInteger events=_pendingHapticEvents;
+    _pendingHapticEvents=0;
+    return _hapticsEnabled&&self.canPause?events:0;
+}
 - (void)setRespectsSilentMode:(BOOL)respect {
     _respectsSilentMode=respect;[self storePreference:respect key:@"audio.respectsSilentMode"];
     [self configureAudioSession];
@@ -426,7 +443,11 @@ struct Runtime {
     if(!_runtime->cpu.fault.empty())_failure=@(_runtime->cpu.fault.c_str());
 }
 - (instancetype)initWithResourcePath:(NSString *)path {
+    return [self initWithResourcePath:path offersHaptics:NO];
+}
+- (instancetype)initWithResourcePath:(NSString *)path offersHaptics:(BOOL)offersHaptics {
     if((self=[super init])) {
+        _offersHaptics=offersHaptics;
         _runtime=std::make_unique<Runtime>();_resourcePath=[path copy];
         _players=[NSMutableDictionary dictionary];
         _sourceBuffers=[NSMutableDictionary dictionary];_sourceLoops=[NSMutableDictionary dictionary];_sourceGains=[NSMutableDictionary dictionary];
@@ -442,6 +463,7 @@ struct Runtime {
         }
         _soundEnabled=[self preference:@"audio.soundEnabled"]?[[self preference:@"audio.soundEnabled"] boolValue]:YES;
         _respectsSilentMode=[self preference:@"audio.respectsSilentMode"]?[[self preference:@"audio.respectsSilentMode"] boolValue]:YES;
+        _hapticsEnabled=_offersHaptics&&[[self preference:@"feedback.hapticsEnabled"] boolValue];
         _wantedMusicEntry=-1;_wantedMusicLoop=YES;
         [self configureAudioSession];
         _audioMixer=[SDBAudioMixer new];
@@ -451,8 +473,21 @@ struct Runtime {
         __unsafe_unretained SDBEngine *owner=self;
         _runtime->cpu.hook=[owner](GuestCPU &cpu,uint32_t pc) {
             if(sdb::display::GameDisplayPatch::handlesPc(pc))return owner->_runtime->displayPatch.handleInstruction(cpu,pc);
+            // Observe the original effect request before its Sound-OFF guard.
+            // The guest method still executes unchanged after this hook.
+            if(pc==0xe994&&owner->_hapticsEnabled) {
+                if(cpu.r[1]==2)owner->_pendingHapticEvents|=1; // Player::fireLockonLaser.
+                else if(cpu.r[1]==3)owner->_pendingHapticEvents|=2; // Successful target acquisition.
+            }
+            if(pc==0x2796&&owner->_hapticsEnabled) {
+                // Observe the actual Player health store, not enemy explosions.
+                Runtime &runtime=*owner->_runtime;
+                uint32_t game=cpu.read32(runtime.game+0xc),player=cpu.read32(game+0x4c);
+                if(cpu.r[1]==0xd8&&cpu.r[2]==player&&
+                   int32_t(cpu.r[3])<int32_t(cpu.read32(player+0xd8)))owner->_pendingHapticEvents|=4;
+            }
             if((pc>=0xee9c&&pc<0xf478)||pc==0xa80c||pc==0xa8a0||pc==0xa958||pc==0x8e04||pc==0xea14||pc==0xe86e||
-               (pc>=SilentOn&&pc<=SilentOffDraw))return [owner bridge:pc];
+               (pc>=SilentOn&&pc<=HapticsOffDraw))return [owner bridge:pc];
             return false;
         };
         [self loadOriginal];[self checkFault];
@@ -590,13 +625,15 @@ struct Runtime {
     if(!c.fault.empty())return;
     // The modern preference wins over the legacy game's initial sound-OFF byte.
     c.write8(r.sound+1,_soundEnabled);
-    #if TARGET_OS_IOS || TARGET_OS_WATCH
+    if(_offersHaptics&&c.read16(0x2796)!=0x5053) {c.fail("Unsupported original player-health store");return;}
+    if(TARGET_OS_IOS||TARGET_OS_WATCH||_offersHaptics) {
     // Extend the original Options table using its own font, layout, buttons, and animations.
     const uint32_t old=c.read32(0x14680);
     if(old!=0x148e0) {c.fail("Unsupported original Options table");return;}
-    uint32_t table=r.allocate(12*60);
+    const uint32_t rowCount=_offersHaptics?15:12;
+    uint32_t table=r.allocate(rowCount*60);
     memcpy(c.memory.data()+table,c.memory.data()+old,7*60);
-    memcpy(c.memory.data()+table+10*60,c.memory.data()+old+7*60,2*60);
+    memcpy(c.memory.data()+table+(rowCount-2)*60,c.memory.data()+old+7*60,2*60);
     const char *label="Respect Silent Mode";uint32_t text=r.allocate(uint32_t(strlen(label)+1));
     c.load(text,label,strlen(label)+1);
     for(unsigned i=0;i<3;++i) {
@@ -608,8 +645,18 @@ struct Runtime {
         if(i==0)c.write32(dest+36,text);
         else {c.write32(dest+40,(i==1?SilentOn:SilentOff)|1);c.write32(dest+44,(i==1?SilentOnDraw:SilentOffDraw)|1);}
     }
+    if(_offersHaptics) {
+        const char *haptics="Haptics";uint32_t hapticsText=r.allocate(uint32_t(strlen(haptics)+1));
+        c.load(hapticsText,haptics,strlen(haptics)+1);
+        for(unsigned i=0;i<3;++i) {
+            uint32_t dest=table+(10+i)*60,source=old+(4+i)*60;
+            memcpy(c.memory.data()+dest,c.memory.data()+source,60);
+            if(i==0)c.write32(dest+36,hapticsText);
+            else {c.write32(dest+40,(i==1?HapticsOn:HapticsOff)|1);c.write32(dest+44,(i==1?HapticsOnDraw:HapticsOffDraw)|1);}
+        }
+    }
     c.write32(0x14680,table);
-    #endif
+    }
     NSString *version=[NSBundle.mainBundle objectForInfoDictionaryKey:@"CFBundleShortVersionString"]?:@"dev";
     _menuVersion=[@"Ver." stringByAppendingString:version];
     const uint32_t versionRow=0x14d90;
@@ -765,8 +812,9 @@ struct Runtime {
     if(pc==0xea14) {_wantedMusicEntry=c.r[1];_wantedMusicLoop=c.r[2]!=0;return NO;}
     if(pc==0xe86e) {_wantedMusicEntry=-1;return NO;}
     if(pc==SilentOn||pc==SilentOff) {[self setRespectsSilentMode:pc==SilentOn];return done();}
-    if(pc==SilentOnDraw||pc==SilentOffDraw) {
-        bool selected=(pc==SilentOnDraw)==bool(_respectsSilentMode);
+    if(pc==HapticsOn||pc==HapticsOff) {[self setHapticsEnabled:pc==HapticsOn];return done();}
+    if(pc==SilentOnDraw||pc==SilentOffDraw||pc==HapticsOnDraw||pc==HapticsOffDraw) {
+        bool selected=pc>=HapticsOnDraw?(pc==HapticsOnDraw)==bool(_hapticsEnabled):(pc==SilentOnDraw)==bool(_respectsSilentMode);
         uint32_t button=c.r[1],data=c.r[2];
         c.call(0x9b2f,{selected?0xff80c0ffu:0xff808080u,button,data});return done();
     }
@@ -944,6 +992,7 @@ struct Runtime {
 }
 - (void)setSuspended:(BOOL)suspended {
     if(suspended==_suspended)return;
+    _pendingHapticEvents=0;
     if(suspended) {
         [self touchPhase:3 x:0 y:0];
         [_pausedSources removeAllObjects];

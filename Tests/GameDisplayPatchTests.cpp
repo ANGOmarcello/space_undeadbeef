@@ -241,6 +241,97 @@ void resizeTests(const std::vector<uint8_t>& executable) {
     require(prefix(cpu) == before, "unsupported menu leaves bounds and paths untouched");
 }
 
+void hapticsMenuTests(const std::vector<uint8_t>& executable) {
+    GuestCPU cpu; loadMachO(cpu, executable);
+    const auto baseline = prefix(cpu);
+    GameDisplayPatch patch;
+    require(patch.initialize(cpu), "haptics menu fixture validates the original executable");
+    constexpr uint32_t originalTable = 0x148e0, pointer = 0x14680, table = 0x40000, stride = 60;
+    const auto copyRow = [&](uint32_t originalIndex, uint32_t destination) {
+        std::copy(cpu.memory.begin() + originalTable + originalIndex * stride,
+                  cpu.memory.begin() + originalTable + (originalIndex + 1) * stride,
+                  cpu.memory.begin() + destination);
+    };
+    for (uint32_t index = 0; index < 7; ++index) copyRow(index, table + index * stride);
+    for (uint32_t section : {7u, 10u})
+        for (uint32_t index = 0; index < 3; ++index) copyRow(4 + index, table + (section + index) * stride);
+    copyRow(7, table + 13 * stride); copyRow(8, table + 14 * stride);
+    // Unique native callbacks and labels must survive every reflow. No callback
+    // executes in this fixture and no host preferences or haptics are accessed.
+    for (uint32_t index = 0; index < 14; ++index) {
+        cpu.write32(table + index * stride + 36, 0x50000 + index * 16);
+        cpu.write32(table + index * stride + 40, 0x01d00001 + index * 4);
+        cpu.write32(table + index * stride + 44, 0x01d00081 + index * 4);
+    }
+    const std::vector<uint8_t> sourceRows(cpu.memory.begin() + table, cpu.memory.begin() + table + 15 * stride);
+    cpu.write32(pointer, table); cpu.write32(0x14d90 + 36, 0x60000);
+    const auto original = DisplayGeometry::make({480, 320}, 1);
+    const auto wide = DisplayGeometry::make({960, 320}, 2, {8, 48, 16, 16});
+    const auto watch = DisplayGeometry::make({216, 242}, 2, {20, 8, 12, 8});
+    require(patch.apply(cpu, original), "fifteen-row native haptics menu applies");
+    constexpr float positions[] = {40, 70, 70, 70, 100, 130, 130, 160, 190, 190, 220, 250, 250, 280};
+    for (uint32_t index = 0; index < std::size(positions); ++index) {
+        near(cpu, table + index * stride, positions[index] - 160,
+             "four compact sections retain their intended logical row positions");
+        require(cpu.read32(table + index * stride + 8) == word(sourceRows, index * stride + 8) &&
+                cpu.read32(table + index * stride + 12) == word(sourceRows, index * stride + 12),
+                "haptics layout retains the original cloned hit-box sizes");
+    }
+    const std::vector<uint8_t> compact(cpu.memory.begin() + table, cpu.memory.begin() + table + 15 * stride);
+    require(patch.apply(cpu, wide), "haptics menu reflows inside a wide view's safe area");
+    near(cpu, table + 7 * stride, -4, "silent-mode heading keeps the safe vertical center");
+    near(cpu, table + 10 * stride, 51.5, "haptics heading shares the compact safe-area spacing");
+    near(cpu, table + 11 * stride, 79.25, "haptics choices retain the scaled thirty-unit heading offset");
+    near(cpu, table + 11 * stride + 4, -44, "haptics ON reuses the original safe-area column");
+    near(cpu, table + 13 * stride, 107, "SAVE-EXIT retains its original safe-area anchor");
+    require(patch.apply(cpu, watch), "fifteen-row geometry also supports a taller viewport");
+    near(cpu, table + 10 * stride,
+         watch.safeUIRect.center().y - watch.logicalSize.height / 2 + 60,
+         "taller viewport centers the compact haptics section in safe UI");
+    for (uint32_t index = 0; index < 15; ++index)
+        require(std::equal(sourceRows.begin() + index * stride + 16, sourceRows.begin() + (index + 1) * stride,
+                           cpu.memory.begin() + table + index * stride + 16),
+                "native haptics labels, callbacks and nongeometry fields are untouched");
+    require(cpu.read32(0x14d90 + 36) == 0x60000, "haptics reflow preserves the native version string");
+    require(patch.apply(cpu, wide) && patch.apply(cpu, original), "haptics geometry resizes from immutable templates");
+    require(std::equal(compact.begin(), compact.end(), cpu.memory.begin() + table),
+            "wide/tall/original round trip exactly restores all compact native rows");
+
+    cpu.write32(table + 12 * stride + 32, 61);
+    auto before = prefix(cpu);
+    std::vector<uint8_t> beforeRows(cpu.memory.begin() + table, cpu.memory.begin() + table + 15 * stride);
+    require(!patch.apply(cpu, wide) && !cpu.fault.empty(), "unsupported haptics row fails validation");
+    require(prefix(cpu) == before && std::equal(beforeRows.begin(), beforeRows.end(), cpu.memory.begin() + table),
+            "unsupported haptics row leaves both loaded and native geometry untouched");
+    cpu.fault.clear(); cpu.write32(table + 12 * stride + 32, 62);
+    cpu.write32(table + 14 * stride + 8, bits(32));
+    before = prefix(cpu);
+    beforeRows.assign(cpu.memory.begin() + table, cpu.memory.begin() + table + 15 * stride);
+    require(!patch.apply(cpu, wide) && !cpu.fault.empty(), "haptics table requires its fifteenth-row terminator");
+    require(prefix(cpu) == before && std::equal(beforeRows.begin(), beforeRows.end(), cpu.memory.begin() + table),
+            "bad haptics terminator cannot partially resize the game");
+    cpu.fault.clear(); cpu.write32(table + 14 * stride + 8, 0);
+
+    // Row eleven is a real choice in the extended table. Check the full length
+    // before reading row fourteen, even when the first twelve rows fit exactly.
+    const uint32_t truncated = uint32_t(cpu.memory.size()) - 12 * stride;
+    std::copy(cpu.memory.begin() + table, cpu.memory.begin() + table + 12 * stride, cpu.memory.begin() + truncated);
+    cpu.write32(pointer, truncated); before = prefix(cpu);
+    require(!patch.apply(cpu, wide) && cpu.fault.find("outside guest heap") != std::string::npos,
+            "fifteen-row detection rejects a truncated table before an out-of-bounds read");
+    require(prefix(cpu) == before, "truncated haptics table leaves original game geometry untouched");
+    cpu.fault.clear();
+    const uint32_t lastValid = uint32_t(cpu.memory.size()) - 15 * stride;
+    std::copy(cpu.memory.begin() + table, cpu.memory.begin() + table + 15 * stride, cpu.memory.begin() + lastValid);
+    cpu.write32(pointer, lastValid);
+    require(patch.apply(cpu, wide), "bounded haptics table may end exactly at guest-memory limit");
+    near(cpu, lastValid + 13 * stride, 107, "last valid haptics table still places SAVE-EXIT correctly");
+    cpu.write32(pointer, originalTable); cpu.write32(0x14d90 + 36, word(baseline, 0x14d90 + 36));
+    require(patch.apply(cpu, original) && prefix(cpu) == baseline,
+            "removing native menu extension restores every original loaded byte");
+    healthy(cpu, "haptics menu fixture remains bounded");
+}
+
 void rejectionTests(const std::vector<uint8_t>& executable) {
     for (uint32_t address : {0x5cf0u, 0x11c90u, 0x14688u, 0x12b34u, 0x5a3cu}) {
         GuestCPU cpu; loadMachO(cpu, executable);
@@ -264,6 +355,7 @@ int main(int argc, char** argv) {
     require(input.good(), std::string("original fixture opens: ") + path);
     const std::vector<uint8_t> executable{std::istreambuf_iterator<char>(input), std::istreambuf_iterator<char>()};
     resizeTests(executable);
+    hapticsMenuTests(executable);
     rejectionTests(executable);
     std::cout << "PASS: " << checks << " display patch checks against original ARM Mach-O\n";
 }

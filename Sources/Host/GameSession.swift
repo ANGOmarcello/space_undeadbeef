@@ -57,12 +57,15 @@ final class GameSession {
     @ObservationIgnored private var softwareTimer: Timer?
     @ObservationIgnored private var clock = GameFrameClock()
     @ObservationIgnored private var releasesTapAfterStep = false
+    @ObservationIgnored private let haptics = GameHaptics()
 
     func setActive(_ active: Bool) {
         if !active {
             isActive = false
             cancelTouch()
             engine?.setSuspended(true)
+            _ = engine?.consumeHapticEvents()
+            haptics.reset()
             canPause = false
             softwareTimer?.invalidate()
             softwareTimer = nil
@@ -75,7 +78,7 @@ final class GameSession {
                 failure = "The original game resources could not be found."
                 return
             }
-            engine = SDBEngine(resourcePath: path)
+            engine = SDBEngine(resourcePath: path, offersHaptics: GameHaptics.offersHaptics)
             failure = engine?.failure
             if let viewport { configure(viewport) }
             if let engine { refreshState(from: engine) }
@@ -113,6 +116,9 @@ final class GameSession {
             }
         }
         engine.renderFrame()
+        let events = engine.consumeHapticEvents()
+        haptics.update(enabled: isActive && engine.hapticsEnabled && engine.gameMenuType == 0 && engine.failure == nil,
+                       events: events)
         refreshState(from: engine)
         if failure != nil { setActive(false) }
         return steps
@@ -147,6 +153,8 @@ final class GameSession {
         guard let engine, canPause else { return }
         cancelTouch()
         engine.pauseGame()
+        _ = engine.consumeHapticEvents()
+        haptics.reset()
         refreshState(from: engine)
         if failure != nil { setActive(false) }
     }

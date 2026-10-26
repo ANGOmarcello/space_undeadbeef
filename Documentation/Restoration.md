@@ -148,7 +148,15 @@ SAVE-EXIT remains in place. The session uses the ambient category when respectin
 silent mode and the playback category when that policy is OFF. macOS retains
 normal system audio output; it has no equivalent iPhone hardware silent switch.
 
-When `SDB_SAVE_DIRECTORY` is provided for a test, both preference keys use an
+On iPhone the same Options table also offers optional soft haptics, default OFF.
+Four sections share the existing heading-to-SAVE-EXIT span, retaining the
+original font, colors, ON/OFF columns, choice offset and exit anchor. iPad and
+Watch retain the three-section audio layout. The native iPhone host consumes
+coalesced original laser-release, target-acquisition and actual player-health
+decrease events, independently of sound, with a global quarter-second cooldown.
+See [Haptics.md](Haptics.md) for verification and persistence details.
+
+When `SDB_SAVE_DIRECTORY` is provided for a test, the preference keys use an
 atomic `audio-preferences.plist` in that temporary directory. The test path never
 accesses standard user defaults. This verifies preference policy and persistence
 without changing real user settings; production uses `NSUserDefaults`.

@@ -11,11 +11,17 @@ NS_ASSUME_NONNULL_BEGIN
 /// Executes the supplied, hash-checked 2008 gameplay code in bounded guest memory.
 @interface SDBEngine : NSObject
 - (instancetype)initWithResourcePath:(NSString *)path;
+/// The native host offers haptics only on iPhone. Other hosts keep their menu.
+- (instancetype)initWithResourcePath:(NSString *)path offersHaptics:(BOOL)offersHaptics;
 @property(nonatomic, readonly, nullable) CGImageRef frame;
 @property(nonatomic, readonly, nullable) NSString *failure;
 @property(nonatomic, readonly) NSString *diagnostics;
 @property(nonatomic) BOOL soundEnabled;
 @property(nonatomic) BOOL respectsSilentMode;
+@property(nonatomic) BOOL hapticsEnabled;
+/// Coalesced original events: laser release=1, target acquired=2, player damage=4.
+/// Consuming clears the events; no audio preference gates them.
+- (NSUInteger)consumeHapticEvents;
 @property(nonatomic, readonly) CGSize logicalSize;
 @property(nonatomic, readonly) CGSize rasterSize;
 /// Raster dimensions expressed in view points, including rounding overscan.

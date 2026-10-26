@@ -241,24 +241,55 @@ bool GameDisplayPatch::apply(GuestCPU& cpu, const DisplayGeometry& geometry) {
 
     const uint32_t options = cpu.read32(OptionsPointer);
     if (options != OriginalOptions) {
-        constexpr uint32_t ExtendedRows = 12;
-        if (options < 0x20000 || options > cpu.memory.size() - ExtendedRows * MenuRecordSize)
+        constexpr uint32_t AudioRows = 12, HapticsRows = 15;
+        if (options < 0x20000 || options > cpu.memory.size() - AudioRows * MenuRecordSize)
             return fail(cpu, "extended Options table is outside guest heap");
-        for (uint32_t index = 0; index < ExtendedRows - 1; ++index) {
+        const uint32_t audioTerminator = options + (AudioRows - 1) * MenuRecordSize;
+        const bool audioOnly = cpu.read32(audioTerminator + 8) == 0 && cpu.read32(audioTerminator + 12) == 0;
+        const uint32_t rows = audioOnly ? AudioRows : HapticsRows;
+        if (options > cpu.memory.size() - rows * MenuRecordSize)
+            return fail(cpu, "extended Options table is outside guest heap");
+        for (uint32_t index = 0; index < rows - 1; ++index) {
             if (cpu.read32(options + index * MenuRecordSize + 32) != 62)
                 return fail(cpu, "unsupported extended Options row");
         }
-        if (cpu.read32(options + 11 * MenuRecordSize + 8) != 0 ||
-            cpu.read32(options + 11 * MenuRecordSize + 12) != 0)
+        if (cpu.read32(options + (rows - 1) * MenuRecordSize + 8) != 0 ||
+            cpu.read32(options + (rows - 1) * MenuRecordSize + 12) != 0)
             return fail(cpu, "extended Options table lacks its terminator");
+
+        const MenuRow *originalRows[8]{};
         for (const MenuRow& original : menus_) {
             if (original.address < OriginalOptions || original.address >= OriginalOptions + 8 * MenuRecordSize) continue;
             const uint32_t index = (original.address - OriginalOptions) / MenuRecordSize;
-            menu(original, options + (index == 7 ? 10 : index) * MenuRecordSize);
-            if (index >= 4 && index <= 6) {
-                MenuRow silent = original;
-                silent.x += 80; // Existing Game Speed -> Sound section spacing.
-                menu(silent, options + (index + 3) * MenuRecordSize);
+            originalRows[index] = &original;
+        }
+        for (const MenuRow *original : originalRows)
+            if (!original) return fail(cpu, "original Options geometry is missing");
+
+        if (audioOnly) {
+            const double sectionStep = originalRows[4]->x - originalRows[0]->x;
+            for (uint32_t index = 0; index < 8; ++index) {
+                menu(*originalRows[index], options + (index == 7 ? 10 : index) * MenuRecordSize);
+                if (index >= 4 && index <= 6) {
+                    MenuRow silent = *originalRows[index];
+                    silent.x += float(sectionStep);
+                    menu(silent, options + (index + 3) * MenuRecordSize);
+                }
+            }
+        } else {
+            // Four sections share the original heading-to-SAVE-EXIT span.
+            // Retain each heading's original thirty-unit choice offset and
+            // ON/OFF columns while leaving SAVE-EXIT at its original anchor.
+            const double firstHeading = originalRows[0]->x;
+            const double sectionStep = (originalRows[7]->x - firstHeading) / 4;
+            for (uint32_t index = 0; index < HapticsRows - 1; ++index) {
+                const uint32_t source = index < 4 ? index : (index == 13 ? 7 : 4 + (index - 4) % 3);
+                MenuRow row = *originalRows[source];
+                if (index >= 4 && index < 13) {
+                    const uint32_t section = 1 + (index - 4) / 3;
+                    row.x = float(firstHeading + section * sectionStep + row.x - originalRows[4]->x);
+                }
+                menu(row, options + index * MenuRecordSize);
             }
         }
     }
