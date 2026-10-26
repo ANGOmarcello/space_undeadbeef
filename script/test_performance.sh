@@ -14,4 +14,8 @@ xcrun clang++ -std=c++17 -O2 -g -fobjc-arc -I "$project_root/Sources/Legacy" \
   -framework Foundation -framework CoreGraphics -framework ImageIO \
   -framework AVFoundation -framework Metal -framework CoreImage -framework QuartzCore \
   -o "$task_temp/PerformanceSmoke"
-"$task_temp/PerformanceSmoke" "$project_root/Resources/Original" "$task_temp/save" "${1:-1800}" "${2:-metal}" "${3:-paced}"
+viewport="${4:-}"
+if [[ -z "$viewport" ]]; then
+  if [[ "${2:-metal}" == watch ]]; then viewport=watch; else viewport=iphone; fi
+fi
+"$task_temp/PerformanceSmoke" "$project_root/Resources/Original" "$task_temp/save" "${1:-1800}" "${2:-metal}" "${3:-paced}" "$viewport"

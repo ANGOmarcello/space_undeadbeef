@@ -1,5 +1,36 @@
 # Verification record
 
+## Second performance pass — 1.1 (9), 26 October 2026
+
+The shared renderer/runtime improvements and software-timer phase correction
+are measured in [Performance.md](Performance.md#second-pass--version-11-9).
+No artwork, game instructions, physics rate or haptic cadence was changed.
+The Watch Simulator now publishes 59–60 images/s in measured gameplay windows,
+compared with 40–46 before correcting its epoch. This is Simulator evidence.
+
+The iPhone 18 Pro, 13-inch iPad Pro M5 and Apple TV 4K Simulator each pass
+`HostUITests.testPerformanceGameplay`. Native Mac and Watch Simulator gameplay
+were visually reviewed with isolated test state. Latest source builds for all
+four platform targets. The passing result identifiers are:
+
+- iPhone: `test_sim_2026-10-26T21-34-27-955Z_pid29351_b2342a8e.xcresult`
+- iPad: `test_sim_2026-10-26T21-42-22-156Z_pid29351_d7e30209.xcresult`
+- TV: `test_sim_2026-10-26T21-49-34-286Z_pid29351_c9456771.xcresult`
+
+99 draw-assembly sanitizer checks, eleven CPU/GPU pixel fixtures, batching and
+malformed-input checks, fixed-clock tests, 53 Session/Crown integration checks
+and 147 haptic policy checks pass. Baseline/current guest state, all 600 software
+images, ten Metal samples across 300 frames, and final saves match exactly.
+Details and the CPU comparison table are in the performance record.
+
+The user requested no real-device testing for this pass. Physical attempts were
+stopped: iPhone automation timed out at the test-runner stage, and the Watch
+installation could not reconnect. No physical performance claim or successful
+Watch build-9 delivery is made. Apple TV hardware was not queried or woken.
+The final checks use native Mac and Simulators only; original game progress and
+preferences are separate from their temporary state. Task-owned test artifacts
+are removed after verification, with measurements retained in the documentation.
+
 The subsequent measured 60 Hz performance pass, audio mixer replacement and
 its exact verification limits are recorded in [Performance.md](Performance.md).
 Optional iPhone and Watch feedback is recorded in [Haptics.md](Haptics.md).

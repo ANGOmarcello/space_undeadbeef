@@ -153,8 +153,8 @@ void applyBaselineInput(SDBEngine *engine, unsigned index, double offsetX, doubl
 }
 
 int run(int argc, char **argv) {
-    if (argc < 3 || argc > 6) {
-        fprintf(stderr, "Usage: PerformanceSmoke RESOURCE_DIRECTORY TEMP_SAVE_DIRECTORY [FRAMES=1800] [metal|watch] [paced|unpaced]\n");
+    if (argc < 3 || argc > 7) {
+        fprintf(stderr, "Usage: PerformanceSmoke RESOURCE_DIRECTORY TEMP_SAVE_DIRECTORY [FRAMES=1800] [metal|watch] [paced|unpaced] [iphone|ipad|mac|tv|watch]\n");
         return 64;
     }
     unsigned count = DefaultSamples;
@@ -169,6 +169,14 @@ int run(int argc, char **argv) {
         fprintf(stderr, "Backend must be metal or watch; pacing must be paced or unpaced.\n");
         return 64;
     }
+    const char *profile = argc > 6 ? argv[6] : (strcmp(backend, "watch") == 0 ? "watch" : "iphone");
+    CGSize size;
+    if (!strcmp(profile, "iphone")) size = CGSizeMake(2622, 1206);
+    else if (!strcmp(profile, "ipad")) size = CGSizeMake(2732, 2064);
+    else if (!strcmp(profile, "mac")) size = CGSizeMake(1920, 1280);
+    else if (!strcmp(profile, "tv")) size = CGSizeMake(3840, 2160);
+    else if (!strcmp(profile, "watch")) size = CGSizeMake(416, 496);
+    else { fprintf(stderr, "Unknown benchmark viewport profile.\n"); return 64; }
     NSString *save = prepareIsolatedSaveDirectory(argv[2]);
     NSString *resources = [NSString stringWithUTF8String:argv[1]];
     if (!save || !resources.length) return 64;
@@ -185,7 +193,6 @@ int run(int argc, char **argv) {
         fprintf(stderr, "SKIP: Metal was requested but is unavailable in this process.\n");
         return 77;
     }
-    const CGSize size = watch ? CGSizeMake(416, 496) : CGSizeMake(2622, 1206);
     [engine configureViewport:size displayScale:1 safeArea:CGRectMake(0, 0, size.width, size.height)];
     if (!check(engine, "configure viewport")) return 1;
     for (unsigned index = 0; index < WarmupSamples; ++index) {
@@ -199,10 +206,10 @@ int run(int argc, char **argv) {
     [engine touchPhase:2 x:160 + offsetX y:40 + offsetY];
     if (!check(engine, "Game Start")) return 1;
 
-    printf("workload=original-baseline samples=%u pacing=%s renderer=%s raster=%.0fx%.0f\n",
-           count, pacing, engine.usesMetalRenderer ? "Metal" : "CPU", size.width, size.height);
+    printf("workload=original-baseline samples=%u pacing=%s renderer=%s profile=%s raster=%.0fx%.0f\n",
+           count, pacing, engine.usesMetalRenderer ? "Metal" : "CPU", profile, size.width, size.height);
     printf("CPU stage milliseconds exclude input, bookkeeping and sleep; no GPU completion or display FPS is measured.\n");
-    if (!paced) printf("Unpaced Metal submissions may encounter bounded queue backpressure.\n");
+    if (!paced && !watch) printf("Unpaced Metal submissions may encounter bounded queue backpressure.\n");
     fflush(stdout);
 
     Samples all;

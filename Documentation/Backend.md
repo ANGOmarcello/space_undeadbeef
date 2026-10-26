@@ -19,6 +19,9 @@ bundle has separate preferences and progress. No historical user save was suppli
 so migration from an original installation remains unverified.
 
 The smoke test sets `SDB_SAVE_DIRECTORY` to its task-owned temporary directory.
+UI tests pass unique `~/tmp/...` paths; the engine expands
+the tilde inside the application sandbox, rather than using the test runner's
+different home. An absent override retains the normal Application Support path.
 With this override, audio and haptics preferences use an atomic `audio-preferences.plist` beside the
 test save and do not access standard user defaults. `SDB_MUTE_AUDIO` mutes only that
 process while retaining the guest audio execution path. Neither override changes
