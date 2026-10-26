@@ -101,6 +101,16 @@ bool BlendFactor(uint32_t value, MTLBlendFactor &factor) {
         default: return false;
     }
 }
+bool SameDrawState(const SDBMetalDraw &a, const SDBMetalDraw &b) {
+    return a.textureID == b.textureID && a.textured == b.textured &&
+        a.textureEnv == b.textureEnv && a.blend == b.blend &&
+        a.sourceBlend == b.sourceBlend && a.destBlend == b.destBlend &&
+        a.nearest == b.nearest && a.distanceField == b.distanceField &&
+        a.glyphAtlas == b.glyphAtlas;
+}
+uint64_t PipelineKey(const SDBMetalDraw &draw) {
+    return draw.blend ? (uint64_t(draw.sourceBlend) << 32) | draw.destBlend : UINT64_MAX;
+}
 }
 
 @implementation SDBMetalRenderer {
@@ -126,6 +136,11 @@ bool BlendFactor(uint32_t value, MTLBlendFactor &factor) {
     CGColorSpaceRef _colorSpace;
     CGImageRef _cachedFrame;
     NSString *_failure;
+    BOOL _pipelinesReady;
+    // Last successful submission diagnostics also let integration checks verify
+    // that equivalent original ranges actually share native draw commands.
+    NSUInteger _lastEncodedDrawCount;
+    NSUInteger _lastPipelineBindingCount;
 }
 
 - (instancetype)init {
@@ -170,7 +185,17 @@ bool BlendFactor(uint32_t value, MTLBlendFactor &factor) {
     }];
     if (!_nearestSampler || !_linearSampler || !_imageContext || !_colorSpace) {
         _failure = @"Unable to prepare Metal image resources.";
+        return self;
     }
+    // Compile the original opaque, straight-alpha and additive states before
+    // gameplay. Other supported blend combinations retain the same lazy path.
+    for (const SDBMetalDraw &draw : {
+        SDBMetalDraw{0, 0, 0, 0, 0x1e01, 0, 1, 0, 0, 0, 0},
+        SDBMetalDraw{0, 0, 0, 0, 0x1e01, 1, 0x302, 0x303, 0, 0, 0},
+        SDBMetalDraw{0, 0, 0, 0, 0x1e01, 1, 0x302, 1, 0, 0, 0}}) {
+        if (![self pipelineForDraw:draw]) return self;
+    }
+    _pipelinesReady = YES;
     return self;
 }
 
@@ -181,7 +206,7 @@ bool BlendFactor(uint32_t value, MTLBlendFactor &factor) {
 
 - (BOOL)isSupported {
     return _device && _queue && _vertexFunction && _fragmentFunction &&
-        _nearestSampler && _linearSampler && _whiteTexture && _imageContext && _colorSpace;
+        _nearestSampler && _linearSampler && _whiteTexture && _imageContext && _colorSpace && _pipelinesReady;
 }
 - (id<MTLDevice>)device { return _device; }
 - (id<MTLTexture>)latestTexture { return _latestTexture; }
@@ -225,14 +250,14 @@ bool BlendFactor(uint32_t value, MTLBlendFactor &factor) {
 }
 
 - (id<MTLRenderPipelineState>)pipelineForDraw:(const SDBMetalDraw &)draw {
-    const uint64_t key = draw.blend ? (uint64_t(draw.sourceBlend) << 32) | draw.destBlend : UINT64_MAX;
-    id<MTLRenderPipelineState> existing = _pipelines[@(key)];
-    if (existing) return existing;
     MTLBlendFactor source = MTLBlendFactorOne, destination = MTLBlendFactorZero;
     if (draw.blend && (!BlendFactor(draw.sourceBlend, source) || !BlendFactor(draw.destBlend, destination))) {
         _failure = @"Unsupported original blend factor in Metal draw.";
         return nil;
     }
+    const uint64_t key = PipelineKey(draw);
+    id<MTLRenderPipelineState> existing = _pipelines[@(key)];
+    if (existing) return existing;
     MTLRenderPipelineDescriptor *descriptor = [MTLRenderPipelineDescriptor new];
     descriptor.label = @"Original OpenGL ES triangle compatibility";
     descriptor.vertexFunction = _vertexFunction;
@@ -282,6 +307,8 @@ bool BlendFactor(uint32_t value, MTLBlendFactor &factor) {
     }
     // Validate before acquiring a slot or encoding, so invalid input never leaves
     // a partial frame or an uncommitted command holding a semaphore permit.
+    bool hasValidatedPipeline = false;
+    uint64_t validatedPipeline = 0;
     for (NSUInteger i = 0; i < drawCount; ++i) {
         const SDBMetalDraw &draw = draws[i];
         if (draw.firstVertex > vertexCount || draw.vertexCount > vertexCount - draw.firstVertex ||
@@ -290,7 +317,20 @@ bool BlendFactor(uint32_t value, MTLBlendFactor &factor) {
             _failure = @"Invalid original triangle draw submitted to Metal.";
             return NO;
         }
-        if (![self pipelineForDraw:draw]) return NO;
+        // Validate even when the prior range used the same pipeline key. Two
+        // invalid UINT32_MAX factors must not alias the opaque key or turn a
+        // malformed zero-length record into an unchecked batch barrier.
+        MTLBlendFactor source, destination;
+        if (draw.blend && (!BlendFactor(draw.sourceBlend, source) || !BlendFactor(draw.destBlend, destination))) {
+            _failure = @"Unsupported original blend factor in Metal draw.";
+            return NO;
+        }
+        const uint64_t key = PipelineKey(draw);
+        if (!hasValidatedPipeline || key != validatedPipeline) {
+            if (![self pipelineForDraw:draw]) return NO;
+            validatedPipeline = key;
+            hasValidatedPipeline = true;
+        }
     }
     if (dispatch_semaphore_wait(_commandSlots, DISPATCH_TIME_NOW)) return NO;
     NSUInteger vertexSlot = NSNotFound;
@@ -361,29 +401,77 @@ bool BlendFactor(uint32_t value, MTLBlendFactor &factor) {
     if (buffer) [encoder setVertexBuffer:buffer offset:0 atIndex:0];
     const float logical[2] = {float(logicalSize.width), float(logicalSize.height)};
     [encoder setVertexBytes:logical length:sizeof(logical) atIndex:1];
-    for (NSUInteger i = 0; i < drawCount; ++i) {
+    id<MTLRenderPipelineState> previousPipeline = nil;
+    uint64_t previousPipelineKey = 0;
+    id<MTLTexture> previousTexture = nil;
+    id<MTLSamplerState> previousSampler = nil;
+    uint32_t previousFlags[4] = {};
+    struct GlyphBinding {
+        uint32_t enabled, firstVertex;
+        float inverseWidth, inverseHeight;
+    } previousGlyph = {};
+    bool hasFlags = false, hasGlyph = false;
+    NSUInteger encodedDrawCount = 0, pipelineBindingCount = 0;
+    for (NSUInteger i = 0; i < drawCount;) {
         const SDBMetalDraw &draw = draws[i];
-        if (!draw.vertexCount) continue;
+        if (!draw.vertexCount) { ++i; continue; }
+        NSUInteger vertexCountInBatch = draw.vertexCount;
+        NSUInteger next = i + 1;
+        // Consecutive triangle lists can share a draw only when every render
+        // state agrees and the vertex ranges touch. Never sort or cross a gap.
+        // Counts are multiples of three, so the shader's per-triangle glyph
+        // bounds keep the same local three vertices after this merge, including
+        // an original firstVertex that is not itself divisible by three.
+        while (next < drawCount && draws[next].vertexCount &&
+               draws[next].firstVertex == draw.firstVertex + vertexCountInBatch &&
+               SameDrawState(draw, draws[next])) {
+            vertexCountInBatch += draws[next].vertexCount;
+            ++next;
+        }
         id<MTLTexture> texture = draw.textured ? _textures[@(draw.textureID)] : _whiteTexture;
         const bool glyphAtlas = draw.textured && draw.glyphAtlas && !draw.distanceField &&
             texture.width >= 16 && texture.height >= 8;
         const uint32_t flags[4] = {draw.textured, draw.textureEnv == 0x1e01, draw.distanceField, glyphAtlas};
-        const struct {
-            uint32_t enabled, firstVertex;
-            float inverseWidth, inverseHeight;
-        } glyph = {uint32_t(glyphAtlas), draw.firstVertex, 1.f / texture.width, 1.f / texture.height};
-        [encoder setRenderPipelineState:[self pipelineForDraw:draw]];
-        [encoder setVertexBytes:&glyph length:sizeof(glyph) atIndex:2];
-        [encoder setFragmentBytes:flags length:sizeof(flags) atIndex:0];
-        [encoder setFragmentTexture:texture atIndex:0];
-        [encoder setFragmentSamplerState:draw.nearest && !draw.distanceField ? _nearestSampler : _linearSampler atIndex:0];
-        [encoder drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:draw.firstVertex vertexCount:draw.vertexCount];
+        const GlyphBinding glyph = {uint32_t(glyphAtlas), glyphAtlas ? draw.firstVertex : 0,
+            1.f / texture.width, 1.f / texture.height};
+        const uint64_t key = PipelineKey(draw);
+        if (!previousPipeline || key != previousPipelineKey) {
+            id<MTLRenderPipelineState> pipeline = [self pipelineForDraw:draw];
+            [encoder setRenderPipelineState:pipeline];
+            previousPipeline = pipeline;
+            previousPipelineKey = key;
+            ++pipelineBindingCount;
+        }
+        if (!hasGlyph || std::memcmp(&glyph, &previousGlyph, sizeof(glyph))) {
+            [encoder setVertexBytes:&glyph length:sizeof(glyph) atIndex:2];
+            previousGlyph = glyph;
+            hasGlyph = true;
+        }
+        if (!hasFlags || std::memcmp(flags, previousFlags, sizeof(flags))) {
+            [encoder setFragmentBytes:flags length:sizeof(flags) atIndex:0];
+            std::memcpy(previousFlags, flags, sizeof(flags));
+            hasFlags = true;
+        }
+        if (texture != previousTexture) {
+            [encoder setFragmentTexture:texture atIndex:0];
+            previousTexture = texture;
+        }
+        id<MTLSamplerState> sampler = draw.nearest && !draw.distanceField ? _nearestSampler : _linearSampler;
+        if (sampler != previousSampler) {
+            [encoder setFragmentSamplerState:sampler atIndex:0];
+            previousSampler = sampler;
+        }
+        [encoder drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:draw.firstVertex vertexCount:vertexCountInBatch];
+        ++encodedDrawCount;
+        i = next;
     }
     [encoder endEncoding];
     [self completeCommand:command vertexSlot:vertexSlot];
     [command commit];
     _latestTexture = target;
     _latestRender = command;
+    _lastEncodedDrawCount = encodedDrawCount;
+    _lastPipelineBindingCount = pipelineBindingCount;
     if (_cachedFrame) { CGImageRelease(_cachedFrame); _cachedFrame = nullptr; }
     return YES;
 }

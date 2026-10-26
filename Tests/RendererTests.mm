@@ -173,6 +173,185 @@ bool glyphAtlasIsolation(Runtime& runtime, SDBMetalRenderer *gpu) {
     return compareGPU(runtime, gpu, "glyph atlas isolated fractional magnification, firstVertex7", atlas, vertices, true);
 }
 
+struct GPUFixture {
+    CGSize logicalSize = CGSizeMake(RasterWidth, RasterHeight);
+    std::vector<SDBMetalVertex> vertices;
+    std::vector<SDBMetalDraw> draws;
+
+    void append(const std::vector<Vertex>& points, SDBMetalDraw state, bool gap) {
+        if (gap && !vertices.empty()) vertices.push_back({});
+        state.firstVertex = uint32_t(vertices.size());
+        state.vertexCount = uint32_t(points.size());
+        for (const Vertex& v : points) vertices.push_back({v.x,v.y,v.u,v.v,v.r,v.g,v.b,v.a});
+        draws.push_back(state);
+    }
+};
+
+bool captureFixture(SDBMetalRenderer *gpu, const GPUFixture& fixture,
+                    std::vector<uint8_t>& bytes, NSUInteger expectedDraws,
+                    NSUInteger expectedPipelineBindings = 0) {
+    if (![gpu renderVertices:fixture.vertices.data() vertexCount:fixture.vertices.size()
+        draws:fixture.draws.data() drawCount:fixture.draws.size()
+        logicalSize:fixture.logicalSize pixelWidth:RasterWidth pixelHeight:RasterHeight]) {
+        fprintf(stderr, "FAIL batch fixture submit: %s\n", gpu.failure.UTF8String ?: "GPU queue busy");
+        return false;
+    }
+    if (!require([[gpu valueForKey:@"lastEncodedDrawCount"] unsignedIntegerValue] == expectedDraws,
+                 "native draw count matches ordered batch boundaries") ||
+        (expectedPipelineBindings && !require([[gpu valueForKey:@"lastPipelineBindingCount"] unsignedIntegerValue] ==
+            expectedPipelineBindings, "unchanged native pipeline is not rebound"))) return false;
+    CGImageRef image = [gpu copyCurrentFrame];
+    if (!require(image != nullptr, "batch fixture GPU snapshot exists")) return false;
+    const bool format = CGImageGetWidth(image) == RasterWidth && CGImageGetHeight(image) == RasterHeight &&
+        CGImageGetBitsPerComponent(image) == 8 && CGImageGetBitsPerPixel(image) == 32;
+    if (!require(format, "batch fixture snapshot format")) { CGImageRelease(image); return false; }
+    CFDataRef data = CGDataProviderCopyData(CGImageGetDataProvider(image));
+    if (!require(data && CFDataGetLength(data) >= CFIndex(CGImageGetBytesPerRow(image) * RasterHeight),
+                 "batch fixture GPU data exists")) {
+        if (data) CFRelease(data);
+        CGImageRelease(image);
+        return false;
+    }
+    bytes.resize(RasterWidth * RasterHeight * 4);
+    for (unsigned y = 0; y < RasterHeight; ++y)
+        std::memcpy(bytes.data() + size_t(y) * RasterWidth * 4,
+                    CFDataGetBytePtr(data) + size_t(y) * CGImageGetBytesPerRow(image), RasterWidth * 4);
+    CFRelease(data);
+    CGImageRelease(image);
+    return true;
+}
+
+bool batchParity(Runtime& runtime, SDBMetalRenderer *gpu, const char *name,
+                 const Texture& texture, bool glyphs, uint32_t destinationBlend = 0x303) {
+    if (!gpu.supported) return true;
+    if (![gpu setTexture:FixtureTexture rgba:texture.pixels.data() byteLength:texture.pixels.size()
+        width:texture.width height:texture.height]) return require(false, "batch fixture texture upload");
+    GPUFixture packed, separate;
+    packed.logicalSize = separate.logicalSize = CGSizeMake(runtime.geometry.logicalSize.width, runtime.geometry.logicalSize.height);
+    auto background = quad(runtime);
+    for (Vertex& v : background) { v.r = v.g = 0; v.b = v.a = 1; }
+    const SDBMetalDraw solid = {0,0,0,0,0x2100,0,1,0,0,0,0};
+    const SDBMetalDraw state = {0,0,FixtureTexture,1,0x2100,1,0x302,destinationBlend,0,
+        texture.distanceField, texture.glyphAtlas};
+    packed.append(background, solid, false);
+    separate.append(background, solid, false);
+    // Both layouts start the first sprite at vertex seven. Only the control
+    // inserts further unused vertices, preventing native merging without
+    // changing positions, per-triangle glyph cells, state or primitive order.
+    packed.vertices.push_back({});
+    constexpr unsigned SpriteCount = 24;
+    for (unsigned i = 0; i < SpriteCount; ++i) {
+        const float u0 = glyphs ? float((i + 48) % 16) / 16 : 0;
+        const float v0 = glyphs ? float((i + 48) / 16) / 8 : 0;
+        auto points = quad(runtime, u0, v0, glyphs ? u0 + 1.f/16 : 1,
+            glyphs ? v0 + 1.f/8 : 1);
+        for (Vertex& v : points) {
+            v.x = v.x * .3f + float(i % 6) * float(packed.logicalSize.width) / 7.f;
+            v.y = v.y * .6f + float(i / 6) * float(packed.logicalSize.height) / 7.f;
+            v.r = .25f + float(i % 3) * .3f;
+            v.g = .4f + float(i % 2) * .4f;
+            v.a = .35f + float(i % 4) * .15f;
+        }
+        packed.append(points, state, false);
+        separate.append(points, state, true);
+    }
+    std::vector<uint8_t> combined, control;
+    if (!captureFixture(gpu, packed, combined, 2, 2) ||
+        !captureFixture(gpu, separate, control, SpriteCount + 1, 2) ||
+        !require(combined == control, "batched and separate GPU pixels are byte-identical")) return false;
+    printf("PASS %s: %u ordered sprite draws -> 1, byte-identical GPU pixels, unaligned vertex seven\n",
+           name, SpriteCount);
+    return true;
+}
+
+bool batchStateBoundaries(Runtime& runtime, SDBMetalRenderer *gpu, const Texture& texture) {
+    if (!gpu.supported) return true;
+    if (![gpu setTexture:FixtureTexture rgba:texture.pixels.data() byteLength:texture.pixels.size()
+        width:texture.width height:texture.height] ||
+        ![gpu setTexture:FixtureTexture + 1 rgba:texture.pixels.data() byteLength:texture.pixels.size()
+        width:texture.width height:texture.height]) return require(false, "boundary textures upload");
+    const SDBMetalDraw base = {0,0,FixtureTexture,1,0x2100,1,0x302,0x303,0,0,0};
+    const auto background = quad(runtime);
+    auto points = quad(runtime, .1f, .1f, .9f, .9f);
+    for (Vertex& v : points) { v.r=.3f;v.g=.5f;v.b=.7f;v.a=.6f; }
+    for (unsigned field = 0; field < 9; ++field) {
+        SDBMetalDraw changed = base;
+        switch (field) {
+            case 0: changed.textureID = FixtureTexture + 1; break;
+            case 1: changed.textured = 0; break;
+            case 2: changed.textureEnv = 0x1e01; break;
+            case 3: changed.blend = 0; break;
+            case 4: changed.sourceBlend = 1; break;
+            case 5: changed.destBlend = 1; break;
+            case 6: changed.nearest = 1; break;
+            case 7: changed.distanceField = 1; break;
+            case 8: changed.glyphAtlas = 1; break;
+        }
+        GPUFixture packed, separate;
+        packed.logicalSize = separate.logicalSize = CGSizeMake(runtime.geometry.logicalSize.width, runtime.geometry.logicalSize.height);
+        for (GPUFixture *fixture : {&packed, &separate}) {
+            fixture->append(background, {0,0,0,0,0x2100,0,1,0,0,0,0}, false);
+            fixture->append(points, base, fixture == &separate);
+            fixture->append(points, changed, fixture == &separate);
+            fixture->append(points, base, fixture == &separate);
+        }
+        std::vector<uint8_t> combined, control;
+        if (!captureFixture(gpu, packed, combined, 4) || !captureFixture(gpu, separate, control, 4) ||
+            !require(combined == control, "every original state boundary preserves ordered GPU pixels")) return false;
+    }
+    // A gap, overlap, reversed range, or zero-length range is not a contiguous
+    // triangle sequence. It must never cause an unrelated triangle to render.
+    for (unsigned boundary = 0; boundary < 4; ++boundary) {
+        GPUFixture fixture;
+        fixture.logicalSize = CGSizeMake(runtime.geometry.logicalSize.width, runtime.geometry.logicalSize.height);
+        fixture.append(points, base, false);
+        fixture.append(points, base, true);
+        if (boundary == 1) fixture.draws[1].firstVertex = fixture.draws[0].firstVertex;
+        if (boundary == 2) std::swap(fixture.draws[0], fixture.draws[1]);
+        if (boundary == 3) fixture.draws.insert(fixture.draws.begin() + 1,
+            SDBMetalDraw{6,0,FixtureTexture,1,0x2100,1,0x302,0x303,0,0,0});
+        std::vector<uint8_t> bytes;
+        if (!captureFixture(gpu, fixture, bytes, 2, 1)) return false;
+    }
+    // Invalid trailing records must be rejected before a valid prefix is
+    // encoded, even if the prefix could otherwise be merged.
+    GPUFixture valid;
+    valid.logicalSize = CGSizeMake(runtime.geometry.logicalSize.width, runtime.geometry.logicalSize.height);
+    valid.append(points, base, false);
+    valid.append(points, base, false);
+    std::vector<uint8_t> before;
+    if (!captureFixture(gpu, valid, before, 1, 1)) return false;
+    for (unsigned invalid = 0; invalid < 7; ++invalid) {
+        GPUFixture bad = valid;
+        switch (invalid) {
+            case 0: bad.draws.back().firstVertex = uint32_t(bad.vertices.size() + 1); break;
+            case 1: bad.draws.back().vertexCount = 4; break;
+            case 2: bad.draws.back().textureID = 9999; break;
+            case 3: bad.draws.back().textureEnv = 9999; break;
+            case 4: bad.draws.back().sourceBlend = 9999; break;
+            case 5:
+                bad.draws.front().blend = 0;
+                bad.draws.back().sourceBlend = bad.draws.back().destBlend = UINT32_MAX;
+                break;
+            case 6:
+                bad.draws.back().vertexCount = 0;
+                bad.draws.back().sourceBlend = 9999;
+                break;
+        }
+        if (!require(![gpu renderVertices:bad.vertices.data() vertexCount:bad.vertices.size()
+                draws:bad.draws.data() drawCount:bad.draws.size() logicalSize:bad.logicalSize
+                pixelWidth:RasterWidth pixelHeight:RasterHeight] && gpu.failure != nil,
+                "invalid trailing draw fails before any encoding") ||
+            !require([[gpu valueForKey:@"lastEncodedDrawCount"] unsignedIntegerValue] == 1,
+                "rejected frame retains prior successful submission diagnostics")) return false;
+        std::vector<uint8_t> recovered;
+        if (!captureFixture(gpu, valid, recovered, 1, 1) ||
+            !require(recovered == before, "valid rendering recovers after rejected input")) return false;
+    }
+    printf("PASS nine state boundaries, gaps/overlaps/reversed/empty ranges, and seven rejected trailing draws\n");
+    return true;
+}
+
 bool prepareMenus(NSString *resources, Texture& gameStart) {
     double maximumAlphaError = 0, maximumColorError = 0;
     for (NSString *name in @[@"game_start.png", @"credits.png", @"continue.png",
@@ -240,6 +419,8 @@ int main(int argc, const char *argv[]) {
         runtime.geometry = DisplayGeometry::make({RasterWidth, RasterHeight}, 1);
         SDBMetalRenderer *gpu = [SDBMetalRenderer new];
         if (!gpu.supported) printf("SKIP GPU parity: %s; CPU checks continue.\n", gpu.failure.UTF8String ?: "Metal unavailable");
+        if (gpu.supported && !require([[gpu valueForKey:@"pipelines"] count] == 3,
+                                     "three common blend pipelines exist before the first frame")) return 1;
 
         // Distinct RGB and alpha values catch channel swaps or dropped alpha
         // when the software sampler interpolates all four components together.
@@ -305,6 +486,11 @@ int main(int argc, const char *argv[]) {
             {0,height,24.f/32,32.f/256,1,1,1,1}, {0,height,24.f/32,32.f/256,1,1,1,1},
             {width,0,4.f/32,72.f/256,1,1,1,1}, {width,height,24.f/32,72.f/256,1,1,1,1}};
         if (!renderCPU(runtime, menu, vertices) || !compareGPU(runtime, gpu, "original GAMESTART mode2 at2x", menu, vertices)) return 1;
+        if (!batchParity(runtime, gpu, "RGBA overlap batching", rgba, false) ||
+            !batchParity(runtime, gpu, "additive overlap batching", rgba, false, 1) ||
+            !batchParity(runtime, gpu, "original glyph cell batching", originalFont, true) ||
+            !batchParity(runtime, gpu, "SDF overlap batching", menu, false) ||
+            !batchStateBoundaries(runtime, gpu, rgba)) return 1;
         printf("PASS CPU coverage, winding, shadow, original font alpha/linear and six-label decomposition; GPU parity %s.\n",
                gpu.supported ? "passed" : "SKIPPED");
         return 0;

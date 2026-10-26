@@ -57,6 +57,9 @@ struct Runtime {
     bool metal=false, titleDrawn=false;
     std::vector<SDBMetalVertex> metalVertices;
     std::vector<SDBMetalDraw> metalDraws;
+    // draw() validates the 4,096-vertex limit before growing this scratch space.
+    // Keep its capacity between draws instead of allocating for every sprite.
+    std::vector<Vertex> drawVertices;
     uint32_t game=0,sound=0,heap=0x20000,seed=1,nextSource=1;
     std::map<uint32_t,uint32_t> allocations;
     std::multimap<uint32_t,uint32_t> freeBlocks;
@@ -151,6 +154,11 @@ struct Runtime {
         int x0=std::max(0,int(std::floor(std::min({a.x,b.x,c.x})))),x1=std::min(Width-1,int(std::ceil(std::max({a.x,b.x,c.x}))));
         int y0=std::max(0,int(std::floor(std::min({a.y,b.y,c.y})))),y1=std::min(Height-1,int(std::ceil(std::max({a.y,b.y,c.y}))));
         auto ti=textures.find(texture);const Texture *t=textured&&ti!=textures.end()?&ti->second:nullptr;
+        const bool replace=t&&textureEnv==0x1e01;
+        #if defined(__clang__)
+        typedef uint8_t Byte4 __attribute__((ext_vector_type(4)));
+        typedef float Float4 __attribute__((ext_vector_type(4)));
+        #endif
         const bool glyphAtlas=t&&t->glyphAtlas&&!t->distanceField&&t->width>=16&&t->height>=8;
         float glyphMinU=0,glyphMinV=0,glyphMaxU=1,glyphMaxV=1;
         if(glyphAtlas) {
@@ -180,9 +188,17 @@ struct Runtime {
             float ea=edge(b,c,x+.5f,y+.5f),eb=edge(c,a,x+.5f,y+.5f),ec=edge(a,b,x+.5f,y+.5f);
             if(ea<0||eb<0||ec<0||(ea==0&&!topLeft(b,c))||(eb==0&&!topLeft(c,a))||(ec==0&&!topLeft(a,b)))continue;
             float wa=ea*inv,wb=eb*inv,wc=ec*inv;
+            #if defined(__clang__)
+            // Keep channels in registers. Resetting a local float array in the
+            // REPLACE path otherwise generates a pattern-fill call per pixel.
+            Float4 rgba=replace?Float4{1,1,1,1}:Float4{
+                wa*a.r+wb*b.r+wc*c.r,wa*a.g+wb*b.g+wc*c.g,
+                wa*a.b+wb*b.b+wc*c.b,wa*a.a+wb*b.a+wc*c.a};
+            #else
             float rgba[4]={wa*a.r+wb*b.r+wc*c.r,wa*a.g+wb*b.g+wc*c.g,wa*a.b+wb*b.b+wc*c.b,wa*a.a+wb*b.a+wc*c.a};
+            if(replace)for(float &channel:rgba)channel=1;
+            #endif
             if(t) {
-                if(textureEnv==0x1e01)for(float &channel:rgba)channel=1;
                 float u=wa*a.u+wb*b.u+wc*c.u,v=wa*a.v+wb*b.v+wc*c.v;
                 if(glyphAtlas) {u=std::clamp(u,glyphMinU,glyphMaxU);v=std::clamp(v,glyphMinV,glyphMaxV);}
                 // GL_LINEAR, clamped to the padded original texture.
@@ -194,8 +210,6 @@ struct Runtime {
                 // Interpolate the four channels together; the weights and
                 // sample order remain the original GL_LINEAR calculation.
                 #if defined(__clang__)
-                typedef uint8_t Byte4 __attribute__((ext_vector_type(4)));
-                typedef float Float4 __attribute__((ext_vector_type(4)));
                 auto rgbaAt=[&](int sx,int sy) {
                     Byte4 bytes;memcpy(&bytes,t->pixels.data()+4*(sy*t->width+sx),4);
                     return __builtin_convertvector(bytes,Float4)/255.f;
@@ -235,7 +249,11 @@ struct Runtime {
                             texel[3]=alpha;
                         } else texel[3]=value;
                 }
+                #if defined(__clang__)
+                rgba*=texel;
+                #else
                 for(int ch=0;ch<4;++ch)rgba[ch]*=texel[ch];
+                #endif
             }
             unsigned p=4*(y*Width+x);
             auto factor=[&](uint32_t f) {switch(f){case 0:return 0.f;case 1:return 1.f;case 0x302:return rgba[3];case 0x303:return 1-rgba[3];default:cpu.fail("Unsupported GL blend factor");return 0.f;}};
@@ -244,9 +262,8 @@ struct Runtime {
             pixels[p+3]=255;
         }
     }
-    void emit(const std::vector<Vertex>& points,uint32_t mode) {
+    void emit(const Vertex *points,unsigned count,uint32_t mode) {
         uint32_t first=uint32_t(metalVertices.size());
-        const unsigned count=unsigned(points.size());
         if(mode==5)for(unsigned i=2;i<count;++i)triangle(points[i-2],points[i-1],points[i]);
         else if(mode==4)for(unsigned i=2;i<count;i+=3)triangle(points[i-2],points[i-1],points[i]);
         else if(mode==6)for(unsigned i=2;i<count;++i)triangle(points[0],points[i-1],points[i]);
@@ -262,7 +279,7 @@ struct Runtime {
         if(count>4096) {cpu.fail("GL draw count exceeds limit");return;}
         ++draws;
         if((TARGET_OS_IOS||watchLayout)&&textured&&texture==12)return; // Native pause control owns this affordance.
-        std::vector<Vertex> points;points.reserve(count);
+        auto &points=drawVertices;points.clear();points.reserve(count);
         for(unsigned i=0;i<count;++i)points.push_back(vertex(first+i));
         if(textured&&texture==3&&!titleDrawn&&textures.count(ExtendedTitle)) {
             titleDrawn=true;
@@ -276,12 +293,12 @@ struct Runtime {
             float u0=(.5f-w/(2*aw))*t.contentWidth/t.width,u1=(.5f+w/(2*aw))*t.contentWidth/t.width;
             float v0=(.5f-h/(2*ah))*t.contentHeight/t.height,v1=(.5f+h/(2*ah))*t.contentHeight/t.height;
             Vertex tint=points.empty()?Vertex{0,0,0,0,1,1,1,1}:points.front();
-            std::vector<Vertex> sky(4,tint);
+            std::array<Vertex,4> sky={tint,tint,tint,tint};
             sky[0].x=0;sky[0].y=0;sky[0].u=u0;sky[0].v=v0;
             sky[1].x=w;sky[1].y=0;sky[1].u=u1;sky[1].v=v0;
             sky[2].x=0;sky[2].y=h;sky[2].u=u0;sky[2].v=v1;
             sky[3].x=w;sky[3].y=h;sky[3].u=u1;sky[3].v=v1;
-            emit(sky,5);texture=original;
+            emit(sky.data(),unsigned(sky.size()),5);texture=original;
         }
         // Cover the taller arena with one uniformly scaled background band;
         // vertical repetition would introduce a visible sky/cloud restart.
@@ -301,7 +318,7 @@ struct Runtime {
                 p.y=anchorY+cover*(p.y-anchorY);
             }
         }
-        emit(points,mode);
+        emit(points.data(),unsigned(points.size()),mode);
     }
 };
 }
@@ -497,7 +514,9 @@ struct Runtime {
         _sourceBuffers=[NSMutableDictionary dictionary];_sourceLoops=[NSMutableDictionary dictionary];_sourceGains=[NSMutableDictionary dictionary];
         _pausedSources=[NSMutableSet set];
         _muted=NSProcessInfo.processInfo.environment[@"SDB_MUTE_AUDIO"]!=nil;
-        NSString *override=NSProcessInfo.processInfo.environment[@"SDB_SAVE_DIRECTORY"];
+        // UI tests run in another sandbox. Resolve a caller-supplied ~/tmp path
+        // inside this app's own home instead of using the test runner's home.
+        NSString *override=[NSProcessInfo.processInfo.environment[@"SDB_SAVE_DIRECTORY"] stringByExpandingTildeInPath];
         NSURL *base=[NSFileManager.defaultManager URLsForDirectory:NSApplicationSupportDirectory inDomains:NSUserDomainMask].firstObject;
         _savePath=override?:[[base URLByAppendingPathComponent:NSBundle.mainBundle.bundleIdentifier?:@"dev.cammalleri.space-undeadbeef"] path];
         if(override) {
@@ -893,9 +912,10 @@ struct Runtime {
     }
     auto it=r.imports.find(pc);if(it==r.imports.end())return NO;
     const std::string &s=it->second;
-    // Keep literal lengths at the call site: the old char-pointer predicate
-    // repeatedly scanned import names in every math and graphics bridge call.
-    auto is=[&](std::string_view name) {return std::string_view(s)==name;};
+    // Resolve std::string's storage once per bridge. Constructing this view in
+    // every comparison repeatedly checks the string's short/long representation.
+    const std::string_view importedName(s);
+    auto is=[&](std::string_view name) {return importedName==name;};
     if(is("__Znwm")||is("__Znam")||is("_malloc"))return done(r.allocate(c.r[0]));
     if(is("_calloc")) {uint64_t n=uint64_t(c.r[0])*c.r[1];return done(n>0x1600000?0:r.allocate((uint32_t)n));}
     if(is("__ZdlPv")||is("__ZdaPv")||is("_free")) {r.release(c.r[0]);return done();}
