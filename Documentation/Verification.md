@@ -1,5 +1,29 @@
 # Verification record
 
+## Crown input correction — 1.1 (13), 27 October 2026
+
+The Watch host now handles each native scaled Crown binding write directly,
+retains an accepted spring destination after idle, and reanchors reversal to
+the live ship when it opposes outstanding travel. Focus follows the actual
+playable ship state, including after entrance/respawn. Original game code,
+spring physics, sensitivity, input range, artwork and layout remain unchanged.
+See [WatchControls.md](WatchControls.md) for the input contract.
+
+The focused checks pass: **103** Crown model and actual Session/engine checks,
+and **2,549** actual Session lifecycle, input, original-menu and checkpoint
+checks. Crown cases cover idle before the first fixed step, successive wrapped
+binding values, hard cancellation, ignored samples during touch ownership,
+viewport changes, the original Pause/Continue flow, and background/resume.
+Each scenario uses normal original Game Start and an empty temporary save;
+no health, enemy, position or instruction state is patched. No physical gameplay
+inputs or performance workload were sent.
+
+The development-signed generic Watch build succeeds for `arm64` and `arm64_32`,
+reports **1.1 (13)** and minimum watchOS 10.0, and passes strict signature,
+exact Series 4 profile membership and shared KVS entitlement authorization.
+Physical installation and Crown feel of this build remain to be verified.
+Pre-existing Xcode project-format edits are excluded from this correction.
+
 ## Series 4 delivery — 1.1 (12), 27 October 2026
 
 The connected Series 4 (`Watch4,2`) reports watchOS 10.6.2 and Developer Mode

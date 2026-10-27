@@ -12,6 +12,7 @@ struct GameCrownInput {
     /// finite control range; an infinite range produces invalid Crown geometry.
     static let rotationRange = -1.0...1.0
     private(set) var targetNormalizedY: Double?
+    private var startsNewGesture = true
 
     static func wrappedDelta(from previous: Double, to current: Double) -> Double {
         guard previous.isFinite, current.isFinite else { return .nan }
@@ -28,11 +29,25 @@ struct GameCrownInput {
             return nil
         }
         guard delta != 0 else { return nil }
-        let anchor = targetNormalizedY ?? min(1, max(0, shipNormalizedY))
+        let ship = min(1, max(0, shipNormalizedY))
+        let pending = targetNormalizedY ?? ship
+        // An opposite input must not first consume distance to a destination
+        // the original spring has not reached yet. Preserve that spring's
+        // inertia, but put the new destination on the requested side.
+        let reversesPendingTravel = (pending - ship) * delta < 0
+        let anchor = startsNewGesture || reversesPendingTravel ? ship : pending
         let target = min(1, max(0, anchor + delta))
         targetNormalizedY = target
+        startsNewGesture = false
         return target
     }
 
-    mutating func reset() { targetNormalizedY = nil }
+    /// Idle ends accumulation, not the accepted spring destination. In
+    /// particular, a short tick may become idle before the next fixed step.
+    mutating func becameIdle() { startsNewGesture = true }
+
+    mutating func reset() {
+        targetNormalizedY = nil
+        startsNewGesture = true
+    }
 }

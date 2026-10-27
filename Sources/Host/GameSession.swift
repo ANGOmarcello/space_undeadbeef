@@ -50,6 +50,7 @@ final class GameSession {
     private(set) var usesMetalRenderer = false
     private(set) var isActive = false
     private(set) var canPause = false
+    private(set) var canSteerShip = false
     private(set) var canRequestUserResume = false
     private(set) var gameMenuType = 0
     private(set) var failure: String?
@@ -70,6 +71,9 @@ final class GameSession {
     @ObservationIgnored private var releasesTapAfterStep = false
     @ObservationIgnored private let haptics = GameHaptics()
     @ObservationIgnored private var crownInput = GameCrownInput()
+    // The Crown Binding setter runs for each native scaled update. Observing
+    // its value through SwiftUI State can coalesce turns before input sees them.
+    @ObservationIgnored private var crownOffset = 0.0
     @ObservationIgnored lazy var inputController = GameInputController(session: self)
     @ObservationIgnored private var lifecycle = GameLifecyclePolicy()
     @ObservationIgnored private lazy var interruptionMonitor = GameInterruptionMonitor { [weak self] event in
@@ -209,6 +213,7 @@ final class GameSession {
             refreshHapticDeliveryStatus()
             #endif
             canPause = false
+            canSteerShip = false
             softwareTimer?.invalidate()
             softwareTimer = nil
             softwareMetrics = GameFrameMetrics(renderer: .software)
@@ -319,6 +324,8 @@ final class GameSession {
         else if frame != nil { frame = nil }
         let pause = engine.canPause
         if canPause != pause { canPause = pause }
+        let steering = engine.canSteerShip
+        if canSteerShip != steering { canSteerShip = steering }
         let menu = Int(engine.gameMenuType)
         if gameMenuType != menu { gameMenuType = menu }
         if menu == 1, isActive, progressSync.needsExchange { progressSync.exchange(with: engine) }
@@ -413,6 +420,20 @@ final class GameSession {
 
     /// Move through the original ship spring without holding a targeting touch.
     /// A held finger keeps ownership; turning the Crown cannot cancel its aim.
+    var crownPosition: Double {
+        get { crownOffset }
+        set {
+            guard newValue.isFinite else { endCrownSteering(); return }
+            let previous = crownOffset
+            // Keep the transport baseline current even when menus, entrance,
+            // inactive state or a held finger reject this particular input.
+            crownOffset = newValue
+            steerWithCrown(delta: GameCrownInput.wrappedDelta(from: previous, to: newValue))
+        }
+    }
+
+    func crownBecameIdle() { crownInput.becameIdle() }
+
     func steerWithCrown(delta: Double) {
         guard persistenceError == nil, lifecycle.shouldRun, lifecycle.sceneAllowsInteraction else { return }
         guard isActive, !isTouching, failure == nil, let engine,

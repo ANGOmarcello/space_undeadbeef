@@ -1,5 +1,39 @@
 # Watch controls and HUD
 
+## Crown delivery correction — 1.1 (13), 27 October 2026
+
+After the user reported inconsistent Crown steering on Series 4, build 13
+corrects three host input boundaries. Each native scaled Crown binding write
+now reaches the session directly through its computed `crownPosition` setter,
+with transport storage excluded from Observation. This replaces SwiftUI State
+plus a later `onChange`, which could combine intermediate values before the
+input model received them. The finite continuous **−1…1** range, **medium**
+sensitivity and normalized movement gain are unchanged.
+
+Idle now marks the next rotation as a fresh gesture while retaining the accepted
+destination. A short turn can therefore reach its destination through the
+original spring even if idle arrives before the next simulation step. When a
+turn opposes the outstanding distance between the ship and its pending target,
+the new target anchors to the live ship position. Reversing no longer has to
+consume that outstanding distance first; original inertia still applies. Touch,
+menus, viewport changes, inactivity and focus loss cancel steering ownership.
+
+Crown focus follows the actual playable ship state rather than only the
+availability of Pause. It is reacquired after the original entrance or respawn;
+rotation during nonplayable states remains discarded. These changes do not
+alter the original spring, damping, integration, clamps, targeting or firing.
+
+The development-signed generic Watch build **1.1 (13)** succeeded for both
+`arm64` and `arm64_32`, retains minimum watchOS 10.0, and its provisioning profile
+includes the Series 4. `script/test_crown_input.sh` passes **103** model and
+actual Session/engine checks, including native binding writes, idle before the
+next frame, wrapped bursts, reversal, cancellation, touch handoff and the
+original Pause/Continue flow. Independent normal rounds and empty temporary
+saves keep those cases separate without changing guest state.
+`script/test_session_lifecycle.sh` also passes **2,549** checks.
+Installation and physical Crown feel of build 13 have not yet been verified;
+the build 12 title evidence below remains historical.
+
 ## Series 4 compatibility — 1.1 (12), 27 October 2026
 
 The Watch target and maintained project generator now explicitly require
@@ -35,9 +69,11 @@ the original spring, damping, integration and clamps still move the ship.
 The host calls the original `DynamicReal::springForce` at `0x562d` with the
 original stiffness from `0x291c`, then runs the normal fixed simulation step.
 It does not write ship positions or start a targeting touch. Crown input ends
-when rotation becomes idle, a touch begins, a menu appears, the viewport changes,
-or the app pauses or becomes inactive. Touch targeting owns input until release.
-The next Crown gesture anchors to the ship again, avoiding a jump after dragging.
+when a touch begins, a menu appears, the viewport changes, focus is lost, or the
+app pauses or becomes inactive. Idle closes the gesture's accumulation while
+allowing its accepted destination to settle through the spring. Touch targeting
+owns input until release. The next Crown gesture anchors to the ship again,
+avoiding a jump after dragging.
 
 The original `Game::touchCancelled` does not release its marker. If a canceled
 touch left that marker held, accepted Crown input calls the original

@@ -11,9 +11,6 @@ struct GameView: View {
     @State private var session = GameSession()
     @Environment(\.displayScale) private var displayScale
     @Environment(\.scenePhase) private var scenePhase
-    #if os(watchOS)
-    @State private var crownPosition = 0.0
-    #endif
     @FocusState private var isFocused: Bool
 
     var body: some View {
@@ -84,7 +81,7 @@ struct GameView: View {
             @unknown default: session.setSceneActivity(.background)
             }
             #if os(watchOS)
-            isFocused = phase == .active && session.canPause
+            isFocused = phase == .active && session.canSteerShip
             #elseif os(tvOS)
             // The remote surface owns focus in both original menus and play.
             // Reapply it after returning from the system Home screen.
@@ -104,7 +101,12 @@ struct GameView: View {
                 Text(session.persistenceError ?? "")
             }
         .onChange(of: isFocused) { _, focused in
-            if !focused { session.inputController.resetHeldInputs() }
+            if !focused {
+                session.inputController.resetHeldInputs()
+                #if os(watchOS)
+                session.endCrownSteering()
+                #endif
+            }
         }
         #if os(iOS)
         .persistentSystemOverlays(.hidden)
@@ -138,23 +140,21 @@ struct GameView: View {
             .accessibilityLabel("SPACE UNDEADBEEF game")
             .accessibilityValue(Text(verbatim: uiTestAccessibilityValue))
         #elseif os(watchOS)
+        @Bindable var crownSession = session
         screen(size: size)
             .gesture(dragGesture(size: size))
-            .focusable(session.canPause)
+            .focusable(session.canSteerShip)
             .focused($isFocused)
             .focusEffectDisabled()
-            .digitalCrownRotation($crownPosition,
+            .digitalCrownRotation($crownSession.crownPosition,
                                   from: GameCrownInput.rotationRange.lowerBound,
                                   through: GameCrownInput.rotationRange.upperBound,
                                   sensitivity: .medium, isContinuous: true,
                                   isHapticFeedbackEnabled: false,
-                                  onChange: { _ in }, onIdle: session.endCrownSteering)
+                                  onChange: { _ in }, onIdle: session.crownBecameIdle)
             .digitalCrownAccessory(.hidden)
-            .onChange(of: crownPosition) { old, new in
-                session.steerWithCrown(delta: GameCrownInput.wrappedDelta(from: old, to: new))
-            }
-            .onChange(of: session.canPause, initial: true) { _, canPause in
-                isFocused = canPause && scenePhase == .active
+            .onChange(of: session.canSteerShip, initial: true) { _, canSteer in
+                isFocused = canSteer && scenePhase == .active
             }
             .accessibilityHint("Turn the Digital Crown to steer up or down. Touch and drag to aim and fire.")
         #else

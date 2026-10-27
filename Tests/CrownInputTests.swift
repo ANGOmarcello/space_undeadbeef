@@ -41,11 +41,22 @@ enum CrownInputTests {
         require(near(input.target(for: -0.1, shipNormalizedY: 0.8), 0.7),
                 "An idle or interrupted gesture discards its old destination")
         require(near(input.target(for: 10, shipNormalizedY: 0.8), 1), "Travel stops at the playable edge")
-        require(near(input.target(for: -0.1, shipNormalizedY: 0.8), 0.9),
+        require(near(input.target(for: -0.1, shipNormalizedY: 0.8), 0.7),
                 "Reversing at an edge responds immediately without overscroll debt")
         require(input.target(for: 0, shipNormalizedY: 0.8) == nil, "No rotation creates no steering request")
         require(input.target(for: .nan, shipNormalizedY: 0.8) == nil && input.targetNormalizedY == nil,
                 "Invalid input cannot retain a stale destination")
+        require(near(input.target(for: 0.4, shipNormalizedY: 0.5), 0.9), "Queue forward travel ahead of the ship")
+        require(near(input.target(for: -0.05, shipNormalizedY: 0.5), 0.45),
+                "Reversal puts the destination behind the live ship instead of chasing an unreached forward target")
+        require(near(input.target(for: 0.02, shipNormalizedY: 0.5), 0.52),
+                "The opposite reversal also reanchors the live ship")
+        input.becameIdle()
+        require(near(input.targetNormalizedY, 0.52), "Idle retains the accepted destination for its next simulation step")
+        require(near(input.target(for: 0.01, shipNormalizedY: 0.51), 0.52),
+                "A new gesture after idle starts at the live ship rather than the old pending target")
+        input.reset()
+        require(input.targetNormalizedY == nil, "A real cancellation still clears the retained idle destination")
 
         guard CommandLine.arguments.count == 3 else {
             FileHandle.standardError.write(Data("Usage: CrownInputTests Resources/Original isolated-save-directory\n".utf8))
@@ -58,113 +69,183 @@ enum CrownInputTests {
         require(FileManager.default.fileExists(atPath: save), "The caller must supply an isolated save directory")
         require((try? FileManager.default.contentsOfDirectory(atPath: save).isEmpty) == true,
                 "The isolated save directory must be empty")
-        setenv("SDB_SAVE_DIRECTORY", save, 1)
         setenv("SDB_MUTE_AUDIO", "1", 1)
         setenv("SDB_CPU_RENDERER", "1", 1)
-        let engine = SDBEngine(resourcePath: resources, offersHaptics: false)
-        engine.watchLayout = true
-        engine.configureViewport(CGSize(width: 208, height: 248), displayScale: 2,
-                                 safeArea: CGRect(x: 0, y: 0, width: 208, height: 248))
-        require(engine.failure == nil, "Initialize the actual original runtime")
-        for _ in 0..<120 { engine.advanceSimulation(GameLayout.simulationStep) }
-        let start = CGPoint(x: 160, y: engine.logicalSize.height / 2 - 120)
-        engine.touchPhase(0, x: start.x, y: start.y)
-        engine.advanceSimulation(GameLayout.simulationStep)
-        engine.touchPhase(2, x: start.x, y: start.y)
-        for _ in 0..<120 { engine.advanceSimulation(GameLayout.simulationStep) }
-        require(engine.canPause && engine.gameMenuType == 0, "Enter gameplay through the original Game Start menu")
+        // Each input scenario starts a real, unmodified round with its own
+        // save. Extra settling frames must not make an unrelated pause test
+        // depend on surviving a longer enemy encounter.
+        for scenario in ["lifecycle", "transport", "touch"] {
+            let scenarioSave = (save as NSString).appendingPathComponent(scenario)
+            do { try FileManager.default.createDirectory(atPath: scenarioSave, withIntermediateDirectories: false) }
+            catch { require(false, "Create the isolated scenario save: \(error)") }
+            setenv("SDB_SAVE_DIRECTORY", scenarioSave, 1)
+            let engine = SDBEngine(resourcePath: resources, offersHaptics: false)
+            engine.watchLayout = true
+            engine.configureViewport(CGSize(width: 208, height: 248), displayScale: 2,
+                                     safeArea: CGRect(x: 0, y: 0, width: 208, height: 248))
+            require(engine.failure == nil, "Initialize the actual original runtime")
+            for _ in 0..<120 { engine.advanceSimulation(GameLayout.simulationStep) }
+            let start = CGPoint(x: 160, y: engine.logicalSize.height / 2 - 120)
+            engine.touchPhase(0, x: start.x, y: start.y)
+            engine.advanceSimulation(GameLayout.simulationStep)
+            engine.touchPhase(2, x: start.x, y: start.y)
+            for _ in 0..<120 { engine.advanceSimulation(GameLayout.simulationStep) }
+            require(engine.canPause && engine.gameMenuType == 0, "Enter gameplay through the original Game Start menu")
 
-        let session = GameSession(engine: engine)
-        session.setSceneActive(true)
-        var time = ProcessInfo.processInfo.systemUptime
-        require(session.drawDisplayFrame(at: time) == 0,
-                "The first software callback anchors its own epoch without simulating activation time")
-        require(session.drawDisplayFrame(at: time) == 0,
-                "A duplicate software epoch callback cannot advance the original game")
-        require(!engine.canSteerShip, "The original entrance precedes the playable ship state")
-        session.steerWithCrown(delta: 0.4)
-        // The original entrance animation reports gameplay before the ship
-        // accepts steering. Complete it through normal fixed updates.
-        for _ in 0..<180 { engine.advanceSimulation(GameLayout.simulationStep) }
-        func step(_ count: Int) {
-            var advanced = 0
-            for _ in 0..<count {
-                time += GameLayout.simulationStep
-                advanced += session.drawDisplayFrame(at: time)
+            let session = GameSession(engine: engine)
+            session.setSceneActive(true)
+            var time = ProcessInfo.processInfo.systemUptime
+            require(session.drawDisplayFrame(at: time) == 0,
+                    "The first software callback anchors its own epoch without simulating activation time")
+            require(session.drawDisplayFrame(at: time) == 0,
+                    "A duplicate software epoch callback cannot advance the original game")
+            require(!engine.canSteerShip, "The original entrance precedes the playable ship state")
+            require(!session.canSteerShip && session.canPause,
+                    "Crown focus eligibility stays false during entrance even though Pause is already available")
+            session.steerWithCrown(delta: 0.4)
+            // The original entrance animation reports gameplay before the ship
+            // accepts steering. Complete it through normal fixed updates.
+            for _ in 0..<180 { engine.advanceSimulation(GameLayout.simulationStep) }
+            func step(_ count: Int) {
+                var advanced = 0
+                for _ in 0..<count {
+                    time += GameLayout.simulationStep
+                    advanced += session.drawDisplayFrame(at: time)
+                }
+                require(advanced == count, "The real Session advances the requested fixed-step batch")
+                require(engine.failure == nil, "The original engine must remain healthy")
             }
-            require(advanced == count, "The real Session advances the requested fixed-step batch")
-            require(engine.failure == nil, "The original engine must remain healthy")
+            defer { session.setActive(false) }
+
+            let entranceAnchor = engine.shipNormalizedY
+            session.steerWithCrown(delta: 0.01)
+            step(60)
+            require(session.canSteerShip, "Ordinary frame publication exposes the newly steerable ship for Crown focus")
+            require(abs(engine.shipNormalizedY - min(1, entranceAnchor + 0.01)) < 0.03,
+                    "Crown rotation during the entrance cannot queue a destination for later gameplay")
+            session.endCrownSteering()
+
+            if scenario == "transport" {
+                let tickAnchor = engine.shipNormalizedY
+                session.crownPosition = 0.2
+                session.crownBecameIdle() // Before even one ordinary fixed update.
+                step(60)
+                require(abs(engine.shipNormalizedY - min(1, tickAnchor + 0.2)) < 0.03,
+                        "A short native tick survives idle-before-frame and reaches its accepted destination")
+                require(!session.isTouching && !engine.shipAiming,
+                        "Completing an idle Crown tick does not synthesize aiming")
+                session.endCrownSteering()
+
+                // Three scaled native updates arrive before SwiftUI publishes a view.
+                // Their accumulated +1.2 exceeds the old observer's half-wrap span.
+                let burstAnchor = engine.shipNormalizedY
+                session.crownPosition = 0.6
+                session.crownPosition = 1.0
+                session.crownPosition = -0.6
+                session.crownBecameIdle()
+                step(60)
+                require(engine.shipNormalizedY > burstAnchor + 0.1,
+                        "A burst across the native seam moves forward through the original spring instead of losing or reversing the turn")
+                session.endCrownSteering()
+                let idleCancelAnchor = engine.shipNormalizedY
+                session.crownPosition = -0.9
+                session.crownBecameIdle()
+                session.endCrownSteering()
+                step(60)
+                require(engine.shipNormalizedY > idleCancelAnchor - 0.15,
+                        "Hard cancellation after idle does not chase the canceled backward target; original inertia remains allowed")
+                let postCancelAnchor = engine.shipNormalizedY
+                session.crownPosition = -0.85
+                session.crownBecameIdle()
+                step(60)
+                require(abs(engine.shipNormalizedY - min(1, postCancelAnchor + 0.05)) < 0.03,
+                        "Cancellation keeps the native transport baseline rather than inventing a large new turn")
+                session.endCrownSteering()
+                continue
+            }
+            if scenario == "touch" {
+                let touch = CGPoint(x: engine.logicalSize.width / 2, y: engine.logicalSize.height / 2)
+                session.drag(to: touch)
+                step(1)
+                require(session.isTouching && engine.shipAiming, "A real finger owns targeting before native Crown samples")
+                session.crownPosition = -0.95
+                session.crownPosition = -0.45
+                require(session.isTouching && engine.shipAiming, "Native Crown rotation cannot release or replace a held finger")
+                session.cancelTouch()
+                let releasedAnchor = engine.shipNormalizedY
+                session.crownPosition = -0.5
+                session.crownBecameIdle()
+                step(60)
+                require(!session.isTouching && !engine.shipAiming, "Native Crown input clears canceled aim without holding touch")
+                require(abs(engine.shipNormalizedY - max(0, releasedAnchor - 0.05)) < 0.03,
+                        "Ignored finger-owned native samples update the baseline without queuing a large post-touch turn")
+                continue
+            }
+
+            let initial = engine.shipNormalizedY
+            session.steerWithCrown(delta: 0.35)
+            step(8)
+            require(engine.shipNormalizedY > initial + 0.01,
+                    "Crown input moves the actual ship through its original spring (\(initial) → \(engine.shipNormalizedY))")
+            require(!session.isTouching && !engine.shipAiming, "Crown steering never synthesizes a held aiming touch")
+            session.endCrownSteering()
+            let newAnchor = engine.shipNormalizedY
+            session.steerWithCrown(delta: 0.02)
+            step(60)
+            require(abs(engine.shipNormalizedY - min(1, newAnchor + 0.02)) < 0.03,
+                    "A fresh Crown gesture follows the actual ship instead of jumping to the prior destination")
+
+            session.steerWithCrown(delta: -0.4)
+            session.configure(GameViewport(size: CGSize(width: 208, height: 248), scale: 2,
+                                           safeArea: CGRect(x: 0, y: 0, width: 208, height: 248)))
+            let resizedAnchor = engine.shipNormalizedY
+            session.steerWithCrown(delta: 0.01)
+            step(30)
+            require(abs(engine.shipNormalizedY - min(1, resizedAnchor + 0.01)) < 0.03,
+                    "Viewport reconfiguration clears the old Crown target before anchoring new input")
+
+            let touch = CGPoint(x: engine.logicalSize.width / 2, y: engine.logicalSize.height / 2)
+            session.drag(to: touch)
+            step(1)
+            require(session.isTouching && engine.shipAiming, "A real finger retains original targeting ownership")
+            session.steerWithCrown(delta: -0.8)
+            require(session.isTouching && engine.shipAiming, "Crown rotation cannot release or replace a held finger")
+            session.cancelTouch()
+            session.steerWithCrown(delta: -0.05)
+            step(1)
+            require(!session.isTouching && !engine.shipAiming, "Returning to the Crown clears canceled legacy aim without holding touch")
+
+            session.pauseGame()
+            require(engine.gameMenuType == 3 && !engine.canPause && !session.canPause,
+                    "Pause enters the original pause menu rather than a death menu")
+            require(!session.canSteerShip, "Pausing removes Crown focus eligibility")
+            let paused = engine.shipNormalizedY
+            session.steerWithCrown(delta: 0.8)
+            // Let the original pause animation complete before selecting Continue.
+            step(120)
+            require(abs(engine.shipNormalizedY - paused) < 0.000001, "Crown rotation does not move the ship in a menu")
+            let resume = CGPoint(x: engine.logicalSize.width / 2, y: engine.logicalSize.height / 2 - 30)
+            session.drag(to: resume)
+            step(1)
+            session.endTouch()
+            step(120)
+            require(engine.canPause, "Continue through the original pause menu (menu=\(engine.gameMenuType), \(engine.diagnostics))")
+
+            session.steerWithCrown(delta: 0.4)
+            session.setActive(false)
+            require(!session.isActive && !session.isTouching, "Backgrounding cancels active input ownership")
+            session.steerWithCrown(delta: -0.8)
+            session.setActive(true)
+            time = ProcessInfo.processInfo.systemUptime
+            require(session.drawDisplayFrame(at: time) == 0,
+                    "Software resume starts a fresh callback epoch without inactive or setup time")
+            let resumed = engine.shipNormalizedY
+            session.steerWithCrown(delta: 0.01)
+            step(60)
+            require(abs(engine.shipNormalizedY - min(1, resumed + 0.01)) < 0.03,
+                    "Resuming starts from the current ship with no stale Crown destination")
+            require(!engine.shipAiming && !session.isTouching, "Pause and resume leave no stuck touch or targeting charge")
         }
-        defer { session.setActive(false) }
-
-        let entranceAnchor = engine.shipNormalizedY
-        session.steerWithCrown(delta: 0.01)
-        step(60)
-        require(abs(engine.shipNormalizedY - min(1, entranceAnchor + 0.01)) < 0.03,
-                "Crown rotation during the entrance cannot queue a destination for later gameplay")
-        session.endCrownSteering()
-
-        let initial = engine.shipNormalizedY
-        session.steerWithCrown(delta: 0.35)
-        step(8)
-        require(engine.shipNormalizedY > initial + 0.01,
-                "Crown input moves the actual ship through its original spring (\(initial) → \(engine.shipNormalizedY))")
-        require(!session.isTouching && !engine.shipAiming, "Crown steering never synthesizes a held aiming touch")
-        session.endCrownSteering()
-        let newAnchor = engine.shipNormalizedY
-        session.steerWithCrown(delta: 0.02)
-        step(60)
-        require(abs(engine.shipNormalizedY - min(1, newAnchor + 0.02)) < 0.03,
-                "A fresh Crown gesture follows the actual ship instead of jumping to the prior destination")
-
-        session.steerWithCrown(delta: -0.4)
-        session.configure(GameViewport(size: CGSize(width: 208, height: 248), scale: 2,
-                                       safeArea: CGRect(x: 0, y: 0, width: 208, height: 248)))
-        let resizedAnchor = engine.shipNormalizedY
-        session.steerWithCrown(delta: 0.01)
-        step(30)
-        require(abs(engine.shipNormalizedY - min(1, resizedAnchor + 0.01)) < 0.03,
-                "Viewport reconfiguration clears the old Crown target before anchoring new input")
-
-        let touch = CGPoint(x: engine.logicalSize.width / 2, y: engine.logicalSize.height / 2)
-        session.drag(to: touch)
-        step(1)
-        require(session.isTouching && engine.shipAiming, "A real finger retains original targeting ownership")
-        session.steerWithCrown(delta: -0.8)
-        require(session.isTouching && engine.shipAiming, "Crown rotation cannot release or replace a held finger")
-        session.cancelTouch()
-        session.steerWithCrown(delta: -0.05)
-        step(1)
-        require(!session.isTouching && !engine.shipAiming, "Returning to the Crown clears canceled legacy aim without holding touch")
-
-        session.pauseGame()
-        require(!engine.canPause && !session.canPause, "The original pause transition updates host gameplay availability")
-        let paused = engine.shipNormalizedY
-        session.steerWithCrown(delta: 0.8)
-        // Let the original pause animation complete before selecting Continue.
-        step(120)
-        require(abs(engine.shipNormalizedY - paused) < 0.000001, "Crown rotation does not move the ship in a menu")
-        let resume = CGPoint(x: engine.logicalSize.width / 2, y: engine.logicalSize.height / 2 - 30)
-        session.drag(to: resume)
-        step(1)
-        session.endTouch()
-        step(120)
-        require(engine.canPause, "Continue through the original pause menu (menu=\(engine.gameMenuType), \(engine.diagnostics))")
-
-        session.steerWithCrown(delta: 0.4)
-        session.setActive(false)
-        require(!session.isActive && !session.isTouching, "Backgrounding cancels active input ownership")
-        session.steerWithCrown(delta: -0.8)
-        session.setActive(true)
-        time = ProcessInfo.processInfo.systemUptime
-        require(session.drawDisplayFrame(at: time) == 0,
-                "Software resume starts a fresh callback epoch without inactive or setup time")
-        let resumed = engine.shipNormalizedY
-        session.steerWithCrown(delta: 0.01)
-        step(60)
-        require(abs(engine.shipNormalizedY - min(1, resumed + 0.01)) < 0.03,
-                "Resuming starts from the current ship with no stale Crown destination")
-        require(!engine.shipAiming && !session.isTouching, "Pause and resume leave no stuck touch or targeting charge")
         print("PASS: \(checks) Crown model and real Session-to-engine checks")
     }
 }
