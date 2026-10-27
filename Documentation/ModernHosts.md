@@ -1,10 +1,13 @@
-# Modern host foundation — version 1.1 (10)
+# Modern host foundation — version 1.1 (11)
 
 The 27 October 2026 pass preserves the supplied executable, artwork, original
 menus, fixed 60 Hz gameplay, collision rules and save packing. Platform behavior
 lives in the native host. Foundation verification used native Mac and Simulators,
 retaining the user's existing Watch session. Subsequent explicitly requested
 device installations are recorded separately in [Verification.md](Verification.md).
+Build 11 refines transient iOS scene handling, native audio recovery and iPhone
+haptic attachment. It is installed and normally opened on the iPhone 14 Pro;
+physical haptic feel remains unverified.
 
 ## Native controls and accessibility
 
@@ -32,14 +35,39 @@ action after a media interruption. It restores scheduling and leaves the
 original Pause/Resume menu in charge. Continuous gameplay is not claimed to be
 fully playable through VoiceOver.
 
+iPhone feedback attaches to the actual app window through a transparent,
+noninteractive sentinel, independently of Metal or software rendering. Owner
+checks prevent an old view's teardown from removing a replacement attachment.
+Invalidated generators rebuild only during an enabled, visible, active update.
+The existing iPhone/Watch event policy and cooldowns are unchanged; see
+[Haptics.md](Haptics.md) for current delivery and historical device receipts.
+
 ## Interruptions and persistence
 
 Scene activity, application focus and audio interruption are independent gates.
-Backgrounding, focus loss, audio interruption and disconnected audio routes
-enter the original pause flow. Hidden time is not simulated on return. A media
-services reset reconstructs native audio nodes while retaining decoded PCM,
-logical voices, paused-source intent and cursors. It waits for explicit input
-before playback, following [Apple's media reset guidance](https://developer.apple.com/library/archive/qa/qa1749/).
+A transient inactive iOS scene continues the existing 60 Hz updates and drawing,
+while cancelling held input and disabling interaction and haptics. Backgrounding,
+focus loss, a real audio interruption and disconnected audio routes enter the
+original pause flow. Other platforms also pause for an inactive scene. Stopped
+time is not simulated on return.
+
+The native audio gate can keep playback stopped while the original Pause menu
+continues updating and drawing. The ordinary Resume action explicitly asks the
+OS to activate audio before releasing that gate. It can recover a missing
+interruption-ended notification or an ended notification without permission to
+resume automatically. A rejected activation remains retryable; it does not
+fault the guest or resume gameplay. Successful activation leaves the original
+Pause/Resume decision in charge.
+
+A media services reset reconstructs native audio nodes while retaining decoded
+PCM, guest state and music identity/cursor intent. One-shot effects interrupted
+or requested while gated are discarded rather than replayed later.
+Rebuilding the native graph does not itself start playback; explicit recovery
+still checks activation, following
+[Apple's media reset guidance](https://developer.apple.com/library/archive/qa/qa1749/).
+iOS also requests the system-alert interruption preference without changing the
+existing Ambient/Playback category policy. A denied preference is diagnostic;
+accepted or full-screen calls can still interrupt and follow the same pause flow.
 
 Periodic checkpoints capture the original 256-byte PSH0 pack on the game thread
 and perform disk work on a serial worker. The backlog is bounded to one active
@@ -91,8 +119,8 @@ mean was 0.358 ms cached versus 3.760 ms uncached; p99 was 5.361/7.508 ms. The
 paired process footprint grew 802816 bytes after warmup, below the 32 MiB bound.
 These are Mac proxy measurements, not Watch battery, thermal or physical FPS proof.
 
-Inactive audio stops its native engine. Memory pressure trims disposable software
-scratch and Metal readback/CI caches without freeing visible images, decoded
+Backgrounded or audio-gated playback stops its native engine. Memory pressure
+trims disposable software scratch and Metal readback/CI caches without freeing visible images, decoded
 assets, guest state or GPU resources still in flight. Actual GPU fixtures verify
 retained snapshots and pending frames survive trimming byte-for-byte.
 Native alerts pause the game and reject held, queued and fresh game input until
@@ -116,8 +144,9 @@ Canonical fixtures in `Tests/Fixtures/original-engine-*.txt` were generated from
 commit `21c7316` with the unchanged actual-engine-v1 workload and Xcode 27.2 on
 Apple silicon. Current/baseline results match for all 600 software images, every
 guest-state checkpoint, 300 Metal steps and final original save bytes. Metal
-pixel hashes also matched on this Mac, but are intentionally excluded from a
-global golden assertion because GPUs/drivers round differently; independent
+pixel hashes also matched on this Mac during the build 10 foundation pass, but
+are intentionally excluded from a global golden assertion because GPUs/drivers
+round differently; independent
 GPU/CPU fixtures enforce their one-byte tolerance. Changing canonical fixtures
 requires reviewing the actual behavior difference, rather than regenerating
 expectations merely to pass a test.

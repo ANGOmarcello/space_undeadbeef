@@ -408,6 +408,7 @@ struct Runtime {
     NSMutableSet<NSNumber*> *_pausedSources;
     BOOL _muted;
     BOOL _suspended;
+    BOOL _audioSuspended;
     BOOL _soundEnabled;
     BOOL _respectsSilentMode;
     BOOL _offersHaptics;
@@ -416,6 +417,7 @@ struct Runtime {
     NSString *_testPreferencesPath;
     NSMutableDictionary *_testPreferences;
     NSString *_audioSessionError;
+    NSString *_audioPolicyError;
     NSInteger _wantedMusicEntry;
     BOOL _wantedMusicLoop;
     SDBSaveCoordinator *_saveStore;
@@ -555,11 +557,87 @@ struct Runtime {
     return !_failure;
 }
 - (BOOL)recoverAudioAfterMediaServicesReset {
-    // The mixer retains logical voices/cursors while replacing native nodes.
-    // Keep their suspension intent so explicit resume can restart those voices.
-    if (![_audioMixer rebuildAfterMediaServicesReset]) {_audioSessionError = _audioMixer.failure; return NO;}
+    [self setAudioSuspended:YES];
+    // Rebuild only native nodes. PCM, music identity/cursor and guest state
+    // survive, and explicit OS-approved activation remains a separate step.
+    if (![_audioMixer rebuildAfterMediaServicesReset]) {
+        _audioSessionError = _audioMixer.failure ?: @"The native audio graph could not be rebuilt.";
+        return NO;
+    }
     [self configureAudioSession];
     return _audioSessionError == nil;
+}
+- (BOOL)audioSuspended {return _audioSuspended;}
+- (NSString *)lastAudioError {return _audioSessionError ?: _audioMixer.failure;}
+- (void)pauseAudioVoices {
+    for (NSNumber *source in _players) if (_players[source].isPlaying) {
+        [_pausedSources addObject:source];
+        [_players[source] pause];
+    }
+}
+- (void)setAudioSuspended:(BOOL)suspended {
+    if (!suspended) {(void)[self tryResumeAudio]; return;}
+    _audioSuspended = YES;
+    NSNumber *music = @(_runtime->sound ? _runtime->cpu.read32(_runtime->sound + 0xec) : 0);
+    // A paused menu may keep animating. Its sounds and interrupted one-shots
+    // must not become deferred effects when native audio becomes available.
+    for (NSNumber *source in [_players.allKeys copy]) if (![source isEqual:music]) {
+        [_players[source] stop];
+        [_players removeObjectForKey:source];
+        [_pausedSources removeObject:source];
+    }
+    [self pauseAudioVoices];
+    [_audioMixer suspend];
+}
+- (BOOL)activateAudioSession {
+    [self configureAudioSession];
+    if (_audioSessionError) return NO;
+    #if !TARGET_OS_OSX
+    NSError *error = nil;
+    if (![AVAudioSession.sharedInstance setActive:YES error:&error]) {
+        _audioSessionError = error.localizedDescription ?: @"The system audio session is temporarily unavailable.";
+        return NO;
+    }
+    #endif
+    return YES;
+}
+- (BOOL)resumeAudioVoices {
+    if (_suspended || _audioSuspended) return YES;
+    if (_soundEnabled) {
+        for (NSNumber *source in [_pausedSources.allObjects copy]) if (_players[source] && ![_players[source] play]) {
+            _audioSessionError = _audioMixer.failure ?: @"The native audio voice could not resume.";
+            [self setAudioSuspended:YES];
+            return NO;
+        }
+        NSNumber *music = @(_runtime->sound ? _runtime->cpu.read32(_runtime->sound + 0xec) : 0);
+        if (_wantedMusicEntry >= 0 && !_players[music]) {
+            _runtime->cpu.call(0xea15, {_runtime->sound, uint32_t(_wantedMusicEntry), uint32_t(_wantedMusicLoop)});
+            [self checkFault];
+        }
+    }
+    if (_audioSuspended) return NO;
+    [_pausedSources removeAllObjects];
+    return !_failure && !_audioSuspended;
+}
+- (BOOL)tryResumeAudio {
+    if (_failure || !_audioMixer) return NO;
+    if (![self activateAudioSession]) {[self setAudioSuspended:YES]; return NO;}
+    // prepare retains a startup error. A later explicit retry replaces only
+    // the orphaned native graph rather than poisoning or recreating the guest.
+    if (_audioMixer.failure && ![_audioMixer rebuildAfterMediaServicesReset]) {
+        _audioSessionError = _audioMixer.failure ?: @"The native audio graph could not be rebuilt.";
+        [self setAudioSuspended:YES];
+        return NO;
+    }
+    if (![_audioMixer prepare]) {
+        _audioSessionError = _audioMixer.failure ?: @"The native audio graph is temporarily unavailable.";
+        [self setAudioSuspended:YES];
+        return NO;
+    }
+    _audioSessionError = nil;
+    _audioSuspended = NO;
+    if (_suspended) {[_audioMixer suspend]; return YES;}
+    return [self resumeAudioVoices];
 }
 - (void)trimTransientResources {
     [_metalRenderer trimTransientResources];
@@ -667,8 +745,8 @@ struct Runtime {
     #if !TARGET_OS_OSX
     category=AVAudioSession.sharedInstance.category;
     #endif
-    return [NSString stringWithFormat:@"frames=%llu draws=%llu instructions=%llu heap=%u allocations=%lu audio=%llu game=%08x menu=%08x sound=%d respectSilent=%d category=%@ audioError=%@ menuType=%u viewport=%.1fx%.1f raster=%ux%u renderer=%@",
-        r.frames,r.draws,r.cpu.instructionCount,r.heap,(unsigned long)r.allocations.size(),r.audioEvents,r.game,r.cpu.read32(r.game+4),_soundEnabled,_respectsSilentMode,category,_audioSessionError?:@"none",r.cpu.read32(r.cpu.read32(r.game+4)+0x20),r.geometry.logicalSize.width,r.geometry.logicalSize.height,r.geometry.rasterWidth,r.geometry.rasterHeight,r.metal?@"Metal":@"CPU"];
+    return [NSString stringWithFormat:@"frames=%llu draws=%llu instructions=%llu heap=%u allocations=%lu audio=%llu game=%08x menu=%08x sound=%d respectSilent=%d category=%@ audioError=%@ menuType=%u viewport=%.1fx%.1f raster=%ux%u renderer=%@ audioSuspended=%d audioPolicyError=%@ rendererError=%@",
+        r.frames,r.draws,r.cpu.instructionCount,r.heap,(unsigned long)r.allocations.size(),r.audioEvents,r.game,r.cpu.read32(r.game+4),_soundEnabled,_respectsSilentMode,category,self.lastAudioError?:@"none",r.cpu.read32(r.cpu.read32(r.game+4)+0x20),r.geometry.logicalSize.width,r.geometry.logicalSize.height,r.geometry.rasterWidth,r.geometry.rasterHeight,r.metal?@"Metal":@"CPU",_audioSuspended,_audioPolicyError?:@"none",_metalRenderer.failure?:@"none"];
 }
 - (id)preference:(NSString *)key {
     return _testPreferencesPath?_testPreferences[key]:[NSUserDefaults.standardUserDefaults objectForKey:key];
@@ -681,13 +759,21 @@ struct Runtime {
     } else [NSUserDefaults.standardUserDefaults setBool:value forKey:key];
 }
 - (void)configureAudioSession {
+    _audioSessionError=nil;
     #if !TARGET_OS_OSX
     AVAudioSession *session=AVAudioSession.sharedInstance;
     NSError *error=nil;
     AVAudioSessionCategory category=_respectsSilentMode?AVAudioSessionCategoryAmbient:AVAudioSessionCategoryPlayback;
     AVAudioSessionCategoryOptions options=_respectsSilentMode?0:AVAudioSessionCategoryOptionMixWithOthers;
-    [session setCategory:category mode:AVAudioSessionModeDefault options:options error:&error];
-    _audioSessionError=error.localizedDescription;
+    if (![session setCategory:category mode:AVAudioSessionModeDefault options:options error:&error])
+        _audioSessionError=error.localizedDescription?:@"The system audio category is temporarily unavailable.";
+    #if TARGET_OS_IOS
+    // This preference applies to banners only; accepted/full-screen calls may
+    // still interrupt. A denied preference never prevents normal playback.
+    NSError *policyError=nil;
+    _audioPolicyError=[session setPrefersNoInterruptionsFromSystemAlerts:YES error:&policyError]?nil:
+        (policyError.localizedDescription?:@"The system-alert interruption preference was not accepted.");
+    #endif
     #endif
 }
 - (BOOL)soundEnabled {return _soundEnabled;}
@@ -701,7 +787,7 @@ struct Runtime {
             if([source isEqual:music]) {[_players[source] pause];}
             else {[_players[source] stop];[_players removeObjectForKey:source];}
         }
-    } else if(changed&&!_suspended&&_wantedMusicEntry>=0) {
+    } else if(changed&&!_suspended&&!_audioSuspended&&_wantedMusicEntry>=0) {
         _runtime->cpu.call(0xea15,{_runtime->sound,uint32_t(_wantedMusicEntry),uint32_t(_wantedMusicLoop)});
         [self checkFault];
     }
@@ -723,7 +809,7 @@ struct Runtime {
 - (void)setRespectsSilentMode:(BOOL)respect {
     _respectsSilentMode=respect;[self storePreference:respect key:@"audio.respectsSilentMode"];
     [self configureAudioSession];
-    if(!_suspended&&_audioMixer&&![_audioMixer prepare])_failure=_audioMixer.failure;
+    if(!_suspended&&!_audioSuspended&&_audioMixer)(void)[self tryResumeAudio];
 }
 - (void)checkFault {
     if(!_runtime->cpu.fault.empty())_failure=@(_runtime->cpu.fault.c_str());
@@ -760,7 +846,7 @@ struct Runtime {
         _hapticsEnabled=_offersHaptics&&(hapticsPreference?hapticsPreference.boolValue:YES);
         _wantedMusicEntry=-1;_wantedMusicLoop=YES;
         [self configureAudioSession];
-        _audioMixer=[SDBAudioMixer new];
+        _audioMixer=[self newAudioMixer];
         _audioMixer.outputVolume=_muted?0:1;
         _metalRenderer=[[SDBMetalRenderer alloc] init];
         _runtime->metal=_metalRenderer.supported&&NSProcessInfo.processInfo.environment[@"SDB_CPU_RENDERER"]==nil;
@@ -798,6 +884,7 @@ struct Runtime {
     return self;
 }
 - (void)dealloc {if(_frame)CGImageRelease(_frame);}
+- (SDBAudioMixer *)newAudioMixer {return [SDBAudioMixer new];}
 
 - (void)loadOriginal {
     Runtime &r=*_runtime;GuestCPU &c=r.cpu;
@@ -922,7 +1009,9 @@ struct Runtime {
         NSURL *url=[NSURL fileURLWithPath:[_resourcePath stringByAppendingPathComponent:entry[@"name"]]];
         if(![_audioMixer loadBuffer:index+1 URL:url]) {c.fail(_audioMixer.failure.UTF8String?:"Original audio could not load");return;}
     }
-    if(![_audioMixer prepare]) {c.fail(_audioMixer.failure.UTF8String?:"Original audio graph could not prepare");return;}
+    // An unavailable audio device must not prevent the original game/menu from
+    // being constructed. Explicit native recovery can activate it later.
+    (void)[self tryResumeAudio];
     if(!c.fault.empty())return;
     r.game=r.allocate(24);if(!c.fault.empty())return;c.call(0x8dfb,{r.game});
     if(!c.fault.empty())return;
@@ -1239,18 +1328,30 @@ struct Runtime {
         else if(is("_alSourcef")&&c.r[1]==0x100a) {_sourceGains[source]=@(real(c.r[2]));_players[source].volume=_muted?0:real(c.r[2]);}
         else if(is("_alSourcePlay")) {
             ++r.audioEvents;
+            NSNumber *music=@(r.sound?c.read32(r.sound+0xec):0);
             SDBAudioVoice *player=[_audioMixer voiceForSource:c.r[0]];
             if(!player||![player configureBuffer:[_sourceBuffers[source] unsignedIntValue] loop:[_sourceLoops[source] boolValue]])
                 c.fail(_audioMixer.failure.UTF8String?:"Original audio selected an invalid voice");
             else {
                 player.volume=_muted?0:(_sourceGains[source]?[_sourceGains[source] floatValue]:1);
+                if(_audioSuspended&&![source isEqual:music]) {
+                    // Validate the original source/buffer even when dropping
+                    // this transient event; the gate must not hide guest faults.
+                    [player stop];[_players removeObjectForKey:source];[_pausedSources removeObject:source];
+                    return done();
+                }
                 _players[source]=player;
-                if(!_suspended&&_soundEnabled) {
+                if(_audioSuspended&&[source isEqual:music])[_pausedSources addObject:source];
+                if(!_suspended&&!_audioSuspended&&_soundEnabled) {
                     [_audioMixer wakeIfNeeded];
-                    if(![player play])c.fail(_audioMixer.failure.UTF8String?:"Original audio could not play");
+                    if(![player play]) {
+                        _audioSessionError=_audioMixer.failure?:@"The native audio voice could not play.";
+                        if([source isEqual:music])[_pausedSources addObject:source];
+                        [self setAudioSuspended:YES];
+                    }
                 }
             }
-        } else if(is("_alSourceStop")) {[_players[source] stop];[_players removeObjectForKey:source];}
+        } else if(is("_alSourceStop")) {[_players[source] stop];[_players removeObjectForKey:source];[_pausedSources removeObject:source];}
         else if(!(is("_alListener3f")||is("_alcCloseDevice")||is("_alcDestroyContext")||is("_alDeleteSources")))c.fail("Unbridged audio call: "+s);
         return done();
     }
@@ -1334,19 +1435,12 @@ struct Runtime {
     _pendingHapticEvents=0;
     if(suspended) {
         [self touchPhase:3 x:0 y:0];
-        [_pausedSources removeAllObjects];
-        for(NSNumber *source in _players)if(_players[source].isPlaying) {[_pausedSources addObject:source];[_players[source] pause];}
+        [self pauseAudioVoices];
         if(!_failure) {_runtime->cpu.call(0x8e13,{_runtime->game});[self checkFault];}
         [_audioMixer suspend];
     } else {
         _suspended=NO;
-        if(![_audioMixer prepare])_runtime->cpu.fail(_audioMixer.failure.UTF8String?:"Original audio graph could not resume");
-        if(_soundEnabled) {
-            for(NSNumber *source in _pausedSources)[_players[source] play];
-            NSNumber *music=@(_runtime->cpu.read32(_runtime->sound+0xec));
-            if(_wantedMusicEntry>=0&&!_players[music])_runtime->cpu.call(0xea15,{_runtime->sound,uint32_t(_wantedMusicEntry),uint32_t(_wantedMusicLoop)});
-        }
-        [_pausedSources removeAllObjects];
+        if(!_audioSuspended)(void)[self tryResumeAudio];
     }
     _suspended=suspended;[self checkFault];
 }

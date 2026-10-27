@@ -50,6 +50,13 @@ struct GameView: View {
             .offset(x: -insets.leading, y: -insets.top)
             .onChange(of: viewport, initial: true) { _, value in session.configure(value) }
         }
+        #if os(iOS)
+        .background {
+            GameHapticsSurface(session: session)
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
+        }
+        #endif
         #if os(watchOS)
         .overlay {
             WatchCornerControls(session: session)
@@ -70,7 +77,12 @@ struct GameView: View {
         .toolbarBackgroundVisibility(.hidden, for: .navigationBar)
         #endif
         .onChange(of: scenePhase, initial: true) { _, phase in
-            session.setSceneActive(phase == .active)
+            switch phase {
+            case .active: session.setSceneActivity(.active)
+            case .inactive: session.setSceneActivity(.inactive)
+            case .background: session.setSceneActivity(.background)
+            @unknown default: session.setSceneActivity(.background)
+            }
             #if os(watchOS)
             isFocused = phase == .active && session.canPause
             #elseif os(tvOS)
@@ -196,7 +208,12 @@ struct GameView: View {
     private var uiTestAccessibilityValue: String {
         guard ProcessInfo.processInfo.environment["SDB_UI_TEST"] == "1" else { return "" }
         // Keep menuType last for the existing performance test's parser.
-        return "viewport \(Int(session.logicalSize.width)) × \(Int(session.logicalSize.height)); hostActive \(session.isActive); canPause \(session.canPause); focused \(isFocused); menuType \(session.gameMenuType)"
+        #if os(iOS)
+        let feedback = "; haptics \(session.hapticDeliveryStatus)"
+        #else
+        let feedback = ""
+        #endif
+        return "viewport \(Int(session.logicalSize.width)) × \(Int(session.logicalSize.height)); hostActive \(session.isActive); canPause \(session.canPause); focused \(isFocused); renderer \(session.usesMetalRenderer ? "Metal" : "CPU")\(feedback); menuType \(session.gameMenuType)"
     }
 
     #if !os(tvOS)

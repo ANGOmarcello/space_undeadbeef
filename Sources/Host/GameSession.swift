@@ -58,6 +58,9 @@ final class GameSession {
     private(set) var pointer = CGPoint(x: GameLayout.width / 2, y: GameLayout.height / 2)
     private(set) var showsPointer = false
     private(set) var isTouching = false
+    #if os(iOS)
+    private(set) var hapticDeliveryStatus = "detached"
+    #endif
 
     @ObservationIgnored private(set) var engine: SDBEngine?
     @ObservationIgnored private var viewport: GameViewport?
@@ -75,59 +78,80 @@ final class GameSession {
     @ObservationIgnored private var checkpointSteps = 0
     @ObservationIgnored private var reportedSaveError: String?
     @ObservationIgnored private let progressSync = GameProgressSync()
+    @ObservationIgnored private let resumeAudio: @MainActor (SDBEngine) -> Bool
 
-    init(engine: SDBEngine? = nil) {
+    init(engine: SDBEngine? = nil, lifecycle: GameLifecyclePolicy = GameLifecyclePolicy(),
+         resumeAudio: @escaping @MainActor (SDBEngine) -> Bool = { $0.tryResumeAudio() }) {
         self.engine = engine
+        self.lifecycle = lifecycle
+        self.resumeAudio = resumeAudio
     }
 
     func setSceneActive(_ active: Bool) {
+        setSceneActivity(active ? .active : .background)
+    }
+
+    func setSceneActivity(_ activity: GameSceneActivity) {
         interruptionMonitor.start()
-        handleLifecycle(.scene(active))
+        handleLifecycle(.scene(activity))
     }
 
     func handleLifecycle(_ event: GameLifecycleEvent) {
         defer { refreshUserResumeAvailability() }
-        let mustPause: Bool
-        switch event {
-        case .scene(false), .application(false), .audioInterrupted, .routeDisconnected,
-             .mediaServicesLost, .mediaServicesReset:
-            mustPause = true
-        default: mustPause = false
-        }
+        let mustPause = lifecycle.requestsOriginalPause(for: event)
         if mustPause {
             inputController.resetHeldInputs()
             if canPause { pauseGame(deliverFeedback: false) }
         }
         lifecycle.handle(event)
+        if !lifecycle.sceneAllowsInteraction { inputController.resetHeldInputs(); cancelTouch() }
+        if lifecycle.audioInterrupted || lifecycle.requiresUserResume || lifecycle.needsAudioRebuild || lifecycle.mediaServicesLost {
+            engine?.setAudioSuspended(true)
+        }
         if case .memoryPressure = event {
             // A bounded checkpoint protects progress before possible eviction.
             saveCheckpoint(completed: true)
             engine?.trimTransientResources()
             return
         }
-        setActive(lifecycle.shouldRun)
+        updateScheduling()
+    }
+
+    private func updateScheduling() {
+        // The original pause routine stops gameplay. Its menu still needs
+        // ordinary fixed updates and drawing while native audio is unavailable.
+        if lifecycle.shouldRun, let engine, engine.audioSuspended, !resumeAudio(engine), canPause {
+            pauseGame(deliverFeedback: false)
+        }
+        let animatesPause = gameMenuType == 3 && lifecycle.canAnimatePausedMenu
+        setActive((lifecycle.shouldRun && engine?.audioSuspended != true) || animatesPause)
+        // Initial engine creation can encounter an audio failure before any OS
+        // interruption notification arrives. Keep that gate independent too.
+        if engine?.audioSuspended == true && !animatesPause { setActive(false) }
+        inputController.setActive(isActive && lifecycle.shouldRun && lifecycle.sceneAllowsInteraction && engine?.audioSuspended != true)
     }
 
     private func prepareForUserInteraction() -> Bool {
         defer { refreshUserResumeAvailability() }
-        guard persistenceError == nil else { return false }
-        if isActive { return true }
-        guard lifecycle.canAcceptUserResume else { return false }
+        guard persistenceError == nil, failure == nil, lifecycle.canAttemptUserResume else { return false }
+        if isActive && lifecycle.shouldRun && engine?.audioSuspended != true { return true }
         if lifecycle.needsAudioRebuild {
             guard engine?.recoverAudioAfterMediaServicesReset() == true else { return false }
             lifecycle.audioRebuilt()
         }
+        guard let engine, resumeAudio(engine) else { return false }
+        lifecycle.handle(.audioActivationSucceeded)
         lifecycle.handle(.userInteraction)
-        setActive(lifecycle.shouldRun)
-        return isActive && failure == nil
+        updateScheduling()
+        return isActive && lifecycle.shouldRun && engine.audioSuspended == false && failure == nil
     }
 
     @discardableResult
     func requestUserResume() -> Bool { prepareForUserInteraction() }
 
     private func refreshUserResumeAvailability() {
-        let available = !isActive && failure == nil && persistenceError == nil && engine != nil && engine?.failure == nil &&
-            lifecycle.canAcceptUserResume && (lifecycle.requiresUserResume || lifecycle.needsAudioRebuild)
+        let available = failure == nil && persistenceError == nil && engine != nil && engine?.failure == nil &&
+            lifecycle.canAttemptUserResume && (!lifecycle.shouldRun || engine?.audioSuspended == true)
         if canRequestUserResume != available { canRequestUserResume = available }
     }
 
@@ -181,6 +205,9 @@ final class GameSession {
             if let engine { updatePersistenceError(from: engine) }
             _ = engine?.consumeHapticEvents()
             haptics.reset()
+            #if os(iOS)
+            refreshHapticDeliveryStatus()
+            #endif
             canPause = false
             softwareTimer?.invalidate()
             softwareTimer = nil
@@ -258,6 +285,10 @@ final class GameSession {
         engine.renderFrame()
         deliverHaptics(from: engine)
         refreshState(from: engine)
+        // A newly failed native graph pauses gameplay once. While that menu
+        // animates, retries belong to lifecycle events or explicit user input,
+        // never to the 60 Hz presentation loop.
+        if engine.audioSuspended && lifecycle.shouldRun && gameMenuType != 3 { updateScheduling() }
         if failure != nil { setActive(false) }
         return steps
     }
@@ -306,12 +337,26 @@ final class GameSession {
         // The engine filters gameplay events while in menus, but preserves
         // accepted selections and the Haptics ON preview in every active menu.
         let events = engine.consumeHapticEvents()
-        haptics.update(enabled: isActive && engine.hapticsEnabled && engine.failure == nil, events: events)
+        haptics.update(enabled: isActive && lifecycle.sceneAllowsInteraction && lifecycle.shouldRun &&
+            engine.hapticsEnabled && engine.failure == nil, events: events)
+        #if os(iOS)
+        refreshHapticDeliveryStatus()
+        #endif
     }
 
     #if os(iOS)
-    func attachHaptics(to view: UIView) { haptics.attach(to: view) }
-    func detachHaptics(from view: UIView) { haptics.detach(from: view) }
+    func attachHaptics(to view: UIView, owner: AnyObject) {
+        haptics.attach(to: view, owner: owner)
+        refreshHapticDeliveryStatus()
+    }
+    func detachHaptics(owner: AnyObject) {
+        haptics.detach(owner: owner)
+        refreshHapticDeliveryStatus()
+    }
+    private func refreshHapticDeliveryStatus() {
+        let next = haptics.deliveryStatus
+        if hapticDeliveryStatus != next { hapticDeliveryStatus = next }
+    }
     #endif
 
     func pauseGame(deliverFeedback: Bool = true) {
@@ -353,7 +398,7 @@ final class GameSession {
     }
 
     func movePointer(dx: CGFloat, dy: CGFloat) {
-        guard persistenceError == nil else { return }
+        guard persistenceError == nil, lifecycle.sceneAllowsInteraction else { return }
         pointer = CGPoint(
             x: min(logicalSize.width, max(0, pointer.x + dx)),
             y: min(logicalSize.height, max(0, pointer.y + dy))
@@ -369,7 +414,7 @@ final class GameSession {
     /// Move through the original ship spring without holding a targeting touch.
     /// A held finger keeps ownership; turning the Crown cannot cancel its aim.
     func steerWithCrown(delta: Double) {
-        guard persistenceError == nil else { return }
+        guard persistenceError == nil, lifecycle.shouldRun, lifecycle.sceneAllowsInteraction else { return }
         guard isActive, !isTouching, failure == nil, let engine,
               engine.canSteerShip, engine.gameMenuType == 0 else {
             endCrownSteering()

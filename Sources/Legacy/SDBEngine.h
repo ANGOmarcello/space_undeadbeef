@@ -61,6 +61,15 @@ NS_ASSUME_NONNULL_BEGIN
 - (BOOL)importValidatedProgress:(NSDictionary<NSString *,id> *)snapshot;
 /// Rebuilds audio graph state after a system media reset without starting audio.
 - (BOOL)recoverAudioAfterMediaServicesReset;
+/// Audio can remain stopped while the original paused menu updates and renders.
+@property(nonatomic, readonly) BOOL audioSuspended;
+@property(nonatomic, readonly, nullable) NSString *lastAudioError;
+/// YES preserves music intent and drops transient effects; NO attempts the same
+/// bounded activation as tryResumeAudio and may leave audio suspended on error.
+- (void)setAudioSuspended:(BOOL)suspended NS_SWIFT_NAME(setAudioSuspended(_:));
+/// Explicitly activates the native session and graph. Temporary OS/start errors
+/// return NO without changing guest health; a later attempt may recover them.
+- (BOOL)tryResumeAudio;
 /// Releases inactive host scratch/readback caches without discarding visible
 /// frame, decoded textures, audio, guest memory, progress or preferences.
 - (void)trimTransientResources;

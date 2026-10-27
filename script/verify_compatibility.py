@@ -101,7 +101,7 @@ def main() -> int:
             ]
             # These independently test host lifecycle/controller policy and
             # isolated persistence. Missing expected suites are failures.
-            for suite in ["lifecycle_policy", "native_controls_policy", "save_store", "save_coordinator", "menu_actions",
+            for suite in ["lifecycle_policy", "native_controls_policy", "haptic_attachment", "engine_audio_gate", "save_store", "save_coordinator", "menu_actions",
                           "session_lifecycle", "progress_sync", "memory_soak", "scenario_resume"]:
                 suites.append((suite, []))
             for suite, arguments in suites:
@@ -188,6 +188,9 @@ def main() -> int:
                 if platform == "iOS":
                     command += [f"-only-testing:SPACE UNDEADBEEF iOS UITests/HostUITests/{test}"
                                 for test in ["testAccessibleOriginalMenus", "testSaveFailureRemainsPlayable"]]
+                if kind == "iphone":
+                    command += [f"-only-testing:SPACE UNDEADBEEF iOS UITests/HostUITests/{test}"
+                                for test in ["testHapticHostWithMetal", "testHapticHostWithSoftware"]]
                 command += ["test"]
                 protected_build(f"UI {kind} {identifier}", platform, command)
 

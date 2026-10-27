@@ -197,6 +197,69 @@ final class HostUITests: XCTestCase {
     }
 
     @MainActor
+    func testHapticHostWithMetal() throws { try verifyHapticHost(forceSoftware: false) }
+
+    @MainActor
+    func testHapticHostWithSoftware() throws { try verifyHapticHost(forceSoftware: true) }
+
+    /// Simulator proof of real UIKit/window attachment and native dispatch
+    /// readiness. Physical pulse strength remains a separate user check.
+    @MainActor
+    private func verifyHapticHost(forceSoftware: Bool) throws {
+        #if os(iOS)
+        guard UIDevice.current.userInterfaceIdiom == .phone else {
+            throw XCTSkip("iPad has no supported native phone haptic output.")
+        }
+        let app = XCUIApplication()
+        let save = "~/tmp/space-haptic-host-\(UUID().uuidString)"
+        app.launchEnvironment = ["SDB_UI_TEST": "1", "SDB_MUTE_AUDIO": "1",
+            "SDB_HAPTICS_LOG": "1", "SDB_SAVE_DIRECTORY": save]
+        if forceSoftware { app.launchEnvironment["SDB_CPU_RENDERER"] = "1" }
+        app.launch()
+        defer { app.terminate() }
+        let canvas = app.descendants(matching: .any).matching(identifier: "game-canvas").firstMatch
+        XCTAssertTrue(canvas.waitForExistence(timeout: 15))
+        func waitForValue(_ value: String) {
+            expectation(for: NSPredicate(format: "value CONTAINS %@", value), evaluatedWith: canvas)
+            waitForExpectations(timeout: 10)
+        }
+        func button(_ label: String) -> XCUIElement {
+            let result = app.buttons.matching(NSPredicate(format: "label == %@", label)).firstMatch
+            XCTAssertTrue(result.waitForExistence(timeout: 10), "Missing original menu action: \(label)")
+            return result
+        }
+        waitForValue("haptics ready")
+        waitForValue(forceSoftware ? "renderer CPU" : "renderer Metal")
+        button("Options").tap()
+        waitForValue("menuType 5")
+        button("Haptics Off").tap()
+        waitForValue("haptics disabled")
+        button("Haptics On").tap()
+        waitForValue("haptics ready")
+        XCTAssertTrue(button("Haptics On").isSelected)
+        capture(app, forceSoftware ? "software-haptic-host-ready" : "metal-haptic-host-ready")
+        XCUIDevice.shared.press(.home)
+        app.activate()
+        waitForValue("haptics ready")
+        waitForValue("menuType 5")
+        button("Save and Exit").tap()
+        waitForValue("menuType 1")
+        button("Game Start").tap()
+        waitForValue("menuType 0")
+        let pause = app.buttons["pause-game"]
+        XCTAssertTrue(pause.waitForExistence(timeout: 5))
+        pause.tap()
+        waitForValue("menuType 3")
+        button("Resume").tap()
+        waitForValue("menuType 0")
+        waitForValue("haptics ready")
+        XCTAssertFalse(app.staticTexts["runtime-failure"].exists)
+        #else
+        throw XCTSkip("Native UIKit haptic attachment is specific to iPhone.")
+        #endif
+    }
+
+    @MainActor
     func testSaveFailureRemainsPlayable() throws {
         #if os(iOS)
         let app = XCUIApplication()

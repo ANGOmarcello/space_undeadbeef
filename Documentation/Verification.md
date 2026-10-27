@@ -1,5 +1,65 @@
 # Verification record
 
+## Notification recovery and iPhone feedback — 1.1 (11), 27 October 2026
+
+Transient inactive iOS scenes retain ordinary 60 Hz scheduling without entering
+Pause; input and feedback wait until active. Backgrounding and real audio
+interruptions still enter the original Pause menu. An independent native audio
+gate lets that menu finish animating, and its ordinary Resume action can retry
+OS activation after a missing interruption-ended notification or a no-resume
+recommendation. Audio failure remains nonfatal and does not cause frame-loop
+activation retries. See [ModernHosts.md](ModernHosts.md) for the contracts.
+
+iPhone feedback now attaches to the actual window independently of the rendering
+surface. Invalidated interactions rebuild on the next eligible update, with
+ownership checks for replacement views. No event timing, original artwork,
+game instructions or sound/haptic preference defaults changed.
+
+The focused isolated checks pass: **2,549** actual Session/engine lifecycle,
+input, original-menu and persistence checks; **55** lifecycle-policy checks;
+**33** sanitizer native-audio gate checks; **20** attachment ownership/recovery
+checks; **147** unchanged shared haptic cadence checks; **287** sanitizer original
+haptic-event checks; **53** Crown/Session checks; and **38** native-input checks.
+Session fixtures use normal guest menu animation and injected native audio
+availability. They cover noninterruptive inactive time, busy activation, missing
+end events, media reset, modal storage failures and held-input cancellation.
+No system interruption or real user save is manufactured by these tests.
+
+Both `testHapticHostWithMetal` and `testHapticHostWithSoftware` pass on the
+**iPhone 18 Pro, iOS 27.2 Simulator**. They verify real UIKit window attachment,
+OFF/ON readiness, Home/foreground recovery and original Start/Pause/Resume.
+Exported Options screenshots were visually reviewed in both paths. The result
+identifier is `iphone-haptics-verified.xcresult`; temporary results are removed
+after recording. Exported app logs contain seven native `selectionChanged`
+requests per renderer's isolated process, including the ON preview and menus.
+Simulator readiness/API requests do not establish a felt pulse.
+
+The canonical Watch workload retains all 600 software images, guest-state
+checkpoints and original 256-byte save exactly. The 300-step Metal workload
+retains canonical guest state/save; its existing golden check deliberately
+excludes GPU pixel hashes. The original executable and all 96 prepared asset
+hashes pass. Canonical expectations were not regenerated.
+
+Unsigned Debug builds pass for iOS, macOS, tvOS and watchOS, with bundle version
+**1.1 (11)**. The Mac build reports the existing multiple-destination warning;
+TV/Watch compile without warnings. No physical Watch or Apple TV was queried,
+launched or tested in this correction. No system or other-app settings changed.
+
+The development-signed iPhone build passes strict signature validation, exact
+iPhone provisioning membership and shared KVS entitlement authorization through
+the profile's permitted team wildcard. CoreDevice installed it in place on the
+iPhone 14 Pro, independently read back **1.1 (11)**, and opened it normally without
+test environment, gameplay automation, data reset or preference overrides.
+Physical haptic feel and an actual incoming banner remain user verification;
+the lifecycle fixture injects the corresponding host events rather than sending
+a real notification. No physical performance test was run.
+
+Task-owned intermediate caches, UI test packages/logs, temporary results,
+captures and isolated Simulator saves were removed after recording the checks.
+The cleanup measured about 191 MiB of additional free space. Latest app products
+and matching symbols remain in the standard project DerivedData directories for
+local inspection; the installed phone uses its own device-side copy.
+
 ## Device installation — 1.1 (10), 27 October 2026
 
 After the foundation verification below, the user explicitly requested installation

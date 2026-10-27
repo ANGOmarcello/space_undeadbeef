@@ -12,11 +12,16 @@ import AppKit
 import AVFAudio
 #endif
 
-enum GameLifecycleEvent: Sendable {
-    case scene(Bool)
+enum GameSceneActivity: Equatable, Sendable {
+    case active, inactive, background
+}
+
+enum GameLifecycleEvent: Equatable, Sendable {
+    case scene(GameSceneActivity)
     case application(Bool)
     case audioInterrupted
     case audioEnded(shouldResume: Bool)
+    case audioActivationSucceeded
     case routeDisconnected
     case mediaServicesLost
     case mediaServicesReset
@@ -25,27 +30,79 @@ enum GameLifecycleEvent: Sendable {
     case wake
 }
 
+/// A suspension begin describes deactivation that already happened while the
+/// process could not run. It is not an ongoing competing-session interruption.
+enum GameAudioInterruptionPolicy {
+    // AVAudioSessionInterruptionReasonAppWasSuspended's documented wire value.
+    // Apple stopped sending it in iOS16; retain decoding for delayed/legacy data.
+    private static let delayedSuspensionReason: UInt = 1
+
+    static func began(reason: UInt?, wasSuspended: Bool = false) -> GameLifecycleEvent? {
+        if let reason {
+            // The current reason supersedes the obsolete wasSuspended key.
+            return reason == delayedSuspensionReason ? nil : .audioInterrupted
+        }
+        return wasSuspended ? nil : .audioInterrupted
+    }
+}
+
 /// Independent gates keep a foreground notification from resuming an ongoing
 /// interruption. Resuming scheduling never dismisses the original pause menu.
 struct GameLifecyclePolicy {
-    private(set) var sceneActive = false
+    #if os(iOS)
+    private static let defaultPausesInactiveScene = false
+    #else
+    private static let defaultPausesInactiveScene = true
+    #endif
+    private let pausesInactiveScene: Bool
+    private(set) var sceneActivity: GameSceneActivity = .background
     private(set) var applicationActive = true
     private(set) var audioInterrupted = false
     private(set) var mediaServicesLost = false
     private(set) var needsAudioRebuild = false
     private(set) var requiresUserResume = false
 
-    var canAcceptUserResume: Bool { sceneActive && applicationActive && !audioInterrupted && !mediaServicesLost }
-    var shouldRun: Bool { canAcceptUserResume && !requiresUserResume && !needsAudioRebuild }
+    init(pausesInactiveScene: Bool = Self.defaultPausesInactiveScene) {
+        self.pausesInactiveScene = pausesInactiveScene
+    }
+
+    var sceneActive: Bool { sceneActivity == .active }
+    var sceneAllowsScheduling: Bool { sceneActive || (sceneActivity == .inactive && !pausesInactiveScene) }
+    var sceneAllowsInteraction: Bool { sceneActive }
+    var canAnimatePausedMenu: Bool { sceneAllowsScheduling && applicationActive }
+    var canAttemptUserResume: Bool { sceneAllowsInteraction && applicationActive && !mediaServicesLost }
+    var canAcceptUserResume: Bool { canAttemptUserResume && !audioInterrupted }
+    var shouldRun: Bool {
+        canAnimatePausedMenu && !audioInterrupted && !mediaServicesLost && !requiresUserResume && !needsAudioRebuild
+    }
+
+    func requestsOriginalPause(for event: GameLifecycleEvent) -> Bool {
+        switch event {
+        case .scene(.background), .application(false), .audioInterrupted,
+             .routeDisconnected, .mediaServicesLost, .mediaServicesReset: true
+        case .scene(.inactive): pausesInactiveScene
+        default: false
+        }
+    }
 
     mutating func handle(_ event: GameLifecycleEvent) {
         switch event {
-        case .scene(let active): sceneActive = active
+        case .scene(let activity): sceneActivity = activity
         case .application(let active): applicationActive = active
         case .audioInterrupted: audioInterrupted = true
         case .audioEnded(let shouldResume):
+            // Recommendations without a tracked interruption must not stop a
+            // running game or cancel an independent explicit-resume gate.
+            guard audioInterrupted else { return }
             audioInterrupted = false
-            requiresUserResume = !shouldResume
+            requiresUserResume = requiresUserResume || !shouldResume
+        case .audioActivationSucceeded:
+            // A user-requested activation approved by the OS can recover a
+            // stale begin whose matching end was never delivered. Graph repair
+            // remains independent; a failed activation must not send this event.
+            guard canAttemptUserResume else { return }
+            audioInterrupted = false
+            requiresUserResume = false
         case .routeDisconnected:
             // The original Pause/Continue menu is the explicit resume action.
             break
@@ -105,7 +162,14 @@ final class GameInterruptionMonitor {
         #else
         observe(AVAudioSession.interruptionNotification) { note in
             let type = note.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt
-            if type == AVAudioSession.InterruptionType.began.rawValue { return .audioInterrupted }
+            if type == AVAudioSession.InterruptionType.began.rawValue {
+                #if os(iOS) || os(watchOS)
+                let reason = (note.userInfo?[AVAudioSessionInterruptionReasonKey] as? NSNumber)?.uintValue
+                return GameAudioInterruptionPolicy.began(reason: reason)
+                #else
+                return .audioInterrupted
+                #endif
+            }
             guard type == AVAudioSession.InterruptionType.ended.rawValue else { return nil }
             let options = (note.userInfo?[AVAudioSessionInterruptionOptionKey] as? UInt) ?? 0
             return .audioEnded(shouldResume: AVAudioSession.InterruptionOptions(rawValue: options).contains(.shouldResume))

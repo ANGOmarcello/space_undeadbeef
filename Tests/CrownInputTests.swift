@@ -75,7 +75,7 @@ enum CrownInputTests {
         require(engine.canPause && engine.gameMenuType == 0, "Enter gameplay through the original Game Start menu")
 
         let session = GameSession(engine: engine)
-        session.setActive(true)
+        session.setSceneActive(true)
         var time = ProcessInfo.processInfo.systemUptime
         require(session.drawDisplayFrame(at: time) == 0,
                 "The first software callback anchors its own epoch without simulating activation time")

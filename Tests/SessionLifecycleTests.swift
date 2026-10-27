@@ -11,6 +11,16 @@ import CoreGraphics
 import Foundation
 import AVFAudio
 
+@MainActor
+private final class SessionAudioAvailability {
+    var available = true
+    var attempts = 0
+    func resume(_ engine: SDBEngine) -> Bool {
+        attempts += 1
+        return available && engine.tryResumeAudio()
+    }
+}
+
 @main
 @MainActor
 enum SessionLifecycleTests {
@@ -37,7 +47,10 @@ enum SessionLifecycleTests {
         setenv("SDB_CPU_RENDERER", "1", 1)
 
         let engine = SDBEngine(resourcePath: resources, offersHaptics: true)
-        let session = GameSession(engine: engine)
+        let audioAvailability = SessionAudioAvailability()
+        let session = GameSession(engine: engine, lifecycle: GameLifecyclePolicy(pausesInactiveScene: false)) { engine in
+            audioAvailability.resume(engine)
+        }
         let viewport = GameViewport(size: CGSize(width: 240, height: 160), scale: 1,
                                     safeArea: CGRect(x: 0, y: 0, width: 240, height: 160))
         session.configure(viewport)
@@ -131,8 +144,11 @@ enum SessionLifecycleTests {
         require(graphBeforeReset != nil && !graphBeforeReset!.isRunning,
                 "Public suspension actually stops native audio callbacks")
         require(engine.recoverAudioAfterMediaServicesReset(), "The public engine reset rebuild succeeds in isolation")
-        require(pausedSources()?.isEqual(pausedBeforeReset) == true,
-                "Native graph reconstruction must retain every paused-source ID")
+        let loopingSources = pausedBeforeReset!.allObjects.compactMap { $0 as? NSNumber }.filter {
+            voicesBeforeReset?[$0].map(isLooping) == true
+        }
+        require(pausedSources()?.isEqual(NSSet(array: loopingSources)) == true,
+                "Native graph reconstruction retains music intent and discards interrupted one-shots")
         let rebuiltGraph = audioGraph()
         require(rebuiltGraph != nil && rebuiltGraph !== graphBeforeReset && !rebuiltGraph!.isRunning,
                 "Recovery replaces the native graph without starting it")
@@ -140,8 +156,8 @@ enum SessionLifecycleTests {
         require(voicesBeforeReset != nil && retainedVoices != nil,
                 "Original voice objects remain observable across graph reconstruction")
         var loopingVoices: [NSObject] = []
-        for identifier in pausedBeforeReset!.allObjects {
-            guard let source = identifier as? NSNumber, let before = voicesBeforeReset?[source],
+        for source in loopingSources {
+            guard let before = voicesBeforeReset?[source],
                   let after = retainedVoices?[source] else {
                 require(false, "Paused source must retain its original logical voice"); continue
             }
@@ -150,7 +166,10 @@ enum SessionLifecycleTests {
             if isLooping(after) { loopingVoices.append(after) }
         }
         require(!loopingVoices.isEmpty, "The retained intent includes original looping background music")
-        engine.setSuspended(false) // Explicit activation, not a reset-side effect.
+        engine.setSuspended(false)
+        require(engine.audioSuspended && audioGraph()?.isRunning == false,
+                "Resuming guest scheduling alone cannot reopen audio after media reset")
+        require(engine.tryResumeAudio(), "Explicit OS-approved activation releases the native audio gate")
         require(engine.failure == nil && audioGraph()?.isRunning == true,
                 "Explicit activation prepares the rebuilt native graph")
         // One-shots may naturally finish in the first resumed render quantum;
@@ -168,6 +187,40 @@ enum SessionLifecycleTests {
         require(audioEvents() == beforeCancel, "Canceling a charge does not request a release-volley sound")
 
         beginCharge()
+        let beforeBanner = engine.progressPortableSnapshot
+        let attemptsBeforeBanner = audioAvailability.attempts
+        session.setSceneActivity(.inactive)
+        require(session.isActive && session.gameMenuType == 0 && !session.isTouching && !engine.shipAiming,
+                "A transient iOS banner cancels held input without stopping gameplay or entering Pause")
+        let pointerBeforeBanner = session.pointer
+        session.drag(to: .zero)
+        session.movePointer(dx: GameLayout.pointerStep, dy: GameLayout.pointerStep)
+        require(!session.isTouching && session.pointer == pointerBeforeBanner,
+                "A foreground inactive banner does not accept input intended for the system")
+        advance(30)
+        require(session.gameMenuType == 0 && !engine.audioSuspended && audioAvailability.attempts == attemptsBeforeBanner,
+                "Banner time uses ordinary game updates without stopping or reactivating audio")
+        session.setSceneActivity(.active)
+        advance(1)
+        require(session.canPause && session.gameMenuType == 0 && !session.canRequestUserResume,
+                "Dismissing a banner leaves the ongoing game playable with no Resume ceremony")
+        require(beforeBanner != nil, "The banner fixture started from real original progress")
+
+        engine.setAudioSuspended(true)
+        audioAvailability.available = false
+        session.handleLifecycle(.wake)
+        require(session.isActive && session.gameMenuType == 3 && engine.audioSuspended,
+                "A native audio failure without an OS notification enters the original animated Pause menu")
+        let failedAttempts = audioAvailability.attempts
+        advance(120)
+        require(audioAvailability.attempts == failedAttempts,
+                "Animating a paused menu never retries unavailable audio from the 60 Hz frame loop")
+        require(!session.activateMenuAction(action("Resume").identifier) && session.gameMenuType == 3,
+                "A failed native audio retry cannot dispatch original Resume")
+        audioAvailability.available = true
+        resumeOriginalGame()
+
+        beginCharge()
         session.setSceneActive(false)
         require(!session.isActive && !session.isTouching && !engine.shipAiming, "Scene suspension cancels charge and aiming")
         require(!session.canRequestUserResume, "An inactive scene exposes no semantic recovery action")
@@ -176,31 +229,60 @@ enum SessionLifecycleTests {
         require(session.drawDisplayFrame(at: time + 10) == 0 && engine.diagnostics == suspendedState,
                 "An inactive host cannot simulate or render hidden game time")
         require(!session.activateMenuAction(staleStart), "An inactive stale semantic action cannot dispatch")
+        audioAvailability.available = false
         session.handleLifecycle(.audioInterrupted)
         session.setSceneActive(true)
-        require(!session.isActive && !session.requestUserResume(), "Foreground and explicit input cannot override an ongoing audio interruption")
-        require(!session.canRequestUserResume, "Ongoing audio interruption cannot offer a dead recovery button")
+        require(session.isActive && engine.audioSuspended && !session.requestUserResume(),
+                "Foreground may animate Pause, but cannot override OS refusal to reactivate audio")
+        require(session.canRequestUserResume, "A foreground pause offers an explicit OS-checked recovery attempt")
+        audioAvailability.available = true
         session.handleLifecycle(.audioEnded(shouldResume: true))
-        require(session.isActive, "An eligible ended interruption releases scheduling")
+        require(session.isActive && !engine.audioSuspended, "An eligible ended interruption releases native audio")
         require(!session.canRequestUserResume, "Automatically eligible scheduling needs no explicit recovery action")
         primeResume()
         resumeOriginalGame()
         require(!session.isTouching && !engine.shipAiming, "Original Resume cannot resurrect a canceled charge")
 
         beginCharge()
+        audioAvailability.available = false
+        session.handleLifecycle(.audioInterrupted)
+        advance(120)
+        let pausedProgress = engine.progressPortableSnapshot
+        advance(120)
+        require(session.isActive && engine.audioSuspended && audioGraph()?.isRunning == false &&
+                session.menuActions.contains(where: { $0.label == "Resume" }),
+                "The original Pause menu completes normal animation while the interrupted audio graph stays stopped")
+        require(NSDictionary(dictionary: pausedProgress ?? [:]).isEqual(to: engine.progressPortableSnapshot ?? [:]),
+                "Paused menu animation cannot advance original progress behind the audio gate")
+        let busyResume = action("Resume")
+        require(!session.activateMenuAction(busyResume.identifier) && session.gameMenuType == 3,
+                "A busy OS rejects explicit recovery without dismissing the original Pause menu")
+        audioAvailability.available = true
+        // No interruption-ended event: actual OS-approved user activation is
+        // sufficient to recover a stale begin, through the original touch row.
+        session.drag(to: CGPoint(x: busyResume.logicalFrame.midX, y: busyResume.logicalFrame.midY))
+        advance(1)
+        session.endTouch()
+        advance(120)
+        require(session.gameMenuType == 0 && session.canPause && !engine.audioSuspended,
+                "One ordinary Resume tap recovers a missing end notification without a hidden first tap")
+
+        beginCharge()
         session.handleLifecycle(.audioInterrupted)
         session.handleLifecycle(.audioEnded(shouldResume: false))
-        require(!session.isActive && !session.isTouching && !engine.shipAiming, "No-resume interruption remains suspended without held input")
+        require(session.isActive && engine.audioSuspended && !session.isTouching && !engine.shipAiming,
+                "A no-resume recommendation keeps audio stopped while the original Pause UI remains live")
         require(session.canRequestUserResume, "An ended no-resume interruption offers semantic user recovery")
         session.setSceneActive(false)
         require(!session.canRequestUserResume, "Backgrounding hides explicit recovery until the scene is eligible")
         session.setSceneActive(true)
-        require(!session.isActive, "Another foreground notification cannot bypass explicit-resume policy")
+        require(session.isActive && engine.audioSuspended, "Foreground animates the original menu without bypassing explicit audio resume")
         require(session.canRequestUserResume, "Returning an eligible scene restores its semantic recovery action")
         session.handleLifecycle(.application(false))
         require(!session.canRequestUserResume && !session.requestUserResume(), "Application focus independently gates semantic recovery")
         session.handleLifecycle(.application(true))
-        require(session.canRequestUserResume && !session.isActive, "Restoring focus offers recovery without resuming automatically")
+        require(session.canRequestUserResume && session.isActive && engine.audioSuspended,
+                "Restoring focus offers animated recovery without restarting audio automatically")
         require(session.requestUserResume() && session.isActive, "A fresh user request can resume an ended interruption")
         require(!session.canRequestUserResume, "Successful explicit recovery removes its semantic action")
         primeResume()
@@ -221,17 +303,18 @@ enum SessionLifecycleTests {
         resumeOriginalGame()
 
         session.handleLifecycle(.mediaServicesLost)
-        require(!session.isActive && !session.requestUserResume(), "Lost media services reject premature resume")
+        require(session.isActive && engine.audioSuspended && !session.requestUserResume(),
+                "Lost media services reject premature audio resume while keeping the original menu responsive")
         require(!session.canRequestUserResume, "Lost media services expose no unusable recovery action")
         session.handleLifecycle(.mediaServicesReset)
         session.handleLifecycle(.wake)
         session.setSceneActive(true)
-        require(!session.isActive && audioGraph()?.isRunning == false,
-                "Media reset, wake and foreground never restart scheduling or native audio automatically")
+        require(session.isActive && audioGraph()?.isRunning == false && engine.audioSuspended,
+                "Media reset, wake and foreground animate Pause without restarting native audio automatically")
         require(session.canRequestUserResume, "Completed media reset offers semantic recovery despite the suspended guest menu")
         require(session.requestUserResume() && session.isActive, "Explicit user recovery rebuilds the real audio graph and resumes scheduling")
         require(!session.canRequestUserResume, "Audio graph recovery clears its semantic recovery action")
-        primeResume()
+        advance(1)
         resumeOriginalGame()
 
         // Preserve a paused original record and currently visible software image
@@ -268,7 +351,8 @@ enum SessionLifecycleTests {
         require((freshEngine.progressPortableSnapshot?["checkpoint"] as? NSNumber)?.intValue == checkpoint,
                 "Fresh original load preserves the saved checkpoint")
         fresh.handleLifecycle(.audioInterrupted)
-        require(!fresh.isActive && !fresh.canRequestUserResume, "An interrupted title cannot offer recovery before audio ends")
+        require(!fresh.isActive && fresh.canRequestUserResume,
+                "An interrupted title offers an explicit OS-checked retry even if an end notification is missing")
         fresh.handleLifecycle(.audioEnded(shouldResume: false))
         require(!fresh.isActive && fresh.canRequestUserResume && fresh.gameMenuType == 1,
                 "A suspended original title offers semantic recovery after a no-resume interruption")
@@ -355,7 +439,7 @@ enum SessionLifecycleTests {
                 "Fresh keyboard/controller presses and releases over Resume cannot play behind the storage alert")
         fresh.inputController.tick(GameLayout.simulationStep, sample: GameControllerSample(fire: true))
         fresh.handleLifecycle(.mediaServicesReset)
-        require(!fresh.isActive && !fresh.canRequestUserResume && fresh.persistenceError != nil,
+        require(fresh.isActive && !fresh.canRequestUserResume && fresh.persistenceError != nil && freshEngine.audioSuspended,
                 "A media-reset gate cannot expose semantic recovery through the pending storage alert")
         fresh.dismissPersistenceError()
         require(fresh.persistenceError == nil, "The storage error can be acknowledged without leaving the game")
@@ -363,12 +447,14 @@ enum SessionLifecycleTests {
                 "Acknowledgement immediately republishes recovery when stopped scheduling has no timer")
         require(fresh.requestUserResume() && fresh.isActive,
                 "Acknowledged explicit recovery rebuilds audio without reopening the unchanged save error")
-        freshTime += 30
-        require(fresh.drawDisplayFrame(at: freshTime) == 0,
-                "Modal/media recovery starts a new clock epoch without simulating stopped time")
         fresh.inputController.tick(GameLayout.simulationStep, sample: GameControllerSample(fire: true))
         require(!fresh.isTouching && fresh.gameMenuType == 3,
                 "A controller button held across acknowledgement is not queued as a hidden Resume")
+        // Check the injected held edge before an ordinary host tick samples
+        // the intentionally absent hardware controller as released.
+        freshTime += GameLayout.simulationStep
+        require(fresh.drawDisplayFrame(at: freshTime) == 1,
+                "Modal/media recovery preserves the ordinary paused-menu clock without a hidden catch-up")
         fresh.drag(to: modalPointer)
         freshTime += GameLayout.simulationStep
         _ = fresh.drawDisplayFrame(at: freshTime)

@@ -16,6 +16,7 @@
 		0B8B4EC11D6F80E764C5F145AE5A69B8 /* SDBAudioMixer.mm in Sources */ = {isa = PBXBuildFile; fileRef = 6A9B7F7DA43BAED04A71C7D28534E47F /* SDBAudioMixer.mm */; };
 		0C83F2D7B9851CFA154C9C54AC312BBA /* Original in Resources */ = {isa = PBXBuildFile; fileRef = A0ED89B192DB6FB4B51C8FED4ECCE924 /* Original */; };
 		0CB6A63355813403D5672320A470E6A5 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 21F5A0ABD1F2D4CD3C2B7C71C3E66054 /* Foundation.framework */; };
+		0F1BA68D69DFD1ABCB43572F /* GameHapticsSurface.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3DA6F9BA1B7540F28086973 /* GameHapticsSurface.swift */; };
 		110D0D1C6193F37F750965C5C1B83773 /* GameProgressSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E820AC358959556196287BC2918D530 /* GameProgressSync.swift */; };
 		163AFFB90F8BACACF83F123336BE53A2 /* GameView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EEED9D843E04C8D2795E3A8EC73A1CC6 /* GameView.swift */; };
 		1D6D9D63C9659974ACCDF268CEE1AA87 /* GameMenuAccessibility.swift in Sources */ = {isa = PBXBuildFile; fileRef = A089A6E5869C0BA2184B522D3E4BB8CA /* GameMenuAccessibility.swift */; };
@@ -25,6 +26,7 @@
 		24BC70AA50D911F80FBE723562C03758 /* GameSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C9FE3BD8A5DEC6F778C516AD952521B /* GameSession.swift */; };
 		279B94DC793BB72BFC75998A9AFAF70A /* SDBShaders.metal in Sources */ = {isa = PBXBuildFile; fileRef = 76038024315CC124DD2C0695E2B1F0C3 /* SDBShaders.metal */; };
 		281B4958D5794C70CEF74CBEC02B04AE /* GameController.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1D4DE1723884B4F610949D9E9164E3D4 /* GameController.framework */; };
+		2BB93E4B2BD518B34AFB40B8 /* GameHapticsSurface.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3DA6F9BA1B7540F28086973 /* GameHapticsSurface.swift */; };
 		2BD84A523FC1986BD7BE328391EF5DA9 /* GameProgressSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E820AC358959556196287BC2918D530 /* GameProgressSync.swift */; };
 		2C9476DA3D91769F28F9C92222521ED6 /* Original in Resources */ = {isa = PBXBuildFile; fileRef = A0ED89B192DB6FB4B51C8FED4ECCE924 /* Original */; };
 		387D27703E89C2DC3A87003A007C958C /* CornerPauseButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6152BBBBA067273069AB9132B83E950 /* CornerPauseButton.swift */; };
@@ -68,6 +70,7 @@
 		6C3668502C674206DA3AB62B57A6B93A /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 687C883F6A0674B753F526AA1AC905F6 /* Cocoa.framework */; };
 		6E3E865EA3BFF8FA3B00C1AA2ED01D2F /* SDBAudioMixer.mm in Sources */ = {isa = PBXBuildFile; fileRef = 6A9B7F7DA43BAED04A71C7D28534E47F /* SDBAudioMixer.mm */; };
 		74E5D9CC775FF3669818A8C1A7B2AD88 /* GameInputController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3135A8F04FEF64682C6C3B129A9D995 /* GameInputController.swift */; };
+		76474F989FD02298FC3FFDD9 /* GameHapticsSurface.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3DA6F9BA1B7540F28086973 /* GameHapticsSurface.swift */; };
 		78F886E379A566A1521FD1CBA8C6B380 /* GameDisplayPatch.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F9379D0177D0E216E42891C0628C961F /* GameDisplayPatch.cpp */; };
 		7B9D93EE1ADF36EC3A5480126F5545D5 /* GameMenuAccessibility.swift in Sources */ = {isa = PBXBuildFile; fileRef = A089A6E5869C0BA2184B522D3E4BB8CA /* GameMenuAccessibility.swift */; };
 		7BCBBCF699305DC299EC640E764801D5 /* GameView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EEED9D843E04C8D2795E3A8EC73A1CC6 /* GameView.swift */; };
@@ -95,6 +98,7 @@
 		A5ABC6CC230B2C4A376866B84FBD94C6 /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FA30424125EFD112A69727525A5F16E2 /* QuartzCore.framework */; };
 		ABAAF378888863C581A8373D57FE2C23 /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9EA0B09C0B48447426E79EC11274B903 /* AVFoundation.framework */; };
 		ADDAB97B19BECC389B895A12D3718F37 /* SDBShaders.metal in Sources */ = {isa = PBXBuildFile; fileRef = 76038024315CC124DD2C0695E2B1F0C3 /* SDBShaders.metal */; };
+		AE165CEC4D17AB062EA91087 /* GameHapticsSurface.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3DA6F9BA1B7540F28086973 /* GameHapticsSurface.swift */; };
 		B0D7C14D5CFC273A42D0AE17A83F7ABD /* SDBMetalRenderer.mm in Sources */ = {isa = PBXBuildFile; fileRef = 8FFB91A6E0F519C6E6CBF929604FF5F2 /* SDBMetalRenderer.mm */; };
 		B2ACC915A768A45FD111B9550B46F10F /* Modern in Resources */ = {isa = PBXBuildFile; fileRef = F1FF9A5B6C22864D16ABD97E4E6EF345 /* Modern */; };
 		B57D49990C26F53F806A99E9F0136775 /* GameSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C9FE3BD8A5DEC6F778C516AD952521B /* GameSession.swift */; };
@@ -216,6 +220,7 @@
 		B91ABB8ACBFB8561E134DBA702B5176E /* CoreImage.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreImage.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.0.sdk/System/Library/Frameworks/CoreImage.framework; sourceTree = DEVELOPER_DIR; };
 		B9CEC8088367CCA781173035874BD93E /* SpaceUndeadbeef (tvOS).app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; name = "SpaceUndeadbeef (tvOS).app"; path = SpaceUndeadbeef.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		BEF65330563405DBA4D1099A9921FC47 /* SpaceUndeadbeef-Bridging-Header.h */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.h; path = "SpaceUndeadbeef-Bridging-Header.h"; sourceTree = "<group>"; };
+		C3DA6F9BA1B7540F28086973 /* GameHapticsSurface.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GameHapticsSurface.swift; sourceTree = "<group>"; };
 		CA04B171318378D0468D266060A36DBE /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = Platforms/WatchOS.platform/Developer/SDKs/WatchOS26.0.sdk/System/Library/Frameworks/CoreGraphics.framework; sourceTree = DEVELOPER_DIR; };
 		D35F6AADCE943A6864E52BD70912DB83 /* watchOS.xcassets */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = folder.assetcatalog; path = watchOS.xcassets; sourceTree = "<group>"; };
 		D6AD0CCE13353A757BAA4F84CC133EE3 /* ProgressSync.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = ProgressSync.entitlements; sourceTree = "<group>"; };
@@ -438,6 +443,7 @@
 				EEED9D843E04C8D2795E3A8EC73A1CC6 /* GameView.swift */,
 				29F674EE880775372FAD885238EF78DA /* MetalGameSurface.swift */,
 				898918F102A66EDF34AC9C9407CD4DF8 /* SpaceUndeadbeefApp.swift */,
+				C3DA6F9BA1B7540F28086973 /* GameHapticsSurface.swift */,
 			);
 			name = Host;
 			path = Host;
@@ -729,6 +735,7 @@
 				E8DB6F1B8D6696B026014F28D2086C7D /* SDBEngine.mm in Sources */,
 				3F27EAE0A145F9D11F0FC576DDC81B62 /* SDBMetalRenderer.mm in Sources */,
 				1E3EC6FBA3BF07E308E8B939F2CD55EE /* SDBSaveStore.mm in Sources */,
+				2BB93E4B2BD518B34AFB40B8 /* GameHapticsSurface.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -763,6 +770,7 @@
 				47E8A21C762095185BA49EE882D0DF42 /* SDBMetalRenderer.mm in Sources */,
 				7C164560E1B76A335EBAD4F11CD088A1 /* SDBSaveStore.mm in Sources */,
 				ADDAB97B19BECC389B895A12D3718F37 /* SDBShaders.metal in Sources */,
+				76474F989FD02298FC3FFDD9 /* GameHapticsSurface.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -797,6 +805,7 @@
 				461C368B204F98100F9DDDF0A6DC6A0E /* SDBMetalRenderer.mm in Sources */,
 				96C285534C96CFC397C7E40E8BE2A0DF /* SDBSaveStore.mm in Sources */,
 				A0D97554905F1B843E7723AF5C1A64C1 /* SDBShaders.metal in Sources */,
+				0F1BA68D69DFD1ABCB43572F /* GameHapticsSurface.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -823,6 +832,7 @@
 				B0D7C14D5CFC273A42D0AE17A83F7ABD /* SDBMetalRenderer.mm in Sources */,
 				BDE49B10409F4FB2DC1AF2D284EAD5C2 /* SDBSaveStore.mm in Sources */,
 				279B94DC793BB72BFC75998A9AFAF70A /* SDBShaders.metal in Sources */,
+				AE165CEC4D17AB062EA91087 /* GameHapticsSurface.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

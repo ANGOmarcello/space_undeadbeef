@@ -1,13 +1,42 @@
-# Optional iPhone and Watch haptics — 26 October 2026
+# Optional iPhone and Watch haptics — version 1.1 (11)
 
 Haptics default to ON when no preference exists. The original Options ON/OFF
 controls persist `feedback.hapticsEnabled` immediately, independently of sound
 and Respect Silent Mode. An explicit OFF remains OFF. Tests use isolated
 `SDB_SAVE_DIRECTORY` preferences and never real user settings. iPhone and Watch
 hosts offer native feedback through the same original Options controls. Each
-host bundle stores its own choice; the iPhone implementation is unchanged.
-Current Watch build **1.1 (8)** shares the iPhone event policy; the earlier
-Watch-specific quiet windows described under builds 6–7 are historical.
+host bundle stores its own choice. The Watch cadence introduced in **1.1 (8)**
+shares the iPhone event policy; the earlier Watch-specific quiet windows described
+under builds 6–7 are historical.
+
+## Window attachment and recovery, build 1.1 (11)
+
+The user reported that iPhone feedback, including the Options ON preview, had
+become silent in build 10. Build 11 removes delivery's dependency on the Metal
+game view. A transparent, noninteractive UIKit sentinel binds feedback to the
+actual app `UIWindow`, so the same attachment exists with software rendering.
+Selection, light-impact and medium-impact generators are associated with that
+window. Teardown checks the sentinel's ownership before detaching; an old view
+cannot remove a replacement host's generators, even in the same window.
+
+Scene/audio invalidation marks the attachment for recovery. The next enabled,
+visible, active update recreates the generators if needed. Attaching or rebinding
+the sentinel alone does not recreate them, so OFF or inactive updates do not
+repeatedly rebuild native feedback state. Cooldown timestamps survive these
+transitions and there is no queued feedback to replay.
+
+A transient inactive iOS scene keeps the game's existing 60 Hz updates and
+drawing, but cancels held input and disables interaction and haptics until active.
+Backgrounding and real audio interruptions still use the original Pause menu.
+Native audio recovery can animate that menu while playback remains gated; the
+ordinary Resume action checks OS activation before gameplay resumes. See
+[ModernHosts.md](ModernHosts.md) for audio recovery and one-shot discard rules.
+
+These changes preserve the shared iPhone/Watch event selection, priority,
+cooldowns and no-replay policy below. Watch preset mapping is unchanged.
+Build 11 is installed and normally opened on the iPhone 14 Pro; its physical
+haptic feel remains unverified. Current verification receipts belong in
+[Verification.md](Verification.md); the build-specific results below are historical.
 
 ## Feedback delivery correction, build 1.1 (2)
 
@@ -16,9 +45,9 @@ confirmed menu feedback was filtered out, ordinary Bluster shots and explosions
 were unobserved, and a shared cooldown could suppress a weapon event after a
 lock tick. The original soft impacts also used very low intensities.
 
-The native host now retains selection, light-impact and medium-impact generators
-associated with its visible Metal game view. It attaches them once per view,
-removes their interactions on teardown and suppresses offscreen/inactive feedback.
+Build 2 retained selection, light-impact and medium-impact generators
+associated with its visible Metal game view. It attached them once per view,
+removed their interactions on teardown and suppressed offscreen/inactive feedback.
 This follows [Apple's view-association guidance](https://developer.apple.com/documentation/applepencil/playing-haptic-feedback-in-your-app)
 and [the UIKit view initializer](https://developer.apple.com/documentation/uikit/uiimpactfeedbackgenerator/init(style:view:)).
 The API correction does not alone prove why the earlier build felt silent.
@@ -50,7 +79,7 @@ weapon test uses the game's actual Bluster path. Empty-space taps emit no menu
 event. Gameplay events are filtered in menus while accepted selections survive
 menu transitions.
 
-## Verification
+### Build 1.1 (2) verification
 
 - `script/test_haptics_policy.sh`: 117 pure checks pass, including separate
   budgets, priority preemption, exact boundaries, OFF, no queued replay and

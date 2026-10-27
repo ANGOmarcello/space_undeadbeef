@@ -55,21 +55,12 @@ private final class MetalSurfaceCoordinator: NSObject, MTKViewDelegate {
         view.isUserInteractionEnabled = false
         #endif
         view.delegate = self
-        #if os(iOS)
-        session.attachHaptics(to: view)
-        #endif
         return view
     }
 
     func update(_ view: MTKView, session: GameSession, engine: SDBEngine, isActive: Bool) {
-        #if os(iOS)
-        if self.session !== session { self.session.detachHaptics(from: view) }
-        #endif
         self.session = session
         self.engine = engine
-        #if os(iOS)
-        session.attachHaptics(to: view)
-        #endif
         if view.device !== engine.metalDevice {
             view.device = engine.metalDevice
         }
@@ -93,12 +84,6 @@ private final class MetalSurfaceCoordinator: NSObject, MTKViewDelegate {
         // Raster dimensions come from the engine. Resizing this native view must
         // not feed back into simulation or replace the engine's viewport policy.
     }
-
-    #if os(iOS)
-    func detachHaptics(from view: MTKView) {
-        session.detachHaptics(from: view)
-    }
-    #endif
 
     func draw(in view: MTKView) {
         guard session.isActive, engine.usesMetalRenderer, view.window != nil else { return }
@@ -169,9 +154,6 @@ private struct PlatformMetalSurface: UIViewRepresentable {
 
     static func dismantleUIView(_ view: MTKView, coordinator: MetalSurfaceCoordinator) {
         view.isPaused = true
-        #if os(iOS)
-        coordinator.detachHaptics(from: view)
-        #endif
         view.delegate = nil
         view.releaseDrawables()
     }
