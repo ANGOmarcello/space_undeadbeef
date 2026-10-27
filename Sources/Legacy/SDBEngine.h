@@ -8,10 +8,19 @@
 #endif
 
 NS_ASSUME_NONNULL_BEGIN
+/// A currently executable original menu button, in the engine's logical space.
+/// Identity expires when the original menu is rebuilt; activation revalidates it.
+@interface SDBMenuAction : NSObject
+@property(nonatomic, readonly) NSString *identifier;
+@property(nonatomic, readonly) NSString *label;
+@property(nonatomic, readonly) CGRect logicalFrame;
+@property(nonatomic, readonly) BOOL selected;
+@end
+
 /// Executes the supplied, hash-checked 2008 gameplay code in bounded guest memory.
 @interface SDBEngine : NSObject
 - (instancetype)initWithResourcePath:(NSString *)path;
-/// The native host offers haptics only on iPhone. Other hosts keep their menu.
+/// The native host offers haptics on iPhone and Watch. Other hosts keep their menu.
 - (instancetype)initWithResourcePath:(NSString *)path offersHaptics:(BOOL)offersHaptics;
 @property(nonatomic, readonly, nullable) CGImageRef frame;
 @property(nonatomic, readonly, nullable) NSString *failure;
@@ -32,6 +41,29 @@ NS_ASSUME_NONNULL_BEGIN
 @property(nonatomic, readonly) NSString *menuVersion;
 @property(nonatomic, readonly) BOOL canPause;
 @property(nonatomic, readonly) NSInteger gameMenuType;
+@property(nonatomic, readonly) NSArray<SDBMenuAction *> *menuActions;
+/// Follows the original hit-test/selection/animation path; false for stale,
+/// suspended, pending, offscreen or otherwise unavailable actions.
+- (BOOL)activateMenuAction:(NSString *)identifier;
+/// Calls the original pack/save routine; unchanged records cause no disk writes.
+/// Storage failures are nonfatal and exposed separately from guest failures.
+- (BOOL)saveProgress;
+/// Captures original packing on the game thread; bounded/coalesced disk work
+/// runs off the frame loop. Completion errors surface through lastSaveError.
+- (void)checkpointProgress;
+@property(nonatomic, readonly, nullable) NSString *lastSaveError;
+@property(nonatomic, readonly, nullable) NSDictionary<NSString *,id> *progressPortableSnapshot;
+/// Pure merge for account sync; no engine, disk, preferences or game mutation.
++ (nullable NSDictionary<NSString *,id> *)mergedPortableSnapshot:(NSDictionary<NSString *,id> *)local
+    remote:(NSDictionary<NSString *,id> *)remote NS_SWIFT_NAME(mergeProgress(_:remote:));
+/// Validated deterministic merge, only on the title screen. Preserves local
+/// preferences and unknown save bytes, then uses the original unpack routine.
+- (BOOL)importValidatedProgress:(NSDictionary<NSString *,id> *)snapshot;
+/// Rebuilds audio graph state after a system media reset without starting audio.
+- (BOOL)recoverAudioAfterMediaServicesReset;
+/// Releases inactive host scratch/readback caches without discarding visible
+/// frame, decoded textures, audio, guest memory, progress or preferences.
+- (void)trimTransientResources;
 /// Explicit Watch HUD/pause policy; defaults to the compiled Watch platform.
 /// Headless software-renderer verification may opt in without a Watch device.
 @property(nonatomic) BOOL watchLayout;
@@ -46,6 +78,9 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)steerShipToNormalizedY:(double)fraction NS_SWIFT_NAME(steerShip(toNormalizedY:));
 /// Ends Crown input; original momentum/damping remain in control of the ship.
 - (void)cancelShipSteering;
+/// Cancels host ownership and ends original marker aiming without firing a
+/// release volley. Ordinary touch-ended input retains its original firing path.
+- (void)cancelHeldInput;
 - (void)pauseGame;
 - (void)configureViewport:(CGSize)size displayScale:(double)scale safeArea:(CGRect)safeArea;
 - (CGPoint)logicalPointForViewPoint:(CGPoint)point;

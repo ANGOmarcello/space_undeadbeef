@@ -352,6 +352,88 @@ bool batchStateBoundaries(Runtime& runtime, SDBMetalRenderer *gpu, const Texture
     return true;
 }
 
+bool snapshotBytes(CGImageRef image, std::vector<uint8_t>& pixels) {
+    if (!require(image && CGImageGetWidth(image) == RasterWidth && CGImageGetHeight(image) == RasterHeight &&
+            CGImageGetBitsPerPixel(image) == 32, "trim snapshot format remains RGBA8")) return false;
+    CFDataRef data = CGDataProviderCopyData(CGImageGetDataProvider(image));
+    if (!require(data && CFDataGetLength(data) >= CFIndex(CGImageGetBytesPerRow(image) * RasterHeight),
+                 "trim snapshot data exists")) {
+        if (data) CFRelease(data);
+        return false;
+    }
+    pixels.resize(RasterWidth * RasterHeight * 4);
+    for (unsigned y = 0; y < RasterHeight; ++y)
+        std::memcpy(pixels.data() + size_t(y) * RasterWidth * 4,
+            CFDataGetBytePtr(data) + size_t(y) * CGImageGetBytesPerRow(image), RasterWidth * 4);
+    CFRelease(data);
+    return true;
+}
+
+bool trimPreservesFrames(Runtime& runtime, SDBMetalRenderer *gpu) {
+    if (!gpu.supported) return true;
+    const auto solid = [&](float red, float green, float blue) {
+        GPUFixture fixture;
+        fixture.logicalSize = CGSizeMake(runtime.geometry.logicalSize.width, runtime.geometry.logicalSize.height);
+        auto points = quad(runtime);
+        for (Vertex& point : points) { point.r=red;point.g=green;point.b=blue;point.a=1; }
+        fixture.append(points, {0,0,0,0,0x2100,0,1,0,0,0,0}, false);
+        return fixture;
+    };
+    const GPUFixture red = solid(1,0,0), green = solid(0,1,0), blue = solid(0,0,1);
+    std::vector<uint8_t> original, afterTrim, afterQueuedTrim, afterRecovery, retainedPixels;
+    if (!captureFixture(gpu, red, original, 1, 1)) return false;
+    struct Snapshot {
+        CGImageRef image;
+        ~Snapshot() { if (image) CGImageRelease(image); }
+    } retained{[gpu copyCurrentFrame]};
+    id<MTLTexture> texture = gpu.latestTexture;
+    [gpu trimTransientResources];
+    Snapshot rebuilt{[gpu copyCurrentFrame]};
+    if (!require(gpu.latestTexture == texture, "trim retains the currently rendered game texture") ||
+        !snapshotBytes(rebuilt.image, afterTrim) ||
+        !require(afterTrim == original, "readback rebuild after trim is byte-identical")) return false;
+
+    id<MTLSharedEvent> gate = [gpu.device newSharedEvent];
+    if (gate) {
+        // Gate the renderer's queue before submitting, making the pending frame
+        // deterministic instead of relying on how quickly a GPU finishes it.
+        id<MTLCommandQueue> queue = [gpu valueForKey:@"queue"];
+        id<MTLCommandBuffer> blocker = [queue commandBuffer];
+        [blocker encodeWaitForEvent:gate value:1];
+        [blocker commit];
+        const bool submitted = [gpu renderVertices:green.vertices.data() vertexCount:green.vertices.size()
+            draws:green.draws.data() drawCount:green.draws.size() logicalSize:green.logicalSize
+            pixelWidth:RasterWidth pixelHeight:RasterHeight];
+        id<MTLCommandBuffer> pending = [gpu valueForKey:@"latestRender"];
+        if (!require(submitted && pending.status != MTLCommandBufferStatusCompleted &&
+                pending.status != MTLCommandBufferStatusError, "trim fixture has a genuinely queued GPU frame")) {
+            gate.signaledValue = 1;
+            return false;
+        }
+        // Core Image may synchronize while clearing its caches. A bounded
+        // fallback releases only this fixture's artificial GPU gate if needed.
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, NSEC_PER_SEC),
+            dispatch_get_global_queue(QOS_CLASS_USER_INITIATED, 0), ^{ gate.signaledValue = 1; });
+        [gpu trimTransientResources];
+        gate.signaledValue = 1;
+        Snapshot queued{[gpu copyCurrentFrame]};
+        if (!snapshotBytes(queued.image, afterQueuedTrim)) return false;
+        for (size_t p=0; p<afterQueuedTrim.size(); p+=4)
+            if (!require(afterQueuedTrim[p] == 0 && afterQueuedTrim[p+1] == 255 &&
+                    afterQueuedTrim[p+2] == 0 && afterQueuedTrim[p+3] == 255,
+                    "queued GPU vertices and output survive cache trimming")) return false;
+    } else return require(false, "available Metal device could not create the shared event required by the queued trim fixture");
+    if (!captureFixture(gpu, blue, afterRecovery, 1, 1) ||
+        !snapshotBytes(retained.image, retainedPixels) ||
+        !require(retainedPixels == original, "caller-retained snapshot remains immutable after trim and later frames")) return false;
+    for (size_t p=0; p<afterRecovery.size(); p+=4)
+        if (!require(afterRecovery[p] == 0 && afterRecovery[p+1] == 0 &&
+                afterRecovery[p+2] == 255 && afterRecovery[p+3] == 255,
+                "ordinary rendering and readback recover after trim")) return false;
+    printf("PASS cache trim preserves current/queued frames, retained snapshot ownership, and later GPU rendering\n");
+    return true;
+}
+
 bool prepareMenus(NSString *resources, Texture& gameStart) {
     double maximumAlphaError = 0, maximumColorError = 0;
     for (NSString *name in @[@"game_start.png", @"credits.png", @"continue.png",
@@ -418,7 +500,14 @@ int main(int argc, const char *argv[]) {
         Runtime runtime;
         runtime.geometry = DisplayGeometry::make({RasterWidth, RasterHeight}, 1);
         SDBMetalRenderer *gpu = [SDBMetalRenderer new];
-        if (!gpu.supported) printf("SKIP GPU parity: %s; CPU checks continue.\n", gpu.failure.UTF8String ?: "Metal unavailable");
+        if (!gpu.supported) {
+            if (gpu.device) {
+                fprintf(stderr, "FAIL Metal initialization on an available device: %s\n",
+                        gpu.failure.UTF8String ?: "renderer did not become ready");
+                return 1;
+            }
+            printf("SKIP GPU parity: no Metal device; CPU checks continue.\n");
+        }
         if (gpu.supported && !require([[gpu valueForKey:@"pipelines"] count] == 3,
                                      "three common blend pipelines exist before the first frame")) return 1;
 
@@ -490,7 +579,7 @@ int main(int argc, const char *argv[]) {
             !batchParity(runtime, gpu, "additive overlap batching", rgba, false, 1) ||
             !batchParity(runtime, gpu, "original glyph cell batching", originalFont, true) ||
             !batchParity(runtime, gpu, "SDF overlap batching", menu, false) ||
-            !batchStateBoundaries(runtime, gpu, rgba)) return 1;
+            !batchStateBoundaries(runtime, gpu, rgba) || !trimPreservesFrames(runtime, gpu)) return 1;
         printf("PASS CPU coverage, winding, shadow, original font alpha/linear and six-label decomposition; GPU parity %s.\n",
                gpu.supported ? "passed" : "SKIPPED");
         return 0;

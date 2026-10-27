@@ -192,7 +192,16 @@ int run(int argc, char **argv) {
     if (watch) setenv("SDB_CPU_RENDERER", "1", 1); else unsetenv("SDB_CPU_RENDERER");
     SDBEngine *engine = [[SDBEngine alloc] initWithResourcePath:[NSString stringWithUTF8String:argv[1]]];
     if (!check(engine, "initialize")) return 1;
-    if (!watch && !engine.usesMetalRenderer) { fprintf(stderr, "SKIP Metal unavailable\n"); return 77; }
+    if (!watch && !engine.usesMetalRenderer) {
+        SDBMetalRenderer *renderer = [engine valueForKey:@"metalRenderer"];
+        if (engine.metalDevice) {
+            fprintf(stderr, "FAIL Metal initialization on an available device: %s\n",
+                    renderer.failure.UTF8String ?: "renderer did not become ready");
+            return 1;
+        }
+        fprintf(stderr, "SKIP no Metal device\n");
+        return 77;
+    }
     if (watch) engine.watchLayout = YES;
     const CGSize size = watch ? CGSizeMake(416, 496) : CGSizeMake(480, 320);
     [engine configureViewport:size displayScale:1 safeArea:CGRectMake(0, 0, size.width, size.height)];

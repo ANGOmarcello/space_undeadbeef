@@ -93,6 +93,7 @@ OSStatus render(MixerState& state, BOOL *silent, AVAudioFrameCount frames, Audio
 - (void)recordFailure:(NSString *)message;
 - (BOOL)prepareOnControlQueue;
 - (void)shutdownOnControlQueue;
+- (BOOL)attachGraphOnControlQueue;
 @end
 
 @interface SDBAudioVoice ()
@@ -127,6 +128,15 @@ OSStatus render(MixerState& state, BOOL *silent, AVAudioFrameCount frames, Audio
     _state = std::make_shared<MixerState>();
     _format = [[AVAudioFormat alloc] initStandardFormatWithSampleRate:MixingSampleRate channels:MixingChannels];
     if (!_engine || !_format) { [self recordFailure:@"Unable to create the persistent audio graph."]; return self; }
+    if (![self attachGraphOnControlQueue]) return self;
+    NSMutableArray<SDBAudioVoice *> *voices = [NSMutableArray arrayWithCapacity:VoiceCount];
+    for (unsigned index = 0; index < VoiceCount; ++index)
+        [voices addObject:[[SDBAudioVoice alloc] initWithMixer:self state:_state index:index]];
+    _voices = [voices copy];
+    return self;
+}
+
+- (BOOL)attachGraphOnControlQueue {
     const auto state = _state;
     _source = [[AVAudioSourceNode alloc] initWithFormat:_format renderBlock:
         ^OSStatus(BOOL *silent, const AudioTimeStamp *, AVAudioFrameCount frames, AudioBufferList *output) {
@@ -139,7 +149,7 @@ OSStatus render(MixerState& state, BOOL *silent, AVAudioFrameCount frames, Audio
     if (@available(macOS 27.0, iOS 27.0, tvOS 27.0, watchOS 27.0, *)) {
         if (![_engine connect:_source to:_engine.mainMixerNode format:_format error:&error]) {
             [self recordFailure:error.localizedDescription ?: @"Unable to connect the persistent audio source."];
-            return self;
+            return NO;
         }
     } else {
 #pragma clang diagnostic push
@@ -147,11 +157,7 @@ OSStatus render(MixerState& state, BOOL *silent, AVAudioFrameCount frames, Audio
         [_engine connect:_source to:_engine.mainMixerNode format:_format];
 #pragma clang diagnostic pop
     }
-    NSMutableArray<SDBAudioVoice *> *voices = [NSMutableArray arrayWithCapacity:VoiceCount];
-    for (unsigned index = 0; index < VoiceCount; ++index)
-        [voices addObject:[[SDBAudioVoice alloc] initWithMixer:self state:_state index:index]];
-    _voices = [voices copy];
-    return self;
+    return YES;
 }
 
 - (void)dealloc {
@@ -248,6 +254,33 @@ OSStatus render(MixerState& state, BOOL *silent, AVAudioFrameCount frames, Audio
     dispatch_sync(_controlQueue, ^{ prepared = [self prepareOnControlQueue]; });
     return prepared;
 }
+
+- (void)suspend {
+    _prepared.store(false, std::memory_order_release);
+    _state->prepared.store(false, std::memory_order_release);
+    if (dispatch_get_specific(&AudioControlQueueKey) == (__bridge void *)self) [_engine stop];
+    else dispatch_sync(_controlQueue, ^{ [self->_engine stop]; });
+}
+
+- (BOOL)rebuildAfterMediaServicesReset { return [self rebuildWithEngine:[AVAudioEngine new]]; }
+
+- (BOOL)rebuildWithEngine:(AVAudioEngine *)engine {
+    if (!engine) return NO;
+    [self suspend];
+    __block BOOL rebuilt = NO;
+    void (^rebuild)(void) = ^{
+        [self shutdownOnControlQueue];
+        self->_source = nil;
+        self->_engine = engine;
+        { std::lock_guard<std::mutex> lock(self->_failureMutex); self->_failure = nil; }
+        // PCM buffers and voice atomics retain their identities; only the
+        // disposable engine/source graph belongs to the reset media service.
+        rebuilt = [self attachGraphOnControlQueue];
+    };
+    if (dispatch_get_specific(&AudioControlQueueKey) == (__bridge void *)self) rebuild();
+    else dispatch_sync(_controlQueue, rebuild);
+    return rebuilt;
+}
 - (BOOL)prepareOnControlQueue {
     if (self.failure || _voices.count != VoiceCount) return NO;
     if (_engine.isRunning) {
@@ -271,7 +304,7 @@ OSStatus render(MixerState& state, BOOL *silent, AVAudioFrameCount frames, Audio
     dispatch_async(_controlQueue, ^{
         SDBAudioMixer *mixer = owner;
         if (!mixer) return;
-        [mixer prepareOnControlQueue];
+        if (mixer->_prepared.load(std::memory_order_acquire)) [mixer prepareOnControlQueue];
         mixer->_wakePending.store(false, std::memory_order_release);
     });
 }

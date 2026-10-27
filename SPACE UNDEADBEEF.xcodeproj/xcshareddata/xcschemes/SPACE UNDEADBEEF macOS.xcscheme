@@ -14,7 +14,7 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "E7E158CCB5B6C60EE24F7786FDC83C17"
+               BlueprintIdentifier = "8F9CC4AE685610F539EE215D4452C878"
                BuildableName = "SpaceUndeadbeef.app"
                BlueprintName = "SPACE UNDEADBEEF macOS"
                ReferencedContainer = "container:SPACE UNDEADBEEF.xcodeproj">
@@ -30,7 +30,7 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "E7E158CCB5B6C60EE24F7786FDC83C17"
+            BlueprintIdentifier = "8F9CC4AE685610F539EE215D4452C878"
             BuildableName = "SpaceUndeadbeef.app"
             BlueprintName = "SPACE UNDEADBEEF macOS"
             ReferencedContainer = "container:SPACE UNDEADBEEF.xcodeproj">
@@ -53,7 +53,7 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "E7E158CCB5B6C60EE24F7786FDC83C17"
+            BlueprintIdentifier = "8F9CC4AE685610F539EE215D4452C878"
             BuildableName = "SpaceUndeadbeef.app"
             BlueprintName = "SPACE UNDEADBEEF macOS"
             ReferencedContainer = "container:SPACE UNDEADBEEF.xcodeproj">
@@ -70,7 +70,7 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "E7E158CCB5B6C60EE24F7786FDC83C17"
+            BlueprintIdentifier = "8F9CC4AE685610F539EE215D4452C878"
             BuildableName = "SpaceUndeadbeef.app"
             BlueprintName = "SPACE UNDEADBEEF macOS"
             ReferencedContainer = "container:SPACE UNDEADBEEF.xcodeproj">

@@ -171,11 +171,45 @@ bool colorAndBlendFaults() {
     draw();
     return require(runtime.cpu.fault == "Unsupported GL blend factor", "invalid destination blend still faults");
 }
+bool softwarePacketBoundaries() {
+    Runtime direct, collected;
+    for (Runtime *runtime : {&direct, &collected}) {
+        prepare(*runtime); runtime->metal = false;
+        runtime->geometry = DisplayGeometry::make({2, 2}, 1); runtime->pixels.assign(16, 0);
+        const float coordinates[] = {-240,-240,-240,240,240,-240,240,240};
+        runtime->cpu.load(0x1000, coordinates, sizeof(coordinates));
+    }
+    collected.collectSoftwareDraws = true;
+    direct.draw(5, 0, 4); collected.draw(5, 0, 4);
+    direct.blend = collected.blend = true;
+    direct.sourceBlend = collected.sourceBlend = 0xdead;
+    direct.draw(5, 0, 4); collected.draw(5, 0, 4);
+    if (!require(direct.cpu.fault == "Unsupported GL blend factor" && collected.cpu.fault == direct.cpu.fault,
+                 "collected draw preserves immediate original blend fault") ||
+        !require(direct.pixels == collected.pixels && direct.draws == collected.draws,
+                 "scalar fault fallback preserves earlier draws and counters")) return false;
+    Runtime invalid;
+    invalid.metalVertices.resize(1);
+    invalid.metalDraws.push_back({UINT32_MAX,3,0,0,0,0,0,0,0,0,0});
+    invalid.texture = 71; invalid.blend = true;
+    invalid.rasterizeSoftwarePacket();
+    if (!require(invalid.cpu.fault == "Invalid collected software triangle range",
+                 "replay rejects invalid range before pointer arithmetic") ||
+        !require(invalid.texture == 71 && invalid.blend, "replay restores state after rejected range")) return false;
+    Runtime packet;
+    prepare(packet); packet.draw(5, 0, 4); packet.rememberMenuPacket(1);
+    if (!require(packet.sameMenuPacket(1), "identical bounded packet recognized")) return false;
+    ++packet.textureGeneration;
+    if (!require(!packet.sameMenuPacket(1), "texture generation invalidates packet")) return false;
+    packet.metalVertices.resize(Runtime::MaximumMenuPacketBytes / sizeof(SDBMetalVertex) + 1);
+    packet.rememberMenuPacket(1);
+    return require(!packet.sameMenuPacket(1), "oversized packet is not retained for reuse");
+}
 }
 
 int main() {
     @autoreleasepool {
-        if (!topologyAndReuse() || !titleAndBackground() || !colorAndBlendFaults()) return 1;
+        if (!topologyAndReuse() || !titleAndBackground() || !colorAndBlendFaults() || !softwarePacketBoundaries()) return 1;
         printf("Passed %u draw assembly checks.\n", checks);
     }
 }

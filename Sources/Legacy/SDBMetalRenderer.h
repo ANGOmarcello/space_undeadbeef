@@ -62,6 +62,11 @@ typedef struct {
 /// presentCurrentFrameToDrawable: instead. The caller owns the returned image.
 - (nullable CGImageRef)copyCurrentFrame CF_RETURNS_RETAINED;
 
+/// Discards the optional readback image and Core Image caches under memory
+/// pressure. Retained caller snapshots, current game texture, queued commands
+/// and all vertex-buffer ownership stay intact. No frame is rerendered here.
+- (void)trimTransientResources;
+
 #if !TARGET_OS_WATCH
 @property(nonatomic, readonly, nullable) id<MTLDevice> device;
 /// Contents become ready in command-queue order; callers must not mutate them.

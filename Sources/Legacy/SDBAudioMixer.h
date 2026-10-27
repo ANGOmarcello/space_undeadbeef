@@ -29,6 +29,13 @@ NS_ASSUME_NONNULL_BEGIN
 /// Configures the graph and starts the engine. Repeated calls are cheap
 /// while running; after a system interruption it can restart the same graph.
 - (BOOL)prepare;
+/// Stops native callbacks while retaining decoded PCM and logical voice state.
+- (void)suspend;
+/// Recreates orphaned native audio objects after a media-services reset. Does
+/// not start playback; the caller must wait for explicit user initiation.
+- (BOOL)rebuildAfterMediaServicesReset;
+/// Offline verification supplies a new manual-rendering engine here.
+- (BOOL)rebuildWithEngine:(AVAudioEngine *)engine;
 /// Coalesces an asynchronous engine running-check/restart after an audio event.
 /// No hardware API or render-cycle wait runs on the calling game thread.
 - (void)wakeIfNeeded;

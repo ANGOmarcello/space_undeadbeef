@@ -17,13 +17,16 @@ legacy_group = source_group.new_group('Legacy', 'Legacy')
 host_sources = Dir.glob(File.join(root, 'Sources/Host/*.swift')).sort.map do |path|
   host_group.new_file(File.basename(path))
 end
-legacy_files = Dir.glob(File.join(root, 'Sources/Legacy/*.{h,c,cpp,m,mm}')).sort.map do |path|
-  legacy_group.new_file(File.basename(path))
+legacy_files = Dir.glob(File.join(root, 'Sources/Legacy/*.{h,c,cpp,m,mm,metal}')).sort.map do |path|
+  file = legacy_group.new_file(File.basename(path))
+  file.last_known_file_type = 'sourcecode.metal' if path.end_with?('.metal')
+  file
 end
 legacy_sources = legacy_files.reject { |file| file.path.end_with?('.h') }
 config_group = project.main_group.new_group('Config', 'Config')
 config = config_group.new_file('App.xcconfig')
 config_group.new_file('SpaceUndeadbeef-Bridging-Header.h')
+config_group.new_file('ProgressSync.entitlements')
 resources_group = project.main_group.new_group('Resources', 'Resources')
 original = resources_group.new_file('Original')
 original.last_known_file_type = 'folder'
@@ -46,13 +49,17 @@ platforms.each do |name, options|
   target.product_name = 'SpaceUndeadbeef'
   target.product_reference.path = 'SpaceUndeadbeef.app'
   target.product_reference.name = "SpaceUndeadbeef (#{name}).app"
-  (host_sources + legacy_sources).each { |file| target.source_build_phase.add_file_reference(file) }
+  (host_sources + legacy_sources).each do |file|
+    next if name == 'watchOS' && file.path.end_with?('.metal')
+    target.source_build_phase.add_file_reference(file)
+  end
   target.resources_build_phase.add_file_reference(original)
   target.resources_build_phase.add_file_reference(modern)
   icon_catalog = icons_group.new_file("#{name}.xcassets")
   target.resources_build_phase.add_file_reference(icon_catalog)
   target.add_system_frameworks(['Foundation', 'CoreGraphics', 'ImageIO', 'AVFoundation'])
   target.add_system_frameworks(['Metal', 'MetalKit', 'CoreImage', 'QuartzCore']) unless name == 'watchOS'
+  target.add_system_frameworks(['GameController']) unless name == 'watchOS'
   plist_path = File.join(root, 'Config', "#{name}-Info.plist")
   plist = {
     'CFBundleDevelopmentRegion' => 'en',
@@ -64,6 +71,7 @@ platforms.each do |name, options|
     'CFBundlePackageType' => 'APPL',
     'CFBundleShortVersionString' => '$(MARKETING_VERSION)',
     'CFBundleVersion' => '$(CURRENT_PROJECT_VERSION)',
+    'SDBProgressSyncEnabled' => true,
     'ITSAppUsesNonExemptEncryption' => false
   }
   case name
@@ -83,17 +91,24 @@ platforms.each do |name, options|
     plist['WKApplication'] = true
     plist['WKWatchOnly'] = true
   end
+  if ['iOS', 'tvOS'].include?(name)
+    # The native host handles extended controllers. Siri Remote retains its
+    # existing host path; do not advertise a second MicroGamepad handler.
+    plist['GCSupportedGameControllers'] = [{ 'ProfileName' => 'ExtendedGamepad' }]
+  end
   Xcodeproj::Plist.write_to_path(plist, plist_path)
   config_group.new_file("#{name}-Info.plist")
   target.build_configurations.each do |configuration|
     configuration.base_configuration_reference = config
     settings = configuration.build_settings
     settings['PRODUCT_BUNDLE_IDENTIFIER'] = "dev.cammalleri.SpaceUndeadbeef#{options[:suffix]}"
+    settings['CODE_SIGN_ENTITLEMENTS'] = 'Config/ProgressSync.entitlements'
     settings['ASSETCATALOG_COMPILER_APPICON_NAME'] = 'AppIcon'
     settings.delete('ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME')
     settings['INFOPLIST_FILE'] = "Config/#{name}-Info.plist"
     settings['SDKROOT'] = options[:sdk]
     settings['SUPPORTED_PLATFORMS'] = options[:supported]
+    settings['MTL_LANGUAGE_REVISION'] = 'Metal24' unless name == 'watchOS'
     settings[options[:deployment]] = options[:version]
     settings['TARGETED_DEVICE_FAMILY'] = options[:family] if options[:family]
     settings['SUPPORTS_MACCATALYST'] = 'NO' if name == 'iOS'

@@ -8,11 +8,13 @@ if [[ $# -gt 1 ]]; then
 fi
 TASK_TEMP="$(mktemp -d /private/tmp/space-undeadbeef-watch-controls.XXXXXX)"
 trap 'rm -rf "$TASK_TEMP"' EXIT
+source "$PROJECT_ROOT/script/prepare_metal_library.sh"
+sdb_prepare_metal_library "$TASK_TEMP"
 cd "$PROJECT_ROOT"
-xcrun clang++ -std=c++17 -O1 -g -fobjc-arc -Wall -Wextra -Werror \
+xcrun clang++ -DSDB_HEADLESS_TESTS=1 -std=c++17 -O1 -g -fobjc-arc -Wall -Wextra -Werror \
   -fsanitize=address,undefined -fno-omit-frame-pointer \
   -I Sources/Legacy Sources/Legacy/GuestCPU.cpp Sources/Legacy/GameDisplayPatch.cpp \
-  Sources/Legacy/SDBMetalRenderer.mm Sources/Legacy/SDBAudioMixer.mm Sources/Legacy/SDBEngine.mm \
+  Sources/Legacy/SDBMetalRenderer.mm Sources/Legacy/SDBAudioMixer.mm Sources/Legacy/SDBSaveStore.mm Sources/Legacy/SDBEngine.mm \
   Tests/WatchControlsSmoke.mm -framework Foundation -framework CoreGraphics \
   -framework ImageIO -framework AVFoundation -framework Metal -framework CoreImage -framework QuartzCore \
   -o "$TASK_TEMP/WatchControlsSmoke"

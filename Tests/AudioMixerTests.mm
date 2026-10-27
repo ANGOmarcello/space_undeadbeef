@@ -242,6 +242,19 @@ int exactTransport(NSString *scratch, AVAudioFormat *format) {
     REQUIRE([mixer prepare] && [voice play], "lifecycle preparation resumes existing paused voice");
     REQUIRE(difference(repeated(samples, 64, 17), render(engine, output, 17)) < .000001,
             "engine restart retains paused loop sample cursor");
+    [voice pause];
+    [mixer suspend];
+    for (unsigned event = 0; event < 64; ++event) [mixer wakeIfNeeded];
+    [NSThread sleepForTimeInterval:.01];
+    REQUIRE(!engine.isRunning, "background suspension cannot be undone by queued event wake requests");
+    AVAudioEngine *replacement = offlineEngine(format);
+    REQUIRE(replacement && [mixer rebuildWithEngine:replacement], "replace orphaned native graph after media reset");
+    REQUIRE(!replacement.isRunning && sourceCount(replacement) == 1,
+            "media reset rebuild stays stopped until an explicit prepare");
+    REQUIRE([mixer voiceForSource:1] == voice, "logical voices retain identity across native graph replacement");
+    REQUIRE([mixer prepare] && [voice play], "explicit user resume starts the rebuilt graph");
+    REQUIRE(difference(repeated(samples, 81, 17), render(replacement, output, 17)) < .000001,
+            "rebuilt graph retains cached PCM, gains and paused sample cursor");
     voice.volume = NAN; mixer.outputVolume = INFINITY;
     REQUIRE(voice.volume == 0 && mixer.outputVolume == 0, "nonfinite gains become process-local silence");
     voice.volume = -1; mixer.outputVolume = 2;

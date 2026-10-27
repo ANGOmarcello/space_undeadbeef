@@ -1,0 +1,16 @@
+fixture=actual-engine-v1 backend=metal watchLayout=0 raster=480x320 warmup=90 frames=300
+checkpoint=initial index=0 state=71731b074fcc6bd03bcd86f8d92abc7a0df2afb182c688515cd98cc6cd2fa9cb frames=2 draws=34 instructions=15087 audio=0 menu=1
+checkpoint=warmup index=90 state=6ec0822db90a92f119ae7a5880f1ab9ad8ae8f29af221516d4482795807525a0 frames=92 draws=1564 instructions=812355 audio=0 menu=1
+checkpoint=start index=0 state=9d6501d6e91e572f20197c6802a034d378c6877f8e6d49013edc6655035fd971 frames=93 draws=1581 instructions=822044 audio=1 menu=1
+checkpoint=frame index=30 state=1ed6edb4cda0abf4af9d64fc3d7d3ed460ca0ea4a38842b8b5d345797911ff7e frames=123 draws=2138 instructions=1093438 audio=1 menu=0
+checkpoint=frame index=60 state=6471abf66313871806edf55d74a9fe40b04be4df71760b20cd957276ce385b69 frames=153 draws=4147 instructions=1553348 audio=2 menu=0
+checkpoint=frame index=90 state=d7d4acd436d1b8f1937ff04deda130ac5235adf60cc44baa165cd0106b6a0871 frames=183 draws=6172 instructions=2018837 audio=2 menu=0
+checkpoint=frame index=120 state=538d72742dde462c1b7de7da7bf03a8c23909a3d5fd57e3946a946dc27a966c4 frames=213 draws=8182 instructions=2486946 audio=2 menu=0
+checkpoint=frame index=150 state=91c5d45ed7c31400d5fe816f52d953a4fcc31526af0ec1eeed4a53591ce040f6 frames=243 draws=10177 instructions=2950052 audio=2 menu=0
+checkpoint=frame index=180 state=a07abf4fe0bd7d6e1b6f716af39964a5519dd4291b557a664af01e975e5b47ce frames=273 draws=12187 instructions=3413317 audio=2 menu=0
+checkpoint=frame index=210 state=217d0ea5306061452264b73bf950dd372790d19e2958aecb197f52bc55f30d2a frames=303 draws=14197 instructions=3876415 audio=2 menu=0
+checkpoint=frame index=240 state=823861fa62d3666c19b944e439b3977707065b3cfc8b1d7225a7de659d208f89 frames=333 draws=16192 instructions=4340649 audio=2 menu=0
+checkpoint=frame index=270 state=995446ef019c037a6bb464b9b358958c94dfd3dba62ec43b56dfed00ea8ab9d6 frames=363 draws=18176 instructions=4793788 audio=2 menu=0
+checkpoint=frame index=300 state=aba5e3a1005bd893c3ed1cdd084a13d23f1a08b38730e506dec5d87305520c2a frames=393 draws=20155 instructions=5245123 audio=2 menu=0
+checkpoint=suspended index=300 state=5caa192cc8e93c66f3ab68d7dc1b70f160119d67e1ab100bdc524296a73a22b2 frames=393 draws=20155 instructions=5245195 audio=2 menu=0
+save bytes=256 sha256=d6f412526e2e799f2ebf1464e4c070f54eb9653db8438667fc7f69dce6b4a369

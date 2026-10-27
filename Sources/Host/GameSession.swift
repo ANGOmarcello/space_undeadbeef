@@ -50,8 +50,11 @@ final class GameSession {
     private(set) var usesMetalRenderer = false
     private(set) var isActive = false
     private(set) var canPause = false
+    private(set) var canRequestUserResume = false
     private(set) var gameMenuType = 0
     private(set) var failure: String?
+    private(set) var menuActions: [GameMenuAction] = []
+    private(set) var persistenceError: String?
     private(set) var pointer = CGPoint(x: GameLayout.width / 2, y: GameLayout.height / 2)
     private(set) var showsPointer = false
     private(set) var isTouching = false
@@ -64,16 +67,118 @@ final class GameSession {
     @ObservationIgnored private var releasesTapAfterStep = false
     @ObservationIgnored private let haptics = GameHaptics()
     @ObservationIgnored private var crownInput = GameCrownInput()
+    @ObservationIgnored lazy var inputController = GameInputController(session: self)
+    @ObservationIgnored private var lifecycle = GameLifecyclePolicy()
+    @ObservationIgnored private lazy var interruptionMonitor = GameInterruptionMonitor { [weak self] event in
+        self?.handleLifecycle(event)
+    }
+    @ObservationIgnored private var checkpointSteps = 0
+    @ObservationIgnored private var reportedSaveError: String?
+    @ObservationIgnored private let progressSync = GameProgressSync()
 
     init(engine: SDBEngine? = nil) {
         self.engine = engine
     }
 
+    func setSceneActive(_ active: Bool) {
+        interruptionMonitor.start()
+        handleLifecycle(.scene(active))
+    }
+
+    func handleLifecycle(_ event: GameLifecycleEvent) {
+        defer { refreshUserResumeAvailability() }
+        let mustPause: Bool
+        switch event {
+        case .scene(false), .application(false), .audioInterrupted, .routeDisconnected,
+             .mediaServicesLost, .mediaServicesReset:
+            mustPause = true
+        default: mustPause = false
+        }
+        if mustPause {
+            inputController.resetHeldInputs()
+            if canPause { pauseGame(deliverFeedback: false) }
+        }
+        lifecycle.handle(event)
+        if case .memoryPressure = event {
+            // A bounded checkpoint protects progress before possible eviction.
+            saveCheckpoint(completed: true)
+            engine?.trimTransientResources()
+            return
+        }
+        setActive(lifecycle.shouldRun)
+    }
+
+    private func prepareForUserInteraction() -> Bool {
+        defer { refreshUserResumeAvailability() }
+        guard persistenceError == nil else { return false }
+        if isActive { return true }
+        guard lifecycle.canAcceptUserResume else { return false }
+        if lifecycle.needsAudioRebuild {
+            guard engine?.recoverAudioAfterMediaServicesReset() == true else { return false }
+            lifecycle.audioRebuilt()
+        }
+        lifecycle.handle(.userInteraction)
+        setActive(lifecycle.shouldRun)
+        return isActive && failure == nil
+    }
+
+    @discardableResult
+    func requestUserResume() -> Bool { prepareForUserInteraction() }
+
+    private func refreshUserResumeAvailability() {
+        let available = !isActive && failure == nil && persistenceError == nil && engine != nil && engine?.failure == nil &&
+            lifecycle.canAcceptUserResume && (lifecycle.requiresUserResume || lifecycle.needsAudioRebuild)
+        if canRequestUserResume != available { canRequestUserResume = available }
+    }
+
+    @discardableResult
+    func activateMenuAction(_ identifier: String) -> Bool {
+        guard prepareForUserInteraction(), let engine else { return false }
+        inputController.resetHeldInputs()
+        cancelTouch()
+        let accepted = engine.activateMenuAction(identifier)
+        deliverHaptics(from: engine)
+        refreshState(from: engine)
+        return accepted
+    }
+
+    func dismissPersistenceError() {
+        inputController.resetHeldInputs()
+        cancelTouch()
+        persistenceError = nil
+        refreshUserResumeAvailability()
+    }
+
+    private func saveCheckpoint(completed: Bool = false) {
+        guard let engine, failure == nil else { return }
+        if completed { _ = engine.saveProgress() }
+        else { engine.checkpointProgress() }
+        progressSync.exchange(with: engine)
+        updatePersistenceError(from: engine)
+    }
+
+    private func updatePersistenceError(from engine: SDBEngine) {
+        let error = engine.lastSaveError
+        if error == nil { reportedSaveError = nil; persistenceError = nil }
+        else if error != reportedSaveError {
+            reportedSaveError = error
+            persistenceError = error
+            inputController.resetHeldInputs()
+            cancelTouch()
+            // The native alert must not leave the original ship playing behind
+            // a modal sheet. Record the error first to prevent recursive alerts.
+            if isActive && canPause { pauseGame(deliverFeedback: false) }
+        }
+    }
+
     func setActive(_ active: Bool) {
+        defer { refreshUserResumeAvailability() }
         if !active {
             isActive = false
+            inputController.setActive(false)
             cancelTouch()
             engine?.setSuspended(true)
+            if let engine { updatePersistenceError(from: engine) }
             _ = engine?.consumeHapticEvents()
             haptics.reset()
             canPause = false
@@ -105,6 +210,8 @@ final class GameSession {
         // steps keep the same bounded catch-up and scheduling-time debt.
         clock.reset(at: usesMetalRenderer ? ProcessInfo.processInfo.systemUptime : nil)
         isActive = true
+        inputController.setActive(true)
+        if let engine { progressSync.exchange(with: engine, foreground: true) }
         // MetalKit drives supported views directly. Watch and other software
         // fallbacks still need a timer to publish their CPU-rendered CGImage.
         guard !usesMetalRenderer else { return }
@@ -113,12 +220,13 @@ final class GameSession {
             MainActor.assumeIsolated {
                 guard let self else { return }
                 let started = ProcessInfo.processInfo.systemUptime
+                let previousFrame = self.frame
                 let steps = self.drawDisplayFrame(at: started)
                 if self.softwareMetrics.enabled {
                     self.softwareMetrics.record(started: started,
                         finished: ProcessInfo.processInfo.systemUptime,
                         simulationSteps: steps,
-                        producedFrame: steps > 0 && self.failure == nil && self.frame != nil,
+                        producedFrame: self.frame !== previousFrame && self.failure == nil && self.frame != nil,
                         menuType: self.gameMenuType)
                 }
             }
@@ -135,7 +243,13 @@ final class GameSession {
         let steps = clock.steps(at: time)
         guard steps > 0 else { return 0 }
         for _ in 0..<steps {
+            inputController.tick(GameLayout.simulationStep)
             engine.advanceSimulation(GameLayout.simulationStep)
+            checkpointSteps += 1
+            if checkpointSteps >= GameFrameClock.framesPerSecond * 30 {
+                checkpointSteps = 0
+                saveCheckpoint()
+            }
             if releasesTapAfterStep {
                 endTouch()
                 releasesTapAfterStep = false
@@ -151,6 +265,7 @@ final class GameSession {
     func configure(_ viewport: GameViewport) {
         self.viewport = viewport
         guard let engine else { return }
+        inputController.resetHeldInputs()
         cancelTouch()
         let old = logicalSize
         engine.configureViewport(viewport.size, displayScale: viewport.scale, safeArea: viewport.safeArea)
@@ -164,13 +279,26 @@ final class GameSession {
     private func refreshState(from engine: SDBEngine) {
         let metal = engine.usesMetalRenderer
         if usesMetalRenderer != metal { usesMetalRenderer = metal }
-        if !metal { frame = engine.frame }
+        if !metal {
+            // A stable software menu retains its immutable image. Publishing
+            // the same reference would still invalidate the SwiftUI leaf.
+            let next = engine.frame
+            if frame !== next { frame = next }
+        }
         else if frame != nil { frame = nil }
         let pause = engine.canPause
         if canPause != pause { canPause = pause }
         let menu = Int(engine.gameMenuType)
         if gameMenuType != menu { gameMenuType = menu }
+        if menu == 1, isActive, progressSync.needsExchange { progressSync.exchange(with: engine) }
+        let actions = engine.menuActions.map {
+            GameMenuAction(identifier: $0.identifier, label: $0.label,
+                           logicalFrame: $0.logicalFrame, selected: $0.selected)
+        }
+        if menuActions != actions { menuActions = actions }
+        updatePersistenceError(from: engine)
         if failure != engine.failure { failure = engine.failure }
+        refreshUserResumeAvailability()
         if !engine.canSteerShip || menu != 0 || failure != nil { endCrownSteering() }
     }
 
@@ -186,11 +314,13 @@ final class GameSession {
     func detachHaptics(from view: UIView) { haptics.detach(from: view) }
     #endif
 
-    func pauseGame() {
+    func pauseGame(deliverFeedback: Bool = true) {
         guard let engine, canPause else { return }
+        inputController.resetHeldInputs()
         cancelTouch()
         engine.pauseGame()
-        deliverHaptics(from: engine)
+        if deliverFeedback { deliverHaptics(from: engine) }
+        else { _ = engine.consumeHapticEvents() }
         refreshState(from: engine)
         if failure != nil { setActive(false) }
     }
@@ -200,6 +330,7 @@ final class GameSession {
     }
 
     func drag(to point: CGPoint) {
+        guard prepareForUserInteraction() else { return }
         endCrownSteering()
         pointer = point
         showsPointer = false
@@ -215,13 +346,14 @@ final class GameSession {
 
     func cancelTouch() {
         endCrownSteering()
-        guard isTouching else { return }
-        engine?.touchPhase(3, x: pointer.x, y: pointer.y)
-        isTouching = false
         releasesTapAfterStep = false
+        guard isTouching else { return }
+        engine?.cancelHeldInput()
+        isTouching = false
     }
 
     func movePointer(dx: CGFloat, dy: CGFloat) {
+        guard persistenceError == nil else { return }
         pointer = CGPoint(
             x: min(logicalSize.width, max(0, pointer.x + dx)),
             y: min(logicalSize.height, max(0, pointer.y + dy))
@@ -237,6 +369,7 @@ final class GameSession {
     /// Move through the original ship spring without holding a targeting touch.
     /// A held finger keeps ownership; turning the Crown cannot cancel its aim.
     func steerWithCrown(delta: Double) {
+        guard persistenceError == nil else { return }
         guard isActive, !isTouching, failure == nil, let engine,
               engine.canSteerShip, engine.gameMenuType == 0 else {
             endCrownSteering()
@@ -258,6 +391,7 @@ final class GameSession {
     }
 
     func beginPointerTouch() {
+        guard prepareForUserInteraction() else { return }
         guard !isTouching else { return }
         endCrownSteering()
         showsPointer = true
@@ -266,11 +400,13 @@ final class GameSession {
     }
 
     func tapPointer() {
+        guard persistenceError == nil else { return }
         beginPointerTouch()
-        releasesTapAfterStep = true
+        if isTouching { releasesTapAfterStep = true }
     }
 
     func togglePointerTouch() {
+        guard persistenceError == nil else { return }
         if isTouching { endTouch() } else { beginPointerTouch() }
     }
 }

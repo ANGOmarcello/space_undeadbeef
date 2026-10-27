@@ -1,0 +1,27 @@
+fixture=actual-engine-v1 backend=watch watchLayout=1 raster=416x496 warmup=90 frames=600
+checkpoint=initial index=0 state=ee195dc71284918e229b973721c43c4575a7be8ef116708a3a4d78a750cf7ea1 frames=3 draws=51 instructions=19392 audio=0 menu=1
+checkpoint=warmup index=90 state=c7d904beaba9c7a9f9e7fcebb1cce6f353f9d6152a44befff3960d8a54cd1556 frames=93 draws=1581 instructions=816660 audio=0 menu=1
+checkpoint=start index=0 state=6f93c1c82680ba0cf53f11449f9405ec321592c310ad4be9d9b3b35d4b457247 frames=94 draws=1598 instructions=826349 audio=1 menu=1
+checkpoint=frame index=30 state=c7cc54ad9ee101fe6ed319bc6a7853634f47f8501806eb6219e441f5596e7d79 frames=124 draws=2155 instructions=1097743 audio=1 menu=0
+checkpoint=frame index=60 state=0399f1ff45eefd3c9572ff78310df44a0ca772432954eb89d1bcace24bff25db frames=154 draws=4164 instructions=1557653 audio=2 menu=0
+checkpoint=frame index=90 state=8cc3160cf0601f77ac492e3eb6c3f2ccad16981aff8f9a4c6c27b85864601922 frames=184 draws=6189 instructions=2022819 audio=2 menu=0
+checkpoint=frame index=120 state=85c3903bcb97183152a4bcd2135cfdeb95b1744553610aeb5b55f952c4db8d01 frames=214 draws=8199 instructions=2490358 audio=2 menu=0
+checkpoint=frame index=150 state=657a48ba8af6aefc5f92da4fda3ffe54051272c8d61c4d0ebe485ee76236078a frames=244 draws=10194 instructions=2953160 audio=2 menu=0
+checkpoint=frame index=180 state=a3dc25df1b8d45d867db7632dc51e44217cdb0e73d0b01de61c00fb4f0863d4e frames=274 draws=12204 instructions=3416406 audio=2 menu=0
+checkpoint=frame index=210 state=ef95c6798cf93c9384931e63feb7e58e014fa4afdd9079ace48a330aa9c52084 frames=304 draws=14214 instructions=3879504 audio=2 menu=0
+checkpoint=frame index=240 state=108e7fde0fcbcdd35240e63235705e654798896a91b63c91cd73446f88b1da11 frames=334 draws=16209 instructions=4343415 audio=2 menu=0
+checkpoint=frame index=270 state=92303278779cc2b87f816b2d985c8866b513596ffac3b0696a2a78fc9d79cbe2 frames=364 draws=18193 instructions=4795984 audio=2 menu=0
+checkpoint=frame index=300 state=610d1e4ca105fb0d371385ee5f7d552df0146cf76b9aedbb7484314eb87d0616 frames=394 draws=20172 instructions=5247015 audio=2 menu=0
+checkpoint=frame index=330 state=aa8003732685435033b18ede18e89df309dd14c7b29207d106cc60129b674501 frames=424 draws=22207 instructions=5718894 audio=8 menu=0
+checkpoint=frame index=360 state=390c2e505730856b3266f5103d791848fd29883819b0dd02ef1ca2c5e487257e frames=454 draws=24298 instructions=6228738 audio=14 menu=0
+checkpoint=frame index=390 state=9e026c89f0f85b09332cf74523ea2d8fe6428238b84c5a7e2423d662f5285737 frames=484 draws=26484 instructions=6843040 audio=15 menu=0
+checkpoint=frame index=420 state=f8461a593e5f7532f12f8ad466feee6d68030f99aa56aca57d7101c1fb33414a frames=514 draws=28754 instructions=7555922 audio=15 menu=0
+checkpoint=frame index=450 state=c5e8a249e3a494c223e459e401c23c25bbca0dd33f7bc8424772438c15299ba4 frames=544 draws=30981 instructions=8219720 audio=15 menu=0
+checkpoint=frame index=480 state=119c8a1b8622503182507accdb6916e915b569bf5829a54a2683f65a15cecd17 frames=574 draws=33256 instructions=8891519 audio=21 menu=0
+checkpoint=frame index=510 state=ae0bfd7a4af2d1a98ea08f72b51ac7b60936de2a04444715c516cf0e512a3ada frames=604 draws=35551 instructions=9570222 audio=27 menu=0
+checkpoint=frame index=540 state=2773dd30ad2230e75df6640b659be8326d0c82014bd455fe9b642de43f2b9657 frames=634 draws=37853 instructions=10295395 audio=28 menu=0
+checkpoint=frame index=570 state=5c72df6e136f95545daf7110ea190dcbd3b5f798c523201b591cd9d623bc37b8 frames=664 draws=40258 instructions=11142233 audio=28 menu=0
+checkpoint=frame index=600 state=8ada11c1c3dbc853d191d880bda4a6b01a8c8e0b24d428f57b1803373daf6ad1 frames=694 draws=42851 instructions=12222336 audio=30 menu=0
+pixels samples=600 sha256=422d963717f98e0279d19bb0a627c4591eb29188e9c25b62b67a4b6a667c2895
+checkpoint=suspended index=600 state=5b2794d2ba22210486cda95bfd11b6f069be3c0c0f41b97412a7765742a7f30e frames=694 draws=42851 instructions=12222408 audio=30 menu=0
+save bytes=256 sha256=6c735ed0c1ae636fefbd4313107f73343a5989fce4e979c7dbdfed224bb08498

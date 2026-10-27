@@ -42,7 +42,7 @@ struct GameView: View {
             .overlay(alignment: .topTrailing) {
                 if session.canPause {
                     CornerPauseButton(viewScale: size.width / session.logicalSize.width,
-                                      action: session.pauseGame)
+                                      action: { session.pauseGame() })
                         .environment(\.layoutDirection, .leftToRight)
                 }
             }
@@ -58,7 +58,7 @@ struct GameView: View {
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
                 if session.canPause {
-                    Button(action: session.pauseGame) {
+                    Button(action: { session.pauseGame() }) {
                         WatchPauseToolbarLabel()
                     }
                     .buttonStyle(.plain)
@@ -70,12 +70,30 @@ struct GameView: View {
         .toolbarBackgroundVisibility(.hidden, for: .navigationBar)
         #endif
         .onChange(of: scenePhase, initial: true) { _, phase in
-            session.setActive(phase == .active)
+            session.setSceneActive(phase == .active)
             #if os(watchOS)
             isFocused = phase == .active && session.canPause
+            #elseif os(tvOS)
+            // The remote surface owns focus in both original menus and play.
+            // Reapply it after returning from the system Home screen.
+            isFocused = phase == .active
             #endif
         }
-        .onDisappear { session.setActive(false) }
+        .onDisappear { session.setSceneActive(false) }
+        #if os(tvOS)
+        .modifier(GameExitCommand(session: session))
+        .defaultFocus($isFocused, true)
+        #endif
+        .alert("Progress could not be saved", isPresented: Binding(
+            get: { session.persistenceError != nil },
+            set: { if !$0 { session.dismissPersistenceError() } })) {
+                Button("OK", role: .cancel) { session.dismissPersistenceError() }
+            } message: {
+                Text(session.persistenceError ?? "")
+            }
+        .onChange(of: isFocused) { _, focused in
+            if !focused { session.inputController.resetHeldInputs() }
+        }
         #if os(iOS)
         .persistentSystemOverlays(.hidden)
         .modifier(GameStatusBarVisibility())
@@ -100,7 +118,13 @@ struct GameView: View {
                 }
             }
             .onPlayPauseCommand { session.togglePointerTouch() }
-            .accessibilityHint("Move the pointer with the remote. Select to tap. Play or Pause holds or releases a touch for dragging.")
+            .accessibilityElement(children: .contain)
+            .accessibilityHint("Move the target with the remote. Select taps; Play or Pause holds or releases a touch. With a controller, the left stick steers, the right stick aims, and A or the right trigger charges until released. Menu pauses.")
+            // A Button otherwise derives its identifier from the virtual menu
+            // children, changing its identity in AX snapshots between menus.
+            .accessibilityIdentifier("game-canvas")
+            .accessibilityLabel("SPACE UNDEADBEEF game")
+            .accessibilityValue(Text(verbatim: uiTestAccessibilityValue))
         #elseif os(watchOS)
         screen(size: size)
             .gesture(dragGesture(size: size))
@@ -128,23 +152,8 @@ struct GameView: View {
             .focused($isFocused)
             .focusEffectDisabled()
             .onAppear { isFocused = true }
-            .onKeyPress(phases: [.down, .repeat, .up]) { press in
-                if press.key == .space {
-                    if press.phase == .up { session.endTouch() }
-                    else { session.beginPointerTouch() }
-                    return .handled
-                }
-                guard press.phase != .up else { return .ignored }
-                switch press.key {
-                case .leftArrow: session.movePointer(dx: -GameLayout.pointerStep, dy: 0)
-                case .rightArrow: session.movePointer(dx: GameLayout.pointerStep, dy: 0)
-                case .upArrow: session.movePointer(dx: 0, dy: -GameLayout.pointerStep)
-                case .downArrow: session.movePointer(dx: 0, dy: GameLayout.pointerStep)
-                default: return .ignored
-                }
-                return .handled
-            }
-            .accessibilityHint("Touch or click and drag to play. With a keyboard, use the arrow keys to move the pointer and hold Space to touch.")
+            .onKeyPress(phases: [.down, .repeat, .up]) { press in handleKey(press) }
+            .accessibilityHint("Touch or click and drag to play. Arrow keys aim; hold Space to charge and release to fire. Escape or P pauses. With a controller, the left stick steers, the right stick aims, and A or the right trigger charges until released.")
         #endif
     }
 
@@ -171,22 +180,76 @@ struct GameView: View {
         }
         .frame(width: size.width, height: size.height)
         .contentShape(Rectangle())
-        .accessibilityElement(children: .ignore)
+        .accessibilityElement(children: .contain)
+        #if !os(tvOS)
+        // TV publishes these on its actual remote Button, not this label's
+        // nonfocusable container. Each platform has one stable canvas element.
         .accessibilityLabel("SPACE UNDEADBEEF game")
         .accessibilityIdentifier("game-canvas")
-        .accessibilityValue(ProcessInfo.processInfo.environment["SDB_UI_TEST"] == "1"
-            ? "viewport \(Int(session.logicalSize.width)) × \(Int(session.logicalSize.height)); menuType \(session.gameMenuType)"
-            : "")
+        .accessibilityValue(Text(verbatim: uiTestAccessibilityValue))
+        #endif
+        .accessibilityChildren {
+            GameMenuAccessibility(session: session, size: size)
+        }
+    }
+
+    private var uiTestAccessibilityValue: String {
+        guard ProcessInfo.processInfo.environment["SDB_UI_TEST"] == "1" else { return "" }
+        // Keep menuType last for the existing performance test's parser.
+        return "viewport \(Int(session.logicalSize.width)) × \(Int(session.logicalSize.height)); hostActive \(session.isActive); canPause \(session.canPause); focused \(isFocused); menuType \(session.gameMenuType)"
     }
 
     #if !os(tvOS)
     private func dragGesture(size: CGSize) -> some Gesture {
         DragGesture(minimumDistance: 0)
-            .onChanged { value in session.drag(to: session.point(inView: value.location)) }
+            .onChanged { value in
+                session.inputController.resetHeldInputs()
+                session.drag(to: session.point(inView: value.location))
+            }
             .onEnded { _ in session.endTouch() }
     }
     #endif
+
+    #if !os(tvOS) && !os(watchOS)
+    private func handleKey(_ press: KeyPress) -> KeyPress.Result {
+        // A modifier pressed during a held game key must not swallow its up
+        // edge and leave movement or charging stuck until focus changes.
+        guard press.phase == .up || press.modifiers.intersection([.command, .control, .option]).isEmpty else { return .ignored }
+        if press.key == .escape || press.characters.lowercased() == "p" {
+            guard press.phase == .down else { return .handled }
+            return session.inputController.pause() ? .handled : .ignored
+        }
+        let key: GameInputKey
+        switch press.key {
+        case .leftArrow: key = .left
+        case .rightArrow: key = .right
+        case .upArrow: key = .up
+        case .downArrow: key = .down
+        case .space: key = .fire
+        default: return .ignored
+        }
+        if press.phase == .down { _ = session.requestUserResume() }
+        // Holding is integrated by the fixed simulation tick. System repeat
+        // events must not alter movement speed or restart a canceled charge.
+        if press.phase != .repeat { session.inputController.setKey(key, pressed: press.phase != .up) }
+        return .handled
+    }
+    #endif
 }
+
+#if os(tvOS)
+/// Back/Menu pauses gameplay through the focused surface's root ancestor.
+/// Menus retain normal system navigation because their handler is nil.
+private struct GameExitCommand: ViewModifier {
+    let session: GameSession
+
+    func body(content: Content) -> some View {
+        content.onExitCommand(perform: session.canPause ? {
+            _ = session.inputController.pause()
+        } : nil)
+    }
+}
+#endif
 
 /// Only this leaf observes the changing software frame. Publishing a Watch
 /// image must not also rebuild the enclosing gestures, Crown or toolbar.

@@ -10,9 +10,11 @@
 #include "TextDistanceField.h"
 #import "SDBMetalRenderer.h"
 #import "SDBAudioMixer.h"
+#import "SDBSaveStore.h"
 #include <algorithm>
 #include <cmath>
 #include <cstring>
+#include <cstdlib>
 #include <map>
 #include <memory>
 #include <sstream>
@@ -57,6 +59,13 @@ struct Runtime {
     bool metal=false, titleDrawn=false;
     std::vector<SDBMetalVertex> metalVertices;
     std::vector<SDBMetalDraw> metalDraws;
+    bool collectSoftwareDraws=false, softwareMenuCaching=true, menuPacketValid=false, softwarePacketFallback=false;
+    uint64_t textureGeneration=0, menuTextureGeneration=0;
+    uint32_t menuRasterWidth=0, menuRasterHeight=0, menuType=0;
+    double menuPixelScale=0;
+    std::vector<SDBMetalVertex> menuVertices;
+    std::vector<SDBMetalDraw> menuDraws;
+    static constexpr size_t MaximumMenuPacketBytes=1024*1024;
     // draw() validates the 4,096-vertex limit before growing this scratch space.
     // Keep its capacity between draws instead of allocating for every sprite.
     std::vector<Vertex> drawVertices;
@@ -76,6 +85,28 @@ struct Runtime {
     float lastX=0,lastY=0;
     bool touching=false,watchLayout=TARGET_OS_WATCH,steeringActive=false;
     double steeringY=.5;
+
+    void invalidateMenuPacket() {menuPacketValid=false;menuVertices.clear();menuDraws.clear();}
+    bool sameMenuPacket(uint32_t type) const {
+        return menuPacketValid&&menuType==type&&menuTextureGeneration==textureGeneration&&
+            menuRasterWidth==geometry.rasterWidth&&menuRasterHeight==geometry.rasterHeight&&
+            menuPixelScale==geometry.pixelsPerLogicalUnit&&menuVertices.size()==metalVertices.size()&&
+            menuDraws.size()==metalDraws.size()&&
+            (menuVertices.empty()||memcmp(menuVertices.data(),metalVertices.data(),menuVertices.size()*sizeof(SDBMetalVertex))==0)&&
+            (menuDraws.empty()||memcmp(menuDraws.data(),metalDraws.data(),menuDraws.size()*sizeof(SDBMetalDraw))==0);
+    }
+    void rememberMenuPacket(uint32_t type) {
+        // Bound retained metadata independently of the image's pixel budget.
+        if(metalVertices.size()>MaximumMenuPacketBytes/sizeof(SDBMetalVertex)||
+           metalDraws.size()>MaximumMenuPacketBytes/sizeof(SDBMetalDraw)||
+           metalVertices.size()*sizeof(SDBMetalVertex)+metalDraws.size()*sizeof(SDBMetalDraw)>MaximumMenuPacketBytes) {
+            invalidateMenuPacket();return;
+        }
+        menuVertices=metalVertices;menuDraws=metalDraws;
+        menuType=type;menuTextureGeneration=textureGeneration;
+        menuRasterWidth=geometry.rasterWidth;menuRasterHeight=geometry.rasterHeight;
+        menuPixelScale=geometry.pixelsPerLogicalUnit;menuPacketValid=true;
+    }
 
     uint32_t gameObject() { return game?cpu.read32(game+0xc):0; }
     uint32_t ship() {uint32_t g=gameObject();return g?cpu.read32(g+0x4c):0;}
@@ -138,7 +169,7 @@ struct Runtime {
     }
     static float edge(const Vertex &a,const Vertex &b,float x,float y) {return (x-a.x)*(b.y-a.y)-(y-a.y)*(b.x-a.x);}
     void triangle(Vertex a,Vertex b,Vertex c) {
-        if(metal) {
+        if(metal||collectSoftwareDraws) {
             metalVertices.push_back({a.x,a.y,a.u,a.v,a.r,a.g,a.b,a.a});
             metalVertices.push_back({b.x,b.y,b.u,b.v,b.r,b.g,b.b,b.a});
             metalVertices.push_back({c.x,c.y,c.u,c.v,c.r,c.g,c.b,c.a});
@@ -268,17 +299,44 @@ struct Runtime {
         else if(mode==4)for(unsigned i=2;i<count;i+=3)triangle(points[i-2],points[i-1],points[i]);
         else if(mode==6)for(unsigned i=2;i<count;++i)triangle(points[0],points[i-1],points[i]);
         else cpu.fail("Unsupported GL primitive mode");
-        if(metal&&metalVertices.size()>first) {
+        if((metal||collectSoftwareDraws)&&metalVertices.size()>first) {
             auto t=textures.find(texture);
             metalDraws.push_back({first,uint32_t(metalVertices.size()-first),texture,uint32_t(textured),textureEnv,
                 uint32_t(blend),sourceBlend,destBlend,0,t!=textures.end()?t->second.distanceField:0,
                 t!=textures.end()?t->second.glyphAtlas:0});
         }
     }
+    void rasterizeSoftwarePacket() {
+        const uint32_t savedTexture=texture,savedEnv=textureEnv,savedSource=sourceBlend,savedDestination=destBlend;
+        const bool savedTextured=textured,savedBlend=blend;
+        collectSoftwareDraws=false;
+        for(const auto &draw:metalDraws) {
+            if(draw.firstVertex>metalVertices.size()||draw.vertexCount>metalVertices.size()-draw.firstVertex||draw.vertexCount%3) {
+                cpu.fail("Invalid collected software triangle range");break;
+            }
+            texture=draw.textureID;textured=draw.textured;textureEnv=draw.textureEnv;
+            blend=draw.blend;sourceBlend=draw.sourceBlend;destBlend=draw.destBlend;
+            const auto vertex=[](const SDBMetalVertex&p) {return Vertex{p.x,p.y,p.u,p.v,p.r,p.g,p.b,p.a};};
+            for(uint32_t index=0;index<draw.vertexCount;index+=3) {
+                const auto *p=metalVertices.data()+draw.firstVertex+index;
+                triangle(vertex(p[0]),vertex(p[1]),vertex(p[2]));
+            }
+        }
+        texture=savedTexture;textured=savedTextured;textureEnv=savedEnv;
+        blend=savedBlend;sourceBlend=savedSource;destBlend=savedDestination;
+    }
     void draw(uint32_t mode,unsigned first,unsigned count) {
         if(count>4096) {cpu.fail("GL draw count exceeds limit");return;}
         ++draws;
         if((TARGET_OS_IOS||watchLayout)&&textured&&texture==12)return; // Native pause control owns this affordance.
+        const auto validFactor=[](uint32_t factor) {return factor==0||factor==1||factor==0x302||factor==0x303;};
+        if(collectSoftwareDraws&&blend&&(!validFactor(sourceBlend)||!validFactor(destBlend))) {
+            // Preserve the original fault boundary: invalid factors only fault
+            // when a covered pixel uses them, before guest execution continues.
+            std::fill(pixels.begin(),pixels.end(),0);
+            rasterizeSoftwarePacket();metalVertices.clear();metalDraws.clear();
+            softwarePacketFallback=true;invalidateMenuPacket();
+        }
         auto &points=drawVertices;points.clear();points.reserve(count);
         for(unsigned i=0;i<count;++i)points.push_back(vertex(first+i));
         if(textured&&texture==3&&!titleDrawn&&textures.count(ExtendedTitle)) {
@@ -323,6 +381,17 @@ struct Runtime {
 };
 }
 
+@interface SDBMenuAction ()
+@property(nonatomic) uint32_t guestButton;
+- (instancetype)initWithIdentifier:(NSString *)identifier label:(NSString *)label frame:(CGRect)frame selected:(BOOL)selected button:(uint32_t)button;
+@end
+@implementation SDBMenuAction
+- (instancetype)initWithIdentifier:(NSString *)identifier label:(NSString *)label frame:(CGRect)frame selected:(BOOL)selected button:(uint32_t)button {
+    if ((self = [super init])) {_identifier = [identifier copy]; _label = [label copy]; _logicalFrame = frame; _selected = selected; _guestButton = button;}
+    return self;
+}
+@end
+
 @implementation SDBEngine {
     std::unique_ptr<Runtime> _runtime;
     SDBMetalRenderer *_metalRenderer;
@@ -349,6 +418,11 @@ struct Runtime {
     NSString *_audioSessionError;
     NSInteger _wantedMusicEntry;
     BOOL _wantedMusicLoop;
+    SDBSaveCoordinator *_saveStore;
+    NSString *_progressError;
+    BOOL _captureSaveOnly;
+    NSData *_capturedSaveData;
+    uint64_t _menuGeneration;
 }
 
 - (CGImageRef)frame {
@@ -361,6 +435,147 @@ struct Runtime {
 - (BOOL)usesMetalRenderer {return _runtime->metal;}
 - (NSString *)menuVersion {return _menuVersion;}
 - (NSInteger)gameMenuType {auto &r=*_runtime;return r.game?r.cpu.read32(r.cpu.read32(r.game+4)+0x20):-1;}
+- (NSArray<SDBMenuAction *> *)menuActions {
+    if (_failure || _suspended || !_runtime->game || self.gameMenuType < 1 || self.gameMenuType > 6) return @[];
+    Runtime &r = *_runtime; GuestCPU &c = r.cpu;
+    const uint32_t menu = c.read32(r.game + 4), sentinel = menu + 0x24;
+    uint32_t node = c.read32(sentinel);
+    NSMutableArray<SDBMenuAction *> *actions = [NSMutableArray array];
+    for (unsigned count = 0; node != sentinel && count < 64; ++count) {
+        auto allocation = r.allocations.find(node);
+        if (allocation == r.allocations.end() || allocation->second < 12) return @[];
+        const uint32_t button = c.read32(node + 8);
+        auto item = r.allocations.find(button);
+        if (item == r.allocations.end() || item->second < 80) return @[];
+        const uint32_t data = c.read32(button);
+        if (data > c.memory.size() - 60) return @[];
+        const uint32_t callback = c.read32(data + 40) & ~1u;
+        if (callback && (c.read32(button + 0x48) != 1 || c.read8(button + 0x44))) return @[];
+        NSString *label = nil, *kind = nil; BOOL selected = NO;
+        switch (callback) {
+            case 0x9ab2: label = @"Game Start"; kind = @"start"; break;
+            case 0x9acc: case 0x9a78: label = @"Continue"; kind = @"continue"; break;
+            case 0x9a36: label = @"Resume"; kind = @"resume"; break;
+            case 0x9a54: case 0x9a98: label = @"Quit"; kind = @"quit"; break;
+            case 0x9ae6: label = @"Options"; kind = @"options"; break;
+            case 0x9afa: label = @"Credits"; kind = @"credits"; break;
+            case 0x9a04: label = @"Back"; kind = @"back"; break;
+            case 0x9a18: label = @"Save and Exit"; kind = @"save-exit"; break;
+            case 0x9394: label = @"Sound On"; kind = @"sound-on"; selected = _soundEnabled; break;
+            case 0x93a4: label = @"Sound Off"; kind = @"sound-off"; selected = !_soundEnabled; break;
+            case 0x93c6: label = @"Game Speed Normal"; kind = @"speed-normal"; selected = c.read32(r.game + 20) == c.read32(0x93d4); break;
+            case 0x93d8: label = @"Game Speed Slow"; kind = @"speed-slow"; selected = c.read32(r.game + 20) == c.read32(0x93e8); break;
+            case 0x9380: label = @"Game Speed Very Slow"; kind = @"speed-very-slow"; selected = c.read32(r.game + 20) == c.read32(0x9390); break;
+            case SilentOn: label = @"Respect Silent Mode On"; kind = @"silent-on"; selected = _respectsSilentMode; break;
+            case SilentOff: label = @"Respect Silent Mode Off"; kind = @"silent-off"; selected = !_respectsSilentMode; break;
+            case HapticsOn: label = @"Haptics On"; kind = @"haptics-on"; selected = _hapticsEnabled; break;
+            case HapticsOff: label = @"Haptics Off"; kind = @"haptics-off"; selected = !_hapticsEnabled; break;
+            default: break;
+        }
+        if (label) {
+            const double x = real(c.read32(button + 0x10)), y = real(c.read32(button + 0x1c));
+            const double w = real(c.read32(button + 0x28)), h = real(c.read32(button + 0x34));
+            if (!std::isfinite(x) || !std::isfinite(y) || !std::isfinite(w) || !std::isfinite(h) || w <= 0 || h <= 0) return @[];
+            CGRect frame = CGRectMake(r.geometry.logicalSize.width / 2 + y - h / 2,
+                r.geometry.logicalSize.height / 2 + x - w / 2, h, w);
+            const CGRect bounds = CGRectMake(0, 0, r.geometry.logicalSize.width, r.geometry.logicalSize.height);
+            if (CGRectIntersectsRect(frame, bounds)) {
+                NSString *identity = [NSString stringWithFormat:@"%@-%llu-%08x-%08x", kind,
+                    (unsigned long long)_menuGeneration, button, data];
+                [actions addObject:[[SDBMenuAction alloc] initWithIdentifier:identity label:label frame:frame selected:selected button:button]];
+            }
+        }
+        node = c.read32(node);
+    }
+    return node == sentinel && c.fault.empty() ? actions : @[];
+}
+- (BOOL)activateMenuAction:(NSString *)identifier {
+    if (_failure || _suspended || _runtime->touching || !identifier.length) return NO;
+    SDBMenuAction *action = nil;
+    for (SDBMenuAction *candidate in self.menuActions) if ([candidate.identifier isEqual:identifier]) {action = candidate; break;}
+    if (!action) return NO;
+    Runtime &r = *_runtime; GuestCPU &c = r.cpu;
+    const uint32_t menu = c.read32(r.game + 4), sentinel = menu + 0x24;
+    const uint32_t button = action.guestButton;
+    const uint32_t x = c.read32(button + 0x10), y = c.read32(button + 0x1c);
+    // Match the original first-hit traversal, including animated overlapping
+    // bounds. An accessibility action may never select a different row.
+    uint32_t node = c.read32(sentinel), hit = 0;
+    for (unsigned count = 0; node != sentinel && count < 64; ++count) {
+        const uint32_t candidate = c.read32(node + 8);
+        if (c.call(0xa0a1, {candidate}) && c.call(0xa115, {candidate, x, y})) {hit = candidate; break;}
+        node = c.read32(node);
+    }
+    [self checkFault]; if (_failure || hit != button) return NO;
+    [self cancelShipSteering];
+    c.call(0x94fd, {menu, x, y});
+    c.call(0x93ed, {menu, x, y});
+    [self checkFault];
+    return !_failure && (c.read8(button + 0x44) || c.read32(button + 0x48) == 2);
+}
+- (NSString *)lastSaveError {return _progressError ?: _saveStore.lastError;}
+- (BOOL)saveProgress {
+    if (_failure || !_runtime->game) return NO;
+    _progressError = nil;
+    const BOOL saved = _runtime->cpu.call(0x8e13, {_runtime->game}) != 0;
+    [self checkFault];
+    return saved && !_failure;
+}
+- (NSData *)captureProgressData {
+    if (_failure || !_runtime->game) return nil;
+    _capturedSaveData = nil; _captureSaveOnly = YES;
+    _runtime->cpu.call(0x8e13, {_runtime->game});
+    _captureSaveOnly = NO;
+    [self checkFault];
+    return _failure ? nil : _capturedSaveData;
+}
+- (void)checkpointProgress {
+    NSData *data = [self captureProgressData];
+    if (data) [_saveStore enqueueData:data];
+}
+- (NSDictionary<NSString *,id> *)progressPortableSnapshot {
+    NSData *data = [self captureProgressData];
+    return data ? [SDBSaveStore portableSnapshotForData:data] : nil;
+}
++ (NSDictionary<NSString *,id> *)mergedPortableSnapshot:(NSDictionary<NSString *,id> *)local remote:(NSDictionary<NSString *,id> *)remote {
+    NSData *localData = [SDBSaveStore dataFromPortableSnapshot:local], *remoteData = [SDBSaveStore dataFromPortableSnapshot:remote];
+    NSData *merged = localData && remoteData ? [SDBSaveStore mergeLocalData:localData remoteData:remoteData] : nil;
+    return merged ? [SDBSaveStore portableSnapshotForData:merged] : nil;
+}
+- (BOOL)importValidatedProgress:(NSDictionary<NSString *,id> *)snapshot {
+    if (_failure || _suspended || _runtime->touching || self.gameMenuType != 1) return NO;
+    NSData *remote = [SDBSaveStore dataFromPortableSnapshot:snapshot], *local = [self captureProgressData];
+    NSData *merged = remote && local ? [SDBSaveStore mergeLocalData:local remoteData:remote] : nil;
+    if (!merged) {_progressError = @"Portable progress could not be validated."; return NO;}
+    if ([merged isEqual:local]) {_progressError = nil; return YES;}
+    if (![_saveStore writeData:merged]) return NO;
+    _runtime->cpu.call(0x8c85, {_runtime->game});
+    _runtime->cpu.write8(_runtime->sound + 1, _soundEnabled);
+    [self checkFault]; _progressError = nil;
+    return !_failure;
+}
+- (BOOL)recoverAudioAfterMediaServicesReset {
+    // The mixer retains logical voices/cursors while replacing native nodes.
+    // Keep their suspension intent so explicit resume can restart those voices.
+    if (![_audioMixer rebuildAfterMediaServicesReset]) {_audioSessionError = _audioMixer.failure; return NO;}
+    [self configureAudioSession];
+    return _audioSessionError == nil;
+}
+- (void)trimTransientResources {
+    [_metalRenderer trimTransientResources];
+    Runtime &r = *_runtime;
+    r.invalidateMenuPacket();
+    std::vector<SDBMetalVertex>().swap(r.menuVertices);
+    std::vector<SDBMetalDraw>().swap(r.menuDraws);
+    if (_suspended) {
+        std::vector<uint8_t>().swap(r.pixels);
+        std::vector<Vertex>().swap(r.drawVertices);
+        std::vector<SDBMetalVertex>().swap(r.metalVertices);
+        std::vector<SDBMetalDraw>().swap(r.metalDraws);
+        std::vector<Matrix>().swap(r.stack);
+    }
+    // _frame is an immutable independent copy and remains visible to the host.
+}
 - (BOOL)canPause {
     if(_failure||_suspended||!_runtime->game)return NO;
     auto &r=*_runtime;return r.cpu.read32(r.cpu.read32(r.game+4)+0x20)==0;
@@ -394,6 +609,15 @@ struct Runtime {
     r.steeringY=std::clamp(fraction,0.,1.);r.steeringActive=true;
 }
 - (void)cancelShipSteering {_runtime->steeringActive=false;}
+- (void)cancelHeldInput {
+    [self cancelShipSteering];
+    if (_failure || !_runtime->game) {_runtime->touching = false; return;}
+    [self touchPhase:3 x:0 y:0];
+    _runtime->touching = false;
+    const uint32_t marker = _runtime->marker();
+    if (marker && _runtime->cpu.read8(marker + 0x24)) _runtime->cpu.call(0x4b3b, {marker});
+    [self checkFault];
+}
 - (void)pauseGame {
     if(!self.canPause)return;
     [self cancelShipSteering];
@@ -430,6 +654,7 @@ struct Runtime {
     [self cancelShipSteering];
     [self touchPhase:3 x:0 y:0];
     _runtime->geometry=geometry;
+    _runtime->invalidateMenuPacket();
     [self applyViewportPatch];
     if(!_runtime->metal)_runtime->pixels.resize(size_t(geometry.pixelCount())*4);
     [self checkFault];[self update:0];
@@ -510,6 +735,10 @@ struct Runtime {
     if((self=[super init])) {
         _offersHaptics=offersHaptics;
         _runtime=std::make_unique<Runtime>();_resourcePath=[path copy];
+        #if defined(SDB_HEADLESS_TESTS)
+        // The paired cache oracle is absent from production app builds.
+        _runtime->softwareMenuCaching=getenv("SDB_TEST_DISABLE_SOFTWARE_MENU_CACHE")==nullptr;
+        #endif
         _players=[NSMutableDictionary dictionary];
         _sourceBuffers=[NSMutableDictionary dictionary];_sourceLoops=[NSMutableDictionary dictionary];_sourceGains=[NSMutableDictionary dictionary];
         _pausedSources=[NSMutableSet set];
@@ -519,6 +748,7 @@ struct Runtime {
         NSString *override=[NSProcessInfo.processInfo.environment[@"SDB_SAVE_DIRECTORY"] stringByExpandingTildeInPath];
         NSURL *base=[NSFileManager.defaultManager URLsForDirectory:NSApplicationSupportDirectory inDomains:NSUserDomainMask].firstObject;
         _savePath=override?:[[base URLByAppendingPathComponent:NSBundle.mainBundle.bundleIdentifier?:@"dev.cammalleri.space-undeadbeef"] path];
+        _saveStore = [[SDBSaveCoordinator alloc] initWithDirectory:_savePath];
         if(override) {
             // Tests persist only inside their own temporary directory, never real user preferences.
             _testPreferencesPath=[override stringByAppendingPathComponent:@"audio-preferences.plist"];
@@ -535,7 +765,8 @@ struct Runtime {
         _metalRenderer=[[SDBMetalRenderer alloc] init];
         _runtime->metal=_metalRenderer.supported&&NSProcessInfo.processInfo.environment[@"SDB_CPU_RENDERER"]==nil;
         __unsafe_unretained SDBEngine *owner=self;
-        _runtime->cpu.hook=[owner](GuestCPU &cpu,uint32_t pc) {
+        _runtime->cpu.hook=[owner](GuestCPU &cpu,uint32_t pc) -> bool {
+            if (pc == 0x97ac) ++owner->_menuGeneration;
             if(sdb::display::GameDisplayPatch::handlesPc(pc))return owner->_runtime->displayPatch.handleInstruction(cpu,pc);
             // Observe the original effect request before its Sound-OFF guard.
             // The guest method still executes unchanged after this hook.
@@ -675,6 +906,7 @@ struct Runtime {
         }
         if(r.metal&&![_metalRenderer setTexture:index+1 rgba:t.pixels.data() byteLength:t.pixels.size() width:pw height:ph]) {c.fail(_metalRenderer.failure.UTF8String?:"Texture upload failed");return;}
         r.textures[index+1]=std::move(t);
+        ++r.textureGeneration;
         uint32_t p=records+32*index;c.write32(p,index+1);c.write32(p+4,bits(w));c.write32(p+8,bits(h));
         c.write32(p+12,pw);c.write32(p+16,ph);c.write32(p+20,0);c.write32(p+24,bits(float(w)/pw));c.write32(p+28,bits(float(h)/ph));
     }
@@ -879,6 +1111,7 @@ struct Runtime {
     }
     if(_runtime->metal)[_metalRenderer setTexture:ExtendedTitle rgba:t.pixels.data() byteLength:t.pixels.size() width:pw height:ph];
     _runtime->textures[ExtendedTitle]=std::move(t);
+    ++_runtime->textureGeneration;
 }
 
 - (BOOL)bridge:(uint32_t)pc {
@@ -899,16 +1132,17 @@ struct Runtime {
         if(pc==0xa958) {r.release(c.r[0]);return done();}
         std::string name=r.string(c.r[0]);
         if(name!="savedata.dat") {c.fail("Unexpected guest save filename");return done();}
-        NSString *file=[_savePath stringByAppendingPathComponent:@"savedata.dat"];
         if(pc==0xa8a0) {
-            NSData *bytes=[NSData dataWithContentsOfFile:file];
-            if(!bytes||bytes.length>4096) {c.write32(c.r[1],0);return done();}
+            NSData *bytes=[_saveStore loadData];
+            if(!bytes) {c.write32(c.r[1],0);return done();}
             uint32_t p=r.allocate((uint32_t)bytes.length);c.load(p,bytes.bytes,bytes.length);c.write32(c.r[1],(uint32_t)bytes.length);return done(p);
         }
         if(!r.span(c.r[1],c.r[2])||c.r[2]>4096)return done();
-        [NSFileManager.defaultManager createDirectoryAtPath:_savePath withIntermediateDirectories:YES attributes:nil error:nil];
         NSData *bytes=[NSData dataWithBytes:c.memory.data()+c.r[1] length:c.r[2]];
-        return done([bytes writeToFile:file options:NSDataWritingAtomic error:nil]);
+        if (_captureSaveOnly) {_capturedSaveData = bytes; return done([SDBSaveStore isValidOriginalData:bytes]);}
+        const BOOL written = [_saveStore writeData:bytes];
+        if (written) _progressError = nil;
+        return done(written);
     }
     auto it=r.imports.find(pc);if(it==r.imports.end())return NO;
     const std::string &s=it->second;
@@ -1050,7 +1284,13 @@ struct Runtime {
 - (void)renderFrame {
     if(_failure||_suspended)return;
     Runtime &r=*_runtime;
-    if(!r.metal)std::fill(r.pixels.begin(),r.pixels.end(),0);
+    const uint32_t type=uint32_t(self.gameMenuType);
+    const bool collectMenu=!r.metal&&type!=0&&r.softwareMenuCaching;
+    r.collectSoftwareDraws=collectMenu;r.softwarePacketFallback=false;
+    if(!r.metal) {
+        r.pixels.resize(size_t(r.geometry.pixelCount())*4);
+        if(!collectMenu) {r.invalidateMenuPacket();std::fill(r.pixels.begin(),r.pixels.end(),0);}
+    }
     r.metalVertices.clear();r.metalDraws.clear();r.titleDrawn=false;
     r.matrix=Matrix();r.stack.clear();r.colorArray=false;
     r.cpu.call(0x8b23,{r.game});[self checkFault];if(_failure)return;
@@ -1061,6 +1301,13 @@ struct Runtime {
         if(_metalRenderer.failure)_failure=_metalRenderer.failure;
         if(submitted&&_frame) {CGImageRelease(_frame);_frame=nullptr;}
     } else {
+        r.collectSoftwareDraws=false;
+        if(collectMenu&&!r.softwarePacketFallback&&_frame&&r.sameMenuPacket(type)) {++r.frames;return;}
+        if(collectMenu&&!r.softwarePacketFallback) {
+            std::fill(r.pixels.begin(),r.pixels.end(),0);
+            r.rasterizeSoftwarePacket();[self checkFault];if(_failure)return;
+            r.rememberMenuPacket(type);
+        }
         for(size_t p=3;p<r.pixels.size();p+=4)r.pixels[p]=255;
         CFDataRef bytes=CFDataCreate(nullptr,r.pixels.data(),r.pixels.size());
         CGDataProviderRef provider=CGDataProviderCreateWithCFData(bytes);CFRelease(bytes);
@@ -1090,6 +1337,7 @@ struct Runtime {
         [_pausedSources removeAllObjects];
         for(NSNumber *source in _players)if(_players[source].isPlaying) {[_pausedSources addObject:source];[_players[source] pause];}
         if(!_failure) {_runtime->cpu.call(0x8e13,{_runtime->game});[self checkFault];}
+        [_audioMixer suspend];
     } else {
         _suspended=NO;
         if(![_audioMixer prepare])_runtime->cpu.fail(_audioMixer.failure.UTF8String?:"Original audio graph could not resume");
