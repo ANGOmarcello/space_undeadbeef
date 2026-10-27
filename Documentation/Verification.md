@@ -1,5 +1,100 @@
 # Verification record
 
+## Modern host foundation — 1.1 (10), 27 October 2026
+
+The controls, interruption handling, recovery saves, optional key-value progress
+sync, memory/cache changes and semantic original menus are described in
+[ModernHosts.md](ModernHosts.md). The supplied executable and all 96 prepared
+original assets retain their recorded hashes. The original menus and fixed
+60 Hz gameplay remain authoritative.
+
+`script/verify_compatibility.sh --tests-only --require-gpu` completed with
+**21 PASS, 0 FAIL, 1 SKIP**: original-resource verification and all 20 isolated
+correctness suites passed. The sole skip was the separately opted-in Simulator
+UI path; actual GPU checks ran. Final lifecycle-memory-pressure and modal-input
+guards were subsequently checked with 17 lifecycle-policy and 1,886 actual
+Session checks, plus 38 native-control checks. These include held controller
+input across alert acknowledgement and media-reset recovery without a timer.
+The suites include 149 offline audio checks, 41 save-store checks, 28 sanitizer
+save-coordinator checks, 76 sanitizer original-menu checks, 46 strict Swift 6
+progress-sync checks, 106 sanitizer draw checks, 21,258 paired cache/soak checks
+and 189 sanitizer checkpoint-entry checks. Save and sync checks use isolated
+state and injected transports; they never access the user's real save or account.
+Final GPU reruns passed all eleven parity fixtures, four batching comparisons,
+queued-frame/cache-trim checks and the 300-frame canonical Metal workload.
+Deliberately missing-library probes failed both GPU fixtures with exit 1 rather
+than being classified as an unavailable-device skip.
+
+Canonical baseline/current comparisons retain all 600 software images, original
+guest state and final save bytes. GPU fixtures use their documented one-byte
+tolerance across drivers. The 17 checkpoint-entry smoke fixtures enter the
+original Continue path and run 240 ordinary updates each; these checks do not
+establish full-stage or every-boss completion.
+
+### Native and Simulator interaction
+
+- **iPhone 18 Pro, iOS 27.2:** original touch interaction, semantic title/Options,
+  Sound OFF/ON, SAVE-EXIT, Credits/Back, Start, Pause/Resume and foreground pause
+  passed. The Credits Back semantic frame was checked against its original row.
+  A separate real save-I/O failure through the process-only `/dev/null` override
+  displayed a dismissible native alert and left the game playable. Original
+  title, Credits, pause and the error alert were visually reviewed.
+- **13-inch iPad Pro M5 Simulator:** the semantic original-menu interaction test
+  passed, including Credits/Back and Pause/Resume. Title and gameplay/pause
+  layouts were visually reviewed in portrait.
+- **Native Mac on Apple silicon:** semantic Options selection, SAVE-EXIT, Start,
+  keyboard movement/charging and P-to-pause worked with isolated state. The
+  original Options and Pause screens were visually reviewed. The task's app
+  instance quit normally afterward.
+- **Watch Series 12, 46 mm Simulator:** title and Options expose the expected
+  semantic actions. Original Options, SAVE-EXIT, Start, death Continue and the
+  compact corner pause control were exercised. Original Pause/Resume/Quit and
+  the bottom HUD were visually reviewed. Crown feel and haptic output were not
+  measured in this pass.
+- **Apple TV 4K, 3rd generation Simulator:** the functional remote test passed
+  with one stable canvas identifier, title Back/Menu exit, foreground reactivation,
+  directional Start, gameplay Back-to-pause, original Resume and Play/Pause
+  targeting/release. Native accessibility wrappers do not reliably expose the
+  focused element through XCTest's `hasFocus`; actual remote interactions are
+  the functional assertions. Exported title, gameplay and original Pause
+  screenshots were visually reviewed at 3840×2160.
+
+Passing result identifiers include `iphone-semantic-final.xcresult`,
+`iphone-save-error.xcresult` and `ipad-final.xcresult`, produced under a task-owned
+temporary directory. These names identify inspected results; temporary bundles
+and captures are removed after recording the findings.
+The passing TV result is `tvos-functional-focus.xcresult`, recorded by
+`test_sim_2026-10-27T01-34-29-941Z_pid17188_f762d756.log` (1 test, 0 failures).
+
+All four unsigned application targets pass both Debug and Release builds with
+Xcode 27.2, and all bundles read back as **1.1 (10)**. The three Metal bundles
+contain their compiled `default.metallib`; Watch builds the software path.
+The Mac Release binary contains both `x86_64` and `arm64` slices; native
+interaction was exercised on Apple silicon only. These are build checks, not
+signed-device installation or distribution checks.
+
+### Verification boundaries
+
+The current physical Watch session was kept. No physical Watch, iPhone or Apple
+TV was queried, installed, restarted or used for a performance test in this
+pass. Controller policy checks do not establish physical controller feel, and
+Mac cache measurements do not establish Watch battery life or sustained hardware
+FPS. No system accessibility setting, Coca or Eidetic setting was changed.
+
+Progress sync uses Foundation key-value storage with no CloudKit database,
+container, schema or backend deployment. No developer-portal mutation, signed
+cross-device sync or live account delivery was performed. Normal Apple KVS
+capability provisioning and account availability are still required. The
+checked-in compatibility workflow has not been run remotely; no release or
+public distribution was performed.
+
+Task-owned caches, intermediate objects, results, logs, captures and isolated
+Simulator test saves were removed after verification, reclaiming 1.80 GiB of
+actual free space in the final cleanup. The latest unsigned app products and
+dSYMs (about 190 MiB total) remain in the standard DerivedData directories
+`SpaceUndeadbeef-Compatibility-{iOS,macOS,tvOS,watchOS}/Build/Products` for local
+inspection and matching symbols. No disposable output is stored in the repository.
+
 ## Second performance pass — 1.1 (9), 26 October 2026
 
 The shared renderer/runtime improvements and software-timer phase correction

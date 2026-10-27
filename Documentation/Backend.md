@@ -2,7 +2,18 @@
 
 The supplied 1.01 executable imports Foundation/UIKit, graphics, audio, C/C++ and Objective-C runtime APIs. Its import inventory contains no networking framework, socket, HTTP, account, purchasing, advertising, analytics, or multiplayer API. No backend service is required for the observed local game implementation.
 
-The restoration adds no network service. The native host replaces the original Documents-directory file wrappers for the one observed filename, `savedata.dat`. Original `SaveData` packing and validation execute in guest code. Each host stores this file atomically under its own Application Support directory. Originals and existing saves are not migrated or overwritten by intake tooling.
+The native host replaces the original Documents-directory file wrappers for the
+one observed filename, `savedata.dat`. Original `SaveData` packing and validation
+execute in guest code. Each host stores this file atomically under its own
+Application Support directory, with bounded checksummed recovery records. Intake
+tooling does not migrate or overwrite originals or existing saves.
+
+Version 1.1 (10) adds optional Foundation key-value progress sync. It requires no
+CloudKit database or schema deployment and introduces no application backend.
+Apple's normal KVS entitlement/provisioning and account availability are still
+required. Local saves operate independently; signed cross-device delivery has
+not been verified. See [ModernHosts.md](ModernHosts.md) for the sync, lifecycle,
+controls and compatibility contracts.
 
 ## Local state
 
@@ -15,7 +26,8 @@ The restoration adds no network service. The native host replaces the original D
 
 Modern audio preferences are applied after loading the legacy save. A historical
 save's sound byte therefore does not replace an explicit modern choice. Each host
-bundle has separate preferences and progress. No historical user save was supplied,
+bundle has separate preferences and local progress; validated progression may be
+merged through the shared KVS identifier. No historical user save was supplied,
 so migration from an original installation remains unverified.
 
 The smoke test sets `SDB_SAVE_DIRECTORY` to its task-owned temporary directory.

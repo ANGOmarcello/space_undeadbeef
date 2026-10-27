@@ -47,12 +47,26 @@ rectangular icon and Top Shelf sizes.
 
 ## Controls
 
-The game retains its original touch controls: hold and sweep over enemies to lock targets, release to fire, and hold your ship to charge. The ship follows the pointer vertically. All presentation sizes preserve the original playfield, including inverse input mapping.
+The game retains its original touch controls: hold and sweep over enemies to
+lock targets, release to fire, and hold your ship to charge. The ship follows
+the pointer vertically. Adaptive arenas retain sprite proportions and matching
+inverse input mapping.
 
 - iPhone/iPad: touch and drag.
-- Mac: mouse and drag, or arrows to position the pointer and Space to hold/release.
-- Apple TV: directional remote presses position the pointer; Select taps, Play/Pause toggles holding for a targeting sweep.
-- Apple Watch: touch and drag; the Digital Crown also moves the pointer vertically. Accessibility actions provide tap and hold/release.
+- Mac / attached keyboard: mouse and drag, or arrows to aim; hold Space to charge and release to fire. Escape or P pauses.
+- Apple TV: directional remote presses position the pointer; Select taps, Play/Pause toggles holding for a targeting sweep, and Back/Menu pauses gameplay.
+- Apple Watch: touch and drag; the Digital Crown steers the ship vertically without holding an aiming touch.
+- Extended controllers on iPhone/iPad, Mac and TV: left stick steers, right stick or D-pad aims, A/right trigger charges until released, and Menu pauses. Either stick addresses menu rows.
+
+Original menus expose semantic buttons and selection state to accessibility.
+Focus loss and interruptions cancel held input and enter the original pause flow.
+See [ModernHosts.md](Documentation/ModernHosts.md) for controls, interruption
+recovery, bounded asynchronous checkpoints, optional KVS progress sync and limits.
+
+Run `script/verify_compatibility.sh` for isolated correctness checks and four
+unsigned builds. `--tests-only`, `--builds-only` and `--require-gpu` are available.
+Simulator UI checks are explicit opt-ins; this command never discovers or tests
+physical hardware.
 
 ## Evidence and limits
 
