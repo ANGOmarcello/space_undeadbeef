@@ -31,8 +31,11 @@ next frame, wrapped bursts, reversal, cancellation, touch handoff and the
 original Pause/Continue flow. Independent normal rounds and empty temporary
 saves keep those cases separate without changing guest state.
 `script/test_session_lifecycle.sh` also passes **2,549** checks.
-Installation and physical Crown feel of build 13 have not yet been verified;
-the build 12 title evidence below remains historical.
+CoreDevice then installed build 13 in place on the exact Series 4, independently
+read back **1.1 (13)** and normally launched its process (**436**). No uninstall,
+data reset, test environment or gameplay input was used. Two passive device
+screenshots were black; title rendering and physical Crown feel remain a user
+check. The build 12 title evidence below remains historical.
 
 ## Series 4 compatibility — 1.1 (12), 27 October 2026
 

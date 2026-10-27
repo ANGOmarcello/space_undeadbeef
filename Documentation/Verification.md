@@ -21,7 +21,11 @@ inputs or performance workload were sent.
 The development-signed generic Watch build succeeds for `arm64` and `arm64_32`,
 reports **1.1 (13)** and minimum watchOS 10.0, and passes strict signature,
 exact Series 4 profile membership and shared KVS entitlement authorization.
-Physical installation and Crown feel of this build remain to be verified.
+CoreDevice installed build **13** in place on the exact Series 4 and
+independently read back **1.1 (13)**. Normal launch, with no test environment or
+uninstall/data reset, succeeded; the matching process was **436**. Two passive
+368×448 screenshots were black, so this does not establish title rendering or
+physical Crown feel. The Series 12 session and Apple TVs were left alone.
 Pre-existing Xcode project-format edits are excluded from this correction.
 
 ## Series 4 delivery — 1.1 (12), 27 October 2026
