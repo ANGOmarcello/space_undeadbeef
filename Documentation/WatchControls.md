@@ -34,8 +34,9 @@ saves keep those cases separate without changing guest state.
 CoreDevice then installed build 13 in place on the exact Series 4, independently
 read back **1.1 (13)** and normally launched its process (**436**). No uninstall,
 data reset, test environment or gameplay input was used. Two passive device
-screenshots were black; title rendering and physical Crown feel remain a user
-check. The build 12 title evidence below remains historical.
+screenshots were black; the user subsequently confirmed the normal menu is
+visible after waking the Series 4. Physical Crown feel during gameplay remains
+a user check. The build 12 title evidence below remains historical.
 
 ## Series 4 compatibility — 1.1 (12), 27 October 2026
 

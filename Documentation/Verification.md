@@ -24,8 +24,9 @@ exact Series 4 profile membership and shared KVS entitlement authorization.
 CoreDevice installed build **13** in place on the exact Series 4 and
 independently read back **1.1 (13)**. Normal launch, with no test environment or
 uninstall/data reset, succeeded; the matching process was **436**. Two passive
-368×448 screenshots were black, so this does not establish title rendering or
-physical Crown feel. The Series 12 session and Apple TVs were left alone.
+368×448 screenshots were black. The user subsequently confirmed that the normal
+menu is visible after waking the Series 4. Physical Crown feel during a round
+remains unconfirmed. The Series 12 session and Apple TVs were left alone.
 Pre-existing Xcode project-format edits are excluded from this correction.
 
 ## Series 4 delivery — 1.1 (12), 27 October 2026
