@@ -1,5 +1,28 @@
 # Watch controls and HUD
 
+## Series 4 compatibility — 1.1 (12), 27 October 2026
+
+The Watch target and maintained project generator now explicitly require
+watchOS 10.0. The navigation bar uses the equivalent watchOS 9-compatible
+`toolbarBackground` visibility spelling instead of the watchOS 11-only name.
+Observation, focus handling and modern `onChange` keep the effective minimum at
+watchOS 10. Crown, Pause, HUD, haptic cadence and original gameplay are unchanged.
+
+The development-signed build includes both Watch architectures. Its
+`arm64_32` slice records minimum watchOS 10.0; the newer `arm64` slice records
+watchOS 26.0 under the current SDK. Strict signatures, the Series 4's exact
+profile membership and shared KVS entitlement authorization pass. The app bundle
+reports **1.1 (12)** with minimum OS 10.0.
+
+The connected physical **Angelo Series 4**, model `Watch4,2`, runs watchOS
+**10.6.2** with Developer Mode enabled. Initial destination preparation and direct
+installation could not complete before Xcode began copying its OS library
+symbols. That preparation is still pending; installation, launch and physical
+gameplay are not yet established for this Watch. No device reset or system
+setting change was made.
+
+## Existing controls
+
 Version **1.1 (3)** replaces the Watch's Crown-controlled virtual pointer with
 relative vertical ship steering. Each new Crown gesture starts at the actual
 ship position. The target stays within the original radius-inset arena bounds;

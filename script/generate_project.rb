@@ -40,7 +40,7 @@ platforms = {
   'iOS' => { platform: :ios, version: '18.0', sdk: 'iphoneos', supported: 'iphoneos iphonesimulator', family: '1,2', deployment: 'IPHONEOS_DEPLOYMENT_TARGET', suffix: '' },
   'macOS' => { platform: :osx, version: '15.0', sdk: 'macosx', supported: 'macosx', family: nil, deployment: 'MACOSX_DEPLOYMENT_TARGET', suffix: '.mac' },
   'tvOS' => { platform: :tvos, version: '18.0', sdk: 'appletvos', supported: 'appletvos appletvsimulator', family: '3', deployment: 'TVOS_DEPLOYMENT_TARGET', suffix: '.tv' },
-  'watchOS' => { platform: :watchos, version: '11.0', sdk: 'watchos', supported: 'watchos watchsimulator', family: '4', deployment: 'WATCHOS_DEPLOYMENT_TARGET', suffix: '.watch' }
+  'watchOS' => { platform: :watchos, version: '10.0', sdk: 'watchos', supported: 'watchos watchsimulator', family: '4', deployment: 'WATCHOS_DEPLOYMENT_TARGET', suffix: '.watch' }
 }
 
 schemes = []

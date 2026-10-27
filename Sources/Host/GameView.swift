@@ -74,7 +74,7 @@ struct GameView: View {
                 }
             }
         }
-        .toolbarBackgroundVisibility(.hidden, for: .navigationBar)
+        .toolbarBackground(.hidden, for: .navigationBar)
         #endif
         .onChange(of: scenePhase, initial: true) { _, phase in
             switch phase {

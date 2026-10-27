@@ -1,5 +1,24 @@
 # Verification record
 
+## Series 4 preparation — 1.1 (12), 27 October 2026
+
+The connected Series 4 (`Watch4,2`) reports watchOS 10.6.2 and Developer Mode
+enabled. A generic physical-Watch Debug build succeeds with watchOS 10.0 as the
+explicit target/generator minimum and the compatible navigation-background API.
+Both `arm64` and `arm64_32` slices are present; the latter's Mach-O minimum is
+10.0. The development signature, exact Series 4 profile membership and shared
+KVS authorization pass. Bundle readback is **1.1 (12)**, minimum OS 10.0.
+
+The exact-device Xcode build initially timed out during destination preparation.
+CoreDevice installation then failed before transfer with RSD allocation error
+`0xE8000003`; the installed legacy MobileDevice tool could not connect either.
+Xcode subsequently showed **Copying OS library symbols from Angelo Series 4**,
+also reported by the user. Preparation is being allowed to finish before another
+installation attempt. No successful Series 4 install, launch, visual or gameplay
+claim is made yet. No Apple TV was targeted, and the existing Series 12 session
+was not changed. Pre-existing Xcode project-format edits are retained separately
+from the explicit deployment-minimum change.
+
 ## Notification recovery and iPhone feedback — 1.1 (11), 27 October 2026
 
 Transient inactive iOS scenes retain ordinary 60 Hz scheduling without entering

@@ -11,7 +11,7 @@ Open `SPACE UNDEADBEEF.xcodeproj` with Xcode 27.2 or newer and select one of the
 - `SPACE UNDEADBEEF iOS` — iPhone/iPad, iOS 18+
 - `SPACE UNDEADBEEF macOS` — macOS 15+
 - `SPACE UNDEADBEEF tvOS` — tvOS 18+
-- `SPACE UNDEADBEEF watchOS` — standalone watch app, watchOS 11+
+- `SPACE UNDEADBEEF watchOS` — standalone watch app, watchOS 10+
 
 Automatic development signing uses Angelo Cammalleri's existing team. Other
 developers should select their own team. macOS local build/run uses
