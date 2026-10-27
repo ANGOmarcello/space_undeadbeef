@@ -1,6 +1,6 @@
 # Verification record
 
-## Series 4 preparation — 1.1 (12), 27 October 2026
+## Series 4 delivery — 1.1 (12), 27 October 2026
 
 The connected Series 4 (`Watch4,2`) reports watchOS 10.6.2 and Developer Mode
 enabled. A generic physical-Watch Debug build succeeds with watchOS 10.0 as the
@@ -13,11 +13,25 @@ The exact-device Xcode build initially timed out during destination preparation.
 CoreDevice installation then failed before transfer with RSD allocation error
 `0xE8000003`; the installed legacy MobileDevice tool could not connect either.
 Xcode subsequently showed **Copying OS library symbols from Angelo Series 4**,
-also reported by the user. Preparation is being allowed to finish before another
-installation attempt. No successful Series 4 install, launch, visual or gameplay
-claim is made yet. No Apple TV was targeted, and the existing Series 12 session
-was not changed. Pre-existing Xcode project-format edits are retained separately
-from the explicit deployment-minimum change.
+also reported by the user. That copy and the following extraction were allowed
+to finish without intervention. Xcode then reported the user's existing run
+successfully running SpaceUndeadbeef on Angelo Series 4.
+
+Read-only CoreDevice checks independently confirm the installed **1.1 (12)** and
+running process **422**. A passive **368×448** screenshot was visually reviewed:
+the filled title, original menu, `Ver.1.1` and **Continue 2-04** are visible. No
+post-preparation reinstall, relaunch, gameplay input or performance test was
+performed. Crown/haptic feel, sustained FPS and the provenance of that checkpoint
+remain separate questions; the image does not establish cross-device sync.
+No Apple TV was targeted, and the existing Series 12 session was not changed.
+Pre-existing Xcode project-format edits are retained separately from the explicit
+deployment-minimum change.
+
+Task-owned intermediate caches, failed results, logs and the temporary screenshot
+were removed afterward. The signed Watch products remain in standard DerivedData
+for matching inspection/debugging. Xcode's newly required Series 4 system-symbol
+cache (about 2.1 GiB) remains in its standard `watchOS DeviceSupport` location;
+it is needed for future development on this OS and was not treated as disposable.
 
 ## Notification recovery and iPhone feedback — 1.1 (11), 27 October 2026
 

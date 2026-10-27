@@ -16,10 +16,14 @@ reports **1.1 (12)** with minimum OS 10.0.
 
 The connected physical **Angelo Series 4**, model `Watch4,2`, runs watchOS
 **10.6.2** with Developer Mode enabled. Initial destination preparation and direct
-installation could not complete before Xcode began copying its OS library
-symbols. That preparation is still pending; installation, launch and physical
-gameplay are not yet established for this Watch. No device reset or system
-setting change was made.
+installation could not complete before Xcode copied and extracted its OS library
+symbols. After that finished, the user's existing Xcode run completed normally.
+CoreDevice independently read back **1.1 (12)** and its running process (PID
+**422**). A passive **368×448** device screenshot showed the filled original
+title, `Ver.1.1` and **Continue 2-04**. The existing running game was left alone;
+no further install, relaunch or gameplay input was needed. This establishes
+physical installation, launch and title rendering, not Crown/haptic feel or
+sustained performance. No device reset or system setting change was made.
 
 ## Existing controls
 
