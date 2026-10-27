@@ -2,8 +2,9 @@
 
 The 27 October 2026 pass preserves the supplied executable, artwork, original
 menus, fixed 60 Hz gameplay, collision rules and save packing. Platform behavior
-lives in the native host. No physical device was queried, restarted, installed
-or used for a performance test; the user's existing Watch session was retained.
+lives in the native host. Foundation verification used native Mac and Simulators,
+retaining the user's existing Watch session. Subsequent explicitly requested
+device installations are recorded separately in [Verification.md](Verification.md).
 
 ## Native controls and accessibility
 
@@ -60,7 +61,9 @@ key-value entitlement on all four app identifiers. There is no CloudKit database
 container, schema, server or deployment command. Normal Apple iCloud capability
 provisioning and an eligible account are still required for actual delivery.
 Local play and local saves remain available if the service is unavailable.
-No developer portal changes or signed cross-device delivery were performed here.
+The foundation checks used injected transports. Subsequent device builds use
+normal Xcode automatic provisioning; signed cross-device progress delivery remains
+unverified.
 
 Only verified checkpoint and score records are exchanged. Furthest progression
 wins; high score never decreases. Local sound, game speed and unknown original

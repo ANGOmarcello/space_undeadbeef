@@ -1,5 +1,23 @@
 # Verification record
 
+## Device installation — 1.1 (10), 27 October 2026
+
+After the foundation verification below, the user explicitly requested installation
+on their iPhone and Watch. Xcode's ordinary automatic development provisioning
+produced signed device builds for both targets. Strict signatures, exact target
+device membership and the shared KVS entitlement/profile match pass for both.
+This involved no CloudKit database, container or schema deployment.
+
+The iPhone 14 Pro was updated in place from 1.1 (3) to **1.1 (10)**. CoreDevice
+independently read back the installed version and normally launched the updated
+bundle. No uninstall, app-data reset, test environment or gameplay input was used.
+
+The Series 12 build is **1.1 (10)**, with `arm64` and `arm64_32` slices. Installation
+has not completed: its known connection reports unavailable and CoreDevice
+returns usage-assertion error 4016. The user was asked to unlock it and keep it
+near the paired iPhone on Wi-Fi. No successful Watch update or cross-device
+progress-sync delivery is claimed. No Apple TV was targeted for device operations.
+
 ## Modern host foundation — 1.1 (10), 27 October 2026
 
 The controls, interruption handling, recovery saves, optional key-value progress
