@@ -7,7 +7,8 @@ retaining the user's existing Watch session. Subsequent explicitly requested
 device installations are recorded separately in [Verification.md](Verification.md).
 Build 11 refines transient iOS scene handling, native audio recovery and iPhone
 haptic attachment. It is installed and normally opened on the iPhone 14 Pro;
-physical haptic feel remains unverified.
+the user confirmed feeling the Options OFF→ON tick again. Gameplay feedback and
+an actual incoming banner remain separate physical verification.
 
 ## Native controls and accessibility
 

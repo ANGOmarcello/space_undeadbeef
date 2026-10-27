@@ -50,9 +50,11 @@ iPhone provisioning membership and shared KVS entitlement authorization through
 the profile's permitted team wildcard. CoreDevice installed it in place on the
 iPhone 14 Pro, independently read back **1.1 (11)**, and opened it normally without
 test environment, gameplay automation, data reset or preference overrides.
-Physical haptic feel and an actual incoming banner remain user verification;
-the lifecycle fixture injects the corresponding host events rather than sending
-a real notification. No physical performance test was run.
+The user subsequently confirmed feeling the Options Haptics OFF→ON tick on this
+updated iPhone build. That establishes restored physical feedback for the preview;
+gameplay effects and an actual incoming banner remain user verification. The
+lifecycle fixture injects the corresponding host events rather than sending a
+real notification. No physical performance test was run.
 
 Task-owned intermediate caches, UI test packages/logs, temporary results,
 captures and isolated Simulator saves were removed after recording the checks.

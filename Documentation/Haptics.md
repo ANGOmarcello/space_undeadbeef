@@ -34,8 +34,9 @@ ordinary Resume action checks OS activation before gameplay resumes. See
 
 These changes preserve the shared iPhone/Watch event selection, priority,
 cooldowns and no-replay policy below. Watch preset mapping is unchanged.
-Build 11 is installed and normally opened on the iPhone 14 Pro; its physical
-haptic feel remains unverified. Current verification receipts belong in
+Build 11 is installed and normally opened on the iPhone 14 Pro. The user confirmed
+feeling the Options OFF→ON tick again. Gameplay feedback remains unconfirmed by
+feel. Current verification receipts belong in
 [Verification.md](Verification.md); the build-specific results below are historical.
 
 ## Feedback delivery correction, build 1.1 (2)
