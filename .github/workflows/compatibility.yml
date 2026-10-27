@@ -1,0 +1,34 @@
+# Created by Angelo Cammalleri on 27.10.2026.
+name: Apple compatibility
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: compatibility-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  correctness-and-builds:
+    # Xcode 27's arm64 runner carries the matching Apple platform SDKs. The
+    # prepared, hash-checked original resources are tracked; no IPA is fetched.
+    runs-on: xcode-27
+    timeout-minutes: 45
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_27.2.app/Contents/Developer
+    steps:
+      - uses: actions/checkout@v5
+      - name: Check Xcode and prepare its Metal toolchain
+        run: |
+          xcodebuild -version
+          if ! xcrun --sdk macosx metal --version; then
+            xcodebuild -downloadComponent metalToolchain
+          fi
+      - name: Isolated correctness checks and four serial unsigned builds
+        # UI and physical-device checks require a separate, explicit local run.
+        run: script/verify_compatibility.sh

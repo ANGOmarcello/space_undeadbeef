@@ -25,8 +25,15 @@ final class HostUITests: XCTestCase {
         app.launchEnvironment["SDB_UI_TEST"] = "1"
         app.launchEnvironment["SDB_SAVE_DIRECTORY"] = "~/tmp/space-undeadbeef-ui-\(UUID().uuidString)"
         app.launch()
+        #if os(tvOS)
+        defer { if app.state != .notRunning { app.terminate() } }
+        #endif
         let canvas = app.descendants(matching: .any).matching(identifier: "game-canvas").firstMatch
         XCTAssertTrue(canvas.waitForExistence(timeout: 15))
+        #if os(tvOS)
+        XCTAssertEqual(app.descendants(matching: .any).matching(identifier: "game-canvas").count, 1,
+                       "The TV canvas must have one stable semantic container")
+        #endif
         func waitForMenu(_ type: Int) {
             let predicate = NSPredicate(format: "value CONTAINS %@", "menuType \(type)")
             expectation(for: predicate, evaluatedWith: canvas)
@@ -35,6 +42,17 @@ final class HostUITests: XCTestCase {
         waitForMenu(1)
         capture(app, "01-title")
         #if os(tvOS)
+        let initialTitle = canvas.value as? String ?? ""
+        XCTAssertTrue(initialTitle.contains("canPause false"), initialTitle)
+        XCUIRemote.shared.press(.menu)
+        let exited = NSPredicate(format: "state == %d OR state == %d OR state == %d",
+            XCUIApplication.State.runningBackground.rawValue,
+            XCUIApplication.State.runningBackgroundSuspended.rawValue,
+            XCUIApplication.State.notRunning.rawValue)
+        expectation(for: exited, evaluatedWith: app)
+        waitForExpectations(timeout: 10)
+        app.activate()
+        waitForMenu(1)
         // Default virtual pointer is (240,160). Move it to the original Start row.
         for _ in 0..<4 { XCUIRemote.shared.press(.left) }
         for _ in 0..<5 { XCUIRemote.shared.press(.up) }
@@ -42,6 +60,19 @@ final class HostUITests: XCTestCase {
         waitForMenu(0)
         Thread.sleep(forTimeInterval: 5)
         capture(app, "02-gameplay-remote-select")
+        let beforeBack = canvas.value as? String ?? ""
+        XCTAssertTrue(beforeBack.contains("hostActive true"), beforeBack)
+        XCTAssertTrue(beforeBack.contains("canPause true"), beforeBack)
+        XCTAssertTrue(beforeBack.contains("focused true"), "Remote surface lost focus: \(beforeBack)")
+        XCUIRemote.shared.press(.menu)
+        XCTAssertEqual(app.state, .runningForeground, "Back should pause the active game within its host")
+        waitForMenu(3)
+        capture(app, "02b-remote-back-pause")
+        // The pointer remains at Start. Move to the original Resume row.
+        for _ in 0..<4 { XCUIRemote.shared.press(.right) }
+        for _ in 0..<4 { XCUIRemote.shared.press(.down) }
+        XCUIRemote.shared.press(.select)
+        waitForMenu(0)
         XCUIRemote.shared.press(.playPause)
         for _ in 0..<5 { XCUIRemote.shared.press(.right) }
         XCUIRemote.shared.press(.playPause)
@@ -100,6 +131,91 @@ final class HostUITests: XCTestCase {
         #endif
         XCTAssertTrue(canvas.exists)
         app.terminate()
+    }
+
+    /// Read the semantic children without changing system VoiceOver settings.
+    /// Ordinary taps still follow the original game menu hit-test path.
+    @MainActor
+    func testAccessibleOriginalMenus() throws {
+        #if os(iOS)
+        let app = XCUIApplication()
+        let save = "~/tmp/space-accessible-menus-\(UUID().uuidString)"
+        app.launchEnvironment = ["SDB_UI_TEST": "1", "SDB_MUTE_AUDIO": "1", "SDB_SAVE_DIRECTORY": save]
+        print("SDB_UI_TEST isolatedSave=\(save)")
+        app.launch()
+        defer { app.terminate() }
+        let canvas = app.descendants(matching: .any).matching(identifier: "game-canvas").firstMatch
+        XCTAssertTrue(canvas.waitForExistence(timeout: 15))
+        func button(_ label: String) -> XCUIElement {
+            let result = app.buttons.matching(NSPredicate(format: "label == %@", label)).firstMatch
+            XCTAssertTrue(result.waitForExistence(timeout: 10), "Missing semantic menu action: \(label)")
+            return result
+        }
+        func waitForMenu(_ type: Int) {
+            expectation(for: NSPredicate(format: "value CONTAINS %@", "menuType \(type)"), evaluatedWith: canvas)
+            waitForExpectations(timeout: 10)
+        }
+        waitForMenu(1)
+        XCTAssertTrue(button("Game Start").frame.intersects(canvas.frame))
+        button("Options").tap()
+        waitForMenu(5)
+        button("Sound Off").tap()
+        XCTAssertTrue(button("Sound Off").isSelected)
+        button("Sound On").tap()
+        XCTAssertTrue(button("Sound On").isSelected)
+        button("Save and Exit").tap()
+        waitForMenu(1)
+        button("Credits").tap()
+        waitForMenu(6)
+        capture(app, "accessible-original-credits")
+        let back = button("Back")
+        XCTAssertLessThan(back.frame.width, canvas.frame.width)
+        XCTAssertLessThan(back.frame.height, canvas.frame.height)
+        XCTAssertGreaterThan(back.frame.midY, canvas.frame.midY)
+        back.tap()
+        waitForMenu(1)
+        capture(app, "accessible-original-title")
+        button("Game Start").tap()
+        waitForMenu(0)
+        let pause = app.buttons["pause-game"]
+        XCTAssertTrue(pause.waitForExistence(timeout: 5))
+        pause.tap()
+        waitForMenu(3)
+        XCTAssertTrue(button("Resume").exists)
+        capture(app, "accessible-original-pause")
+        button("Resume").tap()
+        waitForMenu(0)
+        XCUIDevice.shared.press(.home)
+        app.activate()
+        waitForMenu(3)
+        button("Resume").tap()
+        waitForMenu(0)
+        XCTAssertFalse(app.staticTexts["runtime-failure"].exists)
+        #else
+        throw XCTSkip("Semantic menu activation is checked in the iOS hosts and isolated engine tests.")
+        #endif
+    }
+
+    @MainActor
+    func testSaveFailureRemainsPlayable() throws {
+        #if os(iOS)
+        let app = XCUIApplication()
+        // A character device cannot contain child files. This produces a real
+        // storage error without changing any file or ordinary user settings.
+        app.launchEnvironment = ["SDB_UI_TEST": "1", "SDB_MUTE_AUDIO": "1", "SDB_SAVE_DIRECTORY": "/dev/null"]
+        app.launch()
+        defer { app.terminate() }
+        let alert = app.alerts["Progress could not be saved"]
+        XCTAssertTrue(alert.waitForExistence(timeout: 15))
+        capture(app, "native-save-error")
+        alert.buttons["OK"].tap()
+        let canvas = app.descendants(matching: .any).matching(identifier: "game-canvas").firstMatch
+        XCTAssertTrue(canvas.waitForExistence(timeout: 5))
+        XCTAssertFalse(app.staticTexts["runtime-failure"].exists)
+        XCTAssertFalse(alert.exists)
+        #else
+        throw XCTSkip("The native alert is checked in the iOS host; storage failure handling is shared and tested separately.")
+        #endif
     }
 
     /// Actual host callbacks during an ordinary game, with original death/title
