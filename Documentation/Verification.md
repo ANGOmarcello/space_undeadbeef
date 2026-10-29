@@ -1,5 +1,13 @@
 # Verification record
 
+## Original Home Screen name — 1.1 (18), 29 October 2026
+
+All four platform bundle display names and the project generator now use
+`S.deadbeef`, read directly from the supplied IPA's Info.plist. Project, product,
+folder and bundle identifiers retain their existing values. The iOS build passes;
+its installed iPhone 18 Pro Simulator Home Screen visibly shows `S.deadbeef`
+below the ship icon. No App Store Connect metadata was changed.
+
 ## Watch icon coverage — 1.1 (17), 29 October 2026
 
 The user's Series 4 report identified dark square corners inside the round icon.
