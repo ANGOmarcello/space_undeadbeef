@@ -33,6 +33,9 @@ original.last_known_file_type = 'folder'
 modern = resources_group.new_file('Modern')
 modern.last_known_file_type = 'folder'
 icons_group = resources_group.new_group('AppIcons', 'AppIcons')
+composer_group = project.main_group.new_group('Icon Composer', 'Icon Composer')
+composer_icon = composer_group.new_file('SpaceUndeadbeef.icon')
+composer_icon.last_known_file_type = 'folder.iconcomposer.icon'
 tests_group = project.main_group.new_group('Tests', 'Tests')
 ui_test_source = tests_group.new_file('HostUITests.swift')
 
@@ -55,8 +58,12 @@ platforms.each do |name, options|
   end
   target.resources_build_phase.add_file_reference(original)
   target.resources_build_phase.add_file_reference(modern)
-  icon_catalog = icons_group.new_file("#{name}.xcassets")
-  target.resources_build_phase.add_file_reference(icon_catalog)
+  if name == 'tvOS'
+    icon_catalog = icons_group.new_file('tvOS.xcassets')
+    target.resources_build_phase.add_file_reference(icon_catalog)
+  else
+    target.resources_build_phase.add_file_reference(composer_icon)
+  end
   target.add_system_frameworks(['Foundation', 'CoreGraphics', 'ImageIO', 'AVFoundation'])
   target.add_system_frameworks(['Metal', 'MetalKit', 'CoreImage', 'QuartzCore']) unless name == 'watchOS'
   target.add_system_frameworks(['GameController']) unless name == 'watchOS'
@@ -103,7 +110,7 @@ platforms.each do |name, options|
     settings = configuration.build_settings
     settings['PRODUCT_BUNDLE_IDENTIFIER'] = "dev.cammalleri.SpaceUndeadbeef#{options[:suffix]}"
     settings['CODE_SIGN_ENTITLEMENTS'] = 'Config/ProgressSync.entitlements'
-    settings['ASSETCATALOG_COMPILER_APPICON_NAME'] = 'AppIcon'
+    settings['ASSETCATALOG_COMPILER_APPICON_NAME'] = name == 'tvOS' ? 'AppIcon' : 'SpaceUndeadbeef'
     settings.delete('ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME')
     settings['INFOPLIST_FILE'] = "Config/#{name}-Info.plist"
     settings['SDKROOT'] = options[:sdk]

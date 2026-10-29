@@ -1,6 +1,7 @@
 #!/usr/bin/env swift
 // Created by Angelo Cammalleri on 25.10.2026.
-// Package the original pixel artwork at Apple's required raster icon sizes.
+// Export the editable sky and ship layers to tvOS parallax and Top Shelf assets.
+// Xcode compiles iOS, macOS and watchOS directly from SpaceUndeadbeef.icon.
 
 import Foundation
 import CoreGraphics
@@ -8,14 +9,30 @@ import ImageIO
 import UniformTypeIdentifiers
 
 let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
-let sourceURL = root.appendingPathComponent("Resources/Original/icon.png")
-guard let source = CGImageSourceCreateWithURL(sourceURL as CFURL, nil),
-      let artwork = CGImageSourceCreateImageAtIndex(source, 0, nil),
-      let colorSpace = CGColorSpace(name: CGColorSpace.sRGB) else {
-    fatalError("The prepared original icon is missing or invalid")
+let iconSource = root.appendingPathComponent("Icon Composer/SpaceUndeadbeef.icon/Assets")
+func image(_ name: String) -> CGImage {
+    let url = iconSource.appendingPathComponent(name)
+    guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
+          let image = CGImageSourceCreateImageAtIndex(source, 0, nil) else {
+        fatalError("Missing Icon Composer layer: \(name)")
+    }
+    return image
+}
+let sky = image("TitleSky.png")
+let ship = image("Ship.png")
+guard let colorSpace = CGColorSpace(name: CGColorSpace.sRGB) else {
+    fatalError("Cannot create sRGB color space")
 }
 let info: [String: Any] = ["author": "xcode", "version": 1]
 let assets = root.appendingPathComponent("Resources/AppIcons")
+// Share the editable document's ship scale. Its canvas is 1024 points.
+let documentURL = iconSource.deletingLastPathComponent().appendingPathComponent("icon.json")
+let document = try JSONSerialization.jsonObject(with: Data(contentsOf: documentURL)) as! [String: Any]
+let groups = document["groups"] as! [[String: Any]]
+let shipLayers = groups[0]["layers"] as! [[String: Any]]
+let shipPosition = shipLayers.last!["position"] as! [String: Any]
+let shipScale = shipPosition["scale"] as! Double
+let canvasSide = 1024.0
 
 func json(_ value: [String: Any], at url: URL) throws {
     try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
@@ -24,28 +41,28 @@ func json(_ value: [String: Any], at url: URL) throws {
     try data.write(to: url, options: .atomic)
 }
 
-func png(width: Int, height: Int, at url: URL, transparent: Bool = false) throws {
+func png(width: Int, height: Int, at url: URL, foreground: Bool, composite: Bool = false) throws {
     guard let context = CGContext(data: nil, width: width, height: height,
                                   bitsPerComponent: 8, bytesPerRow: width * 4,
                                   space: colorSpace,
-                                  bitmapInfo: (transparent ? CGImageAlphaInfo.premultipliedLast : .noneSkipLast).rawValue) else {
+                                  bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else {
         fatalError("Cannot allocate icon bitmap")
     }
-    if !transparent {
-        // Extend the edge columns for rectangular TV assets. The ship keeps its
-        // original proportions, and the source's background remains continuous.
-        context.setFillColor(CGColor(gray: 0, alpha: 1))
-        context.fill(CGRect(x: 0, y: 0, width: width, height: height))
-        context.interpolationQuality = .none
-        let side = min(width, height)
-        let inset = (width - side) / 2
-        if inset > 0 {
-            let left = artwork.cropping(to: CGRect(x: 0, y: 0, width: 1, height: artwork.height))!
-            let right = artwork.cropping(to: CGRect(x: artwork.width - 1, y: 0, width: 1, height: artwork.height))!
-            context.draw(left, in: CGRect(x: 0, y: 0, width: inset, height: height))
-            context.draw(right, in: CGRect(x: inset + side, y: 0, width: width - inset - side, height: height))
-        }
-        context.draw(artwork, in: CGRect(x: inset, y: 0, width: side, height: height))
+    context.interpolationQuality = .high
+    if !foreground || composite {
+        // Cover the rectangular TV surface naturally with the continuous sky.
+        let cover = max(Double(width) / Double(sky.width), Double(height) / Double(sky.height))
+        let size = CGSize(width: Double(sky.width) * cover, height: Double(sky.height) * cover)
+        context.draw(sky, in: CGRect(x: (Double(width) - size.width) / 2,
+                                    y: (Double(height) - size.height) / 2,
+                                    width: size.width, height: size.height))
+    }
+    if foreground || composite {
+        let scale = Double(height) / canvasSide * shipScale
+        let size = CGSize(width: Double(ship.width) * scale, height: Double(ship.height) * scale)
+        context.draw(ship, in: CGRect(x: (Double(width) - size.width) / 2,
+                                     y: (Double(height) - size.height) / 2,
+                                     width: size.width, height: size.height))
     }
     try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
     guard let image = context.makeImage(),
@@ -56,32 +73,7 @@ func png(width: Int, height: Int, at url: URL, transparent: Bool = false) throws
     guard CGImageDestinationFinalize(destination) else { fatalError("Cannot write icon bitmap") }
 }
 
-for platform in ["iOS", "watchOS", "macOS", "tvOS"] {
-    try json(["info": info], at: assets.appendingPathComponent("\(platform).xcassets/Contents.json"))
-}
-for platform in ["iOS", "watchOS"] {
-    let icon = assets.appendingPathComponent("\(platform).xcassets/AppIcon.appiconset")
-    try png(width: 1024, height: 1024, at: icon.appendingPathComponent("AppIcon-1024.png"))
-    try json(["images": [["filename": "AppIcon-1024.png", "idiom": "universal",
-                            "platform": platform.lowercased(), "size": "1024x1024"]],
-              "info": info], at: icon.appendingPathComponent("Contents.json"))
-}
-
-let macIcon = assets.appendingPathComponent("macOS.xcassets/AppIcon.appiconset")
-var macImages: [[String: String]] = []
-var generatedSizes = Set<Int>()
-for size in [16, 32, 128, 256, 512] {
-    for scale in [1, 2] {
-        let pixels = size * scale
-        let filename = "AppIcon-\(pixels).png"
-        if generatedSizes.insert(pixels).inserted {
-            try png(width: pixels, height: pixels, at: macIcon.appendingPathComponent(filename))
-        }
-        macImages.append(["filename": filename, "idiom": "mac", "size": "\(size)x\(size)", "scale": "\(scale)x"])
-    }
-}
-try json(["images": macImages, "info": info], at: macIcon.appendingPathComponent("Contents.json"))
-
+try json(["info": info], at: assets.appendingPathComponent("tvOS.xcassets/Contents.json"))
 let tv = assets.appendingPathComponent("tvOS.xcassets/AppIcon.brandassets")
 try json(["assets": [
     ["filename": "App Icon.imagestack", "idiom": "tv", "role": "primary-app-icon", "size": "400x240"],
@@ -99,7 +91,7 @@ for (name, width, height, scales) in [("App Icon", 400, 240, [1, 2]), ("App Icon
         for scale in scales {
             let filename = "\(layer)-\(scale)x.png"
             try png(width: width * scale, height: height * scale,
-                    at: directory.appendingPathComponent("Content.imageset/\(filename)"), transparent: layer == "Front")
+                    at: directory.appendingPathComponent("Content.imageset/\(filename)"), foreground: layer == "Front")
             images.append(["filename": filename, "idiom": "tv", "scale": "\(scale)x"])
         }
         try json(["images": images, "info": info], at: directory.appendingPathComponent("Content.imageset/Contents.json"))
@@ -108,8 +100,8 @@ for (name, width, height, scales) in [("App Icon", 400, 240, [1, 2]), ("App Icon
 var topShelf: [[String: String]] = []
 for scale in [1, 2] {
     let filename = "TopShelf-\(scale)x.png"
-    try png(width: 2320 * scale, height: 720 * scale, at: tv.appendingPathComponent("Top Shelf Image Wide.imageset/\(filename)"))
+    try png(width: 2320 * scale, height: 720 * scale, at: tv.appendingPathComponent("Top Shelf Image Wide.imageset/\(filename)"), foreground: false, composite: true)
     topShelf.append(["filename": filename, "idiom": "tv", "scale": "\(scale)x"])
 }
 try json(["images": topShelf, "info": info], at: tv.appendingPathComponent("Top Shelf Image Wide.imageset/Contents.json"))
-print("Prepared four platform icon catalogs from the original 57×57 artwork.")
+print("Prepared tvOS parallax and Top Shelf assets from the Icon Composer layers.")

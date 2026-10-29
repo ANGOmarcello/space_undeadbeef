@@ -1,0 +1,95 @@
+{
+  "fill": {
+    "automatic-gradient": "srgb:0.09020,0.13725,0.19216,1.00000"
+  },
+  "groups": [
+    {
+      "name": "Original ship silhouette",
+      "layers": [
+        {
+          "name": "Monochrome silhouette lift",
+          "image-name": "Ship.png",
+          "glass": false,
+          "position": {
+            "scale": 0.74,
+            "translation-in-points": [
+              0,
+              0
+            ]
+          },
+          "opacity": 0.0,
+          "opacity-specializations": [
+            {
+              "appearance": "tinted",
+              "value": 0.24
+            }
+          ],
+          "fill": {
+            "solid": "srgb:0.95000,0.95000,0.95000,1.00000"
+          }
+        },
+        {
+          "name": "Silver armor and orange fin",
+          "image-name": "Ship.png",
+          "glass": false,
+          "position": {
+            "scale": 0.74,
+            "translation-in-points": [
+              0,
+              0
+            ]
+          }
+        }
+      ],
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0.3
+      },
+      "translucency": {
+        "enabled": false,
+        "value": 0.0
+      }
+    },
+    {
+      "name": "Title-screen sunset",
+      "layers": [
+        {
+          "name": "Navy and peach clouds",
+          "image-name": "TitleSky.png",
+          "glass": false,
+          "position": {
+            "scale": 0.8165869218500797,
+            "translation-in-points": [
+              0,
+              0
+            ]
+          },
+          "opacity-specializations": [
+            {
+              "appearance": "dark",
+              "value": 0.32
+            },
+            {
+              "appearance": "tinted",
+              "value": 0.0
+            }
+          ]
+        }
+      ],
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0.0
+      },
+      "translucency": {
+        "enabled": false,
+        "value": 0.0
+      }
+    }
+  ],
+  "supported-platforms": {
+    "squares": "shared",
+    "circles": [
+      "watchOS"
+    ]
+  }
+}

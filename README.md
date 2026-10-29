@@ -39,11 +39,14 @@ python3 script/prepare_original.py
 
 To regenerate the project after adding source files, run `ruby script/generate_project.rb` (requires the `xcodeproj` Ruby gem). The committed project builds without running this generator.
 
-The four targets include platform app-icon catalogs made from the original
-57×57 ship artwork. Run `xcrun swift script/prepare_icons.swift` to regenerate
-them. Pixel scaling preserves the supplied artwork; these are not recovered
-high-resolution originals. TV assets extend the background edges to fit its
-rectangular icon and Top Shelf sizes.
+The primary icon is the editable [Icon Composer document](<Icon Composer/SpaceUndeadbeef.icon>),
+with light, dark, clear and tinted appearances for iPhone/iPad/Mac and a circular
+Watch composition. Its separate sky and ship layers recreate the original icon
+at higher resolution. They are new derived artwork, not recovered originals.
+Xcode compiles the native icon and older-OS fallback images. TV uses the same
+layers in its parallax icon and Top Shelf assets; regenerate those with
+`xcrun swift script/prepare_icons.swift`. See [AppIcon.md](Documentation/AppIcon.md)
+for provenance, editable sources and verification.
 
 ## Controls
 
