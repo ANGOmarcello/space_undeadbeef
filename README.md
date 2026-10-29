@@ -1,4 +1,24 @@
+![Space Deadbeef — restored for modern Apple platforms](Documentation/Images/Readme-Banner.png)
+
 # SPACE UNDEADBEEF
+
+## What changed in version 1.1
+
+We raised the displayed version from the original **1.01** to **1.1** to mark
+our restoration and modernization work. The original game remains the foundation;
+these additions make it usable on today's Apple platforms.
+
+- **Modern platforms:** native 64-bit hosts for iPhone, iPad, Mac, Apple TV and a standalone Apple Watch app.
+- **Screen-filling layouts:** adaptive arenas, wider title art, Retina rendering, a screen-corner pause control and a compact, centered Watch HUD.
+- **Faithful sharper artwork:** higher-density renditions of all player views, enemies, boss parts, weapons and effects; crisp menu text and corrected text shadows.
+- **Smoother execution:** original 60 Hz simulation, display-paced presentation, batched Metal drawing, bounded asynchronous checkpoints and cached software menus.
+- **Native controls:** touch, mouse, keyboard and extended controllers; direct Digital Crown steering; Apple TV menu focus and remote touch-down/drag/release gameplay.
+- **Sound preferences:** sound enabled by default, respecting Silent Mode by default where supported, with persistent Options choices.
+- **Optional haptics:** iPhone and Watch feedback for menus, weapons, hits and explosions, controlled through the original Options screen.
+- **Interruption recovery:** noninterruptive iPhone banners keep gameplay running; real interruptions use the original resumable Pause flow and recoverable native audio.
+- **Safer progress storage:** bounded, validated checkpoints and recovery records; a small tvOS preferences transaction; optional provisioned iCloud key-value progress exchange without a CloudKit deployment.
+- **Updated icons:** editable Icon Composer appearances, earlier-system fallbacks, a full circular Watch background and TV parallax/Top Shelf artwork.
+- **Accessibility and credits:** semantic original menu actions and an original-style, tappable modernization credit linking to cammalleri.dev.
 
 A restoration workbench for the supplied **Space Deadbeef 1.01** iPhoneOS 2.1 game, following [Respring's restoration workflow](https://github.com/DylanMcD8/respring-skill). The original IPA remains unchanged.
 
@@ -17,7 +37,8 @@ Automatic development signing uses Angelo Cammalleri's existing team. Other
 developers should select their own team. macOS local build/run uses
 `./script/build_and_run.sh`; `--build-only` builds without launching. Build output
 stays in standard Xcode DerivedData. Each platform has a distinct host bundle
-identity and its own save directory.
+identity and its own save storage. tvOS uses a bounded preferences record; other
+platforms use Application Support files.
 
 For a physical Watch, select **SPACE UNDEADBEEF watchOS** and the Watch destination.
 Enable Developer Mode on the Watch, complete its restart and confirmation, and
@@ -48,6 +69,9 @@ layers in its parallax icon and Top Shelf assets; regenerate those with
 `xcrun swift script/prepare_icons.swift`. See [AppIcon.md](Documentation/AppIcon.md)
 for provenance, editable sources and verification.
 
+The [README banner record](Documentation/ReadmeBanner.md) documents the generated
+promotional artwork and its visual references.
+
 The [credits restoration record](Documentation/Credits.md) documents the reported
 bounce of the original contact address and the replacement website credit.
 
@@ -66,9 +90,9 @@ inverse input mapping.
 
 - iPhone/iPad: touch and drag.
 - Mac / attached keyboard: mouse and drag, or arrows to aim; hold Space to charge and release to fire. Escape or P pauses.
-- Apple TV: directional remote presses position the pointer; Select taps, Play/Pause toggles holding for a targeting sweep, and Back/Menu pauses gameplay.
+- Apple TV: swipe or press directions to focus original menu choices, then Select. During play, touch and sweep to aim/charge and lift to fire. Click-only remotes can hold Select or toggle a hold with Play/Pause; arrows move the target while held, and Up/Down steer otherwise. Back/Menu pauses gameplay.
 - Apple Watch: touch and drag; the Digital Crown steers the ship vertically without holding an aiming touch.
-- Extended controllers on iPhone/iPad, Mac and TV: left stick steers, right stick or D-pad aims, A/right trigger charges until released, and Menu pauses. Either stick addresses menu rows.
+- Extended controllers on iPhone/iPad, Mac and TV: left stick steers, right stick or D-pad aims, A/right trigger charges until released, and Menu pauses. Either stick addresses menu rows on iPhone/iPad/Mac; TV menus use system focus.
 
 Original menus expose semantic buttons and selection state to accessibility.
 Focus loss and interruptions cancel held input and enter the original pause flow.
