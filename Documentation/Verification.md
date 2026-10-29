@@ -1,5 +1,22 @@
 # Verification record
 
+## Remaining Retina sprites — 1.1 (19), 29 October 2026
+
+All 16 remaining gameplay textures now have prepared 2×/4× renditions, including
+enemies, boss components, weapons and effects. Explosion/debris cells are isolated;
+soft lights retain linear gradients. See [RetinaSprites.md](RetinaSprites.md) for
+provenance, the comparison, original frame contracts and decoded-memory cost.
+
+The actual-loader suite passes **408** sanitizer-backed checks. Re-exports match
+all 32 images exactly. Original executable and all 96 prepared asset hashes pass.
+The pre-change/current engines match guest, draw, audio and save fingerprints
+across 600 fixed steps. The iPhone 18 Pro original interaction test passes
+(1 test, 0 failures), with its existing two audio-session main-thread warnings.
+Gameplay screenshots, the full comparison and both explosion atlases were
+visually reviewed. All four Debug platform builds pass, identify as
+`S.deadbeef 1.1 (19)`, and contain matching final sprite hashes.
+No physical device was installed, launched or exercised in this pass.
+
 ## Original Home Screen name — 1.1 (18), 29 October 2026
 
 All four platform bundle display names and the project generator now use

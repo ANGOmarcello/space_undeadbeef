@@ -1018,10 +1018,20 @@ struct Runtime {
     // Prepared, matching views only: keep the guest's original size, padding
     // and UV contract independent from the native texture's pixel density.
     // Watch needs a smaller resident set; no scaling work runs during a frame.
-    constexpr unsigned ShipScale=TARGET_OS_WATCH?2:4;
+    constexpr unsigned SpriteScale=TARGET_OS_WATCH?2:4;
     NSString *shipDirectory=[[_resourcePath stringByDeletingLastPathComponent]
-        stringByAppendingPathComponent:[NSString stringWithFormat:@"Modern/PlayerShip/%ux",ShipScale]];
+        stringByAppendingPathComponent:[NSString stringWithFormat:@"Modern/PlayerShip/%ux",SpriteScale]];
     const bool retinaShips=[[NSFileManager defaultManager] fileExistsAtPath:shipDirectory];
+    NSString *spriteDirectory=[[_resourcePath stringByDeletingLastPathComponent]
+        stringByAppendingPathComponent:[NSString stringWithFormat:@"Modern/Sprites/%ux",SpriteScale]];
+    const bool retinaSprites=[[NSFileManager defaultManager] fileExistsAtPath:spriteDirectory];
+    struct SpriteLayout {const char *name;unsigned width,height;};
+    constexpr SpriteLayout sprites[]={
+        {"ThrustMiddle.png",40,42},{"lockmark.png",64,64},{"laser.png",16,16},{"missile.png",8,32},
+        {"Explosion.png",99,114},{"exp01.png",256,174},{"exp02.png",512,392},{"splinter.png",64,64},
+        {"gray_ball.png",64,64},{"ball.png",16,16},{"zako01.png",32,32},{"zako02.png",64,64},
+        {"sergeant.png",64,64},{"snake_dou.png",48,48},{"snake_head.png",48,96},{"snake_tail.png",96,48}
+    };
     for(NSDictionary *entry in manifest[@"textures"]) {
         uint32_t index=[entry[@"entry"] unsignedIntValue];if(index>=62)continue;
         NSURL *url=[NSURL fileURLWithPath:[_resourcePath stringByAppendingPathComponent:entry[@"name"]]];
@@ -1042,10 +1052,27 @@ struct Runtime {
             CGImageSourceRef retinaSource=CGImageSourceCreateWithURL((__bridge CFURLRef)retinaURL,nullptr);
             CGImageRef retinaImage=retinaSource?CGImageSourceCreateImageAtIndex(retinaSource,0,nullptr):nullptr;
             if(retinaSource)CFRelease(retinaSource);
-            if(!retinaImage||CGImageGetWidth(retinaImage)!=logicalWidth*ShipScale||
-               CGImageGetHeight(retinaImage)!=logicalHeight*ShipScale) {
+            if(!retinaImage||CGImageGetWidth(retinaImage)!=logicalWidth*SpriteScale||
+               CGImageGetHeight(retinaImage)!=logicalHeight*SpriteScale) {
                 if(retinaImage)CGImageRelease(retinaImage);
                 CGImageRelease(image);c.fail("Retina player-ship texture is missing or has invalid dimensions");return;
+            }
+            CGImageRelease(image);image=retinaImage;
+        }
+        if(retinaSprites&&index>=46&&index<=61) {
+            const auto &layout=sprites[index-46];
+            NSString *expected=[NSString stringWithUTF8String:layout.name];
+            if(![entry[@"name"] isEqualToString:expected]||logicalWidth!=layout.width||logicalHeight!=layout.height) {
+                CGImageRelease(image);c.fail("Unsupported original gameplay-sprite texture layout");return;
+            }
+            NSURL *retinaURL=[NSURL fileURLWithPath:[spriteDirectory stringByAppendingPathComponent:expected]];
+            CGImageSourceRef retinaSource=CGImageSourceCreateWithURL((__bridge CFURLRef)retinaURL,nullptr);
+            CGImageRef retinaImage=retinaSource?CGImageSourceCreateImageAtIndex(retinaSource,0,nullptr):nullptr;
+            if(retinaSource)CFRelease(retinaSource);
+            if(!retinaImage||CGImageGetWidth(retinaImage)!=logicalWidth*SpriteScale||
+               CGImageGetHeight(retinaImage)!=logicalHeight*SpriteScale) {
+                if(retinaImage)CGImageRelease(retinaImage);
+                CGImageRelease(image);c.fail("Retina gameplay-sprite texture is missing or has invalid dimensions");return;
             }
             CGImageRelease(image);image=retinaImage;
         }
