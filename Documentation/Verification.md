@@ -1,5 +1,15 @@
 # Verification record
 
+## Watch icon coverage — 1.1 (17), 29 October 2026
+
+The user's Series 4 report identified dark square corners inside the round icon.
+The shared 1024-point sky was smaller than the 1088-point Watch canvas. Its
+Watch-only Composer scale now covers that canvas; the ship retains its scale
+and placement. Native Watch preview was visually inspected. A standalone
+watchOS-10-minimum asset compilation succeeds and reports a 1088×1088 sky layer,
+with precomposed raster and native icon stack both present. No Watch installation
+or physical icon-display verification is claimed.
+
 ## Credits row alignment — 1.1 (16), 29 October 2026
 
 At the user's request, the restoration notice is now one `Modernization:` row,

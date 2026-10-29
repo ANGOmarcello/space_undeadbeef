@@ -57,13 +57,21 @@
           "name": "Navy and peach clouds",
           "image-name": "TitleSky.png",
           "glass": false,
-          "position": {
-            "scale": 0.8165869218500797,
-            "translation-in-points": [
-              0,
-              0
-            ]
-          },
+          "position-specializations": [
+            {
+              "value": {
+                "scale": 0.8165869218500797,
+                "translation-in-points": [0, 0]
+              }
+            },
+            {
+              "idiom": "watchOS",
+              "value": {
+                "scale": 0.8676236044657097,
+                "translation-in-points": [0, 0]
+              }
+            }
+          ],
           "opacity-specializations": [
             {
               "appearance": "dark",

@@ -27,6 +27,18 @@ the sky and preserves ship luminance, with a restrained silhouette lift for
 small-size readability. The system supplies clear/tinted appearance colors,
 masking and lighting. Watch uses its circular layout and default appearance.
 
+## Watch background coverage — 1.1 (17)
+
+The Watch canvas is 1088 points, while the shared square canvas is 1024.
+The former shared sky scale left a 32-point band outside its square on Watch,
+visible as dark edges inside the circle. A Watch-only position specialization
+now covers the full 1088-point canvas (1254-pixel sky × 1088/1254).
+Ship placement and scale and all square-platform appearances are unchanged.
+Native Composer rendering confirms continuous sky at the circle boundary;
+the watchOS-10-minimum compiled catalog reports a 1088×1088 sky layer and retains
+both the older-system raster and native layer stack. This has not yet been
+visually confirmed on the physical Series 4.
+
 ## Build ownership
 
 The iOS, macOS and watchOS app targets compile only `SpaceUndeadbeef.icon` as
