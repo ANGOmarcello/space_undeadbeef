@@ -146,7 +146,7 @@ final class HostUITests: XCTestCase {
         credits.press(forDuration: 0.2)
         let link = app.descendants(matching: .any).matching(identifier: "restoration-credit-link").firstMatch
         XCTAssertTrue(link.waitForExistence(timeout: 10))
-        XCTAssertEqual(link.label, "Restoration & modernization by cammalleri.dev")
+        XCTAssertEqual(link.label, "Modernization: cammalleri.dev")
         let back = app.buttons.matching(NSPredicate(format: "label == %@", "Back")).firstMatch
         XCTAssertTrue(back.waitForExistence(timeout: 10))
         XCTAssertFalse(link.frame.intersects(back.frame), "Link must preserve the original EXIT hit area")

@@ -1,5 +1,17 @@
 # Verification record
 
+## Credits row alignment — 1.1 (16), 29 October 2026
+
+At the user's request, the restoration notice is now one `Modernization:` row,
+with the website right-aligned in the same 33-column grid and 24×12 font as the
+creator credits. It occupies the original email row, with the original row
+spacing, a warm-yellow underlined URL and a native link over that URL only.
+All seven original creator/thanks rows and EXIT retain their positions.
+The actual-engine menu suite passes **97** sanitizer-backed checks with captures;
+the iPhone 18 Pro link UI test passes (1 pass, 0 failures), including Safari URL
+handoff, return and original EXIT. iOS and Mac builds pass. See
+[Credits.md](Credits.md) for wording history and the reported email bounce.
+
 ## iPhone delivery — 1.1 (15), 29 October 2026
 
 At the user's request, the Retina-ship source was development-signed and installed

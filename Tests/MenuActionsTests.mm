@@ -62,7 +62,9 @@ int main(int argc, const char *argv[]) {
         SDBMenuAction *creditsBack = action(engine, @"Back");
         CGRect creditFrame=engine.restorationCreditFrame;
         [engine renderFrame];
-        if (!require(!engine.failure, "two-line restoration credit renders through the original font") ||
+        if (!require(!engine.failure, "single-row modernization credit renders through the original font") ||
+            !require(std::abs(creditFrame.size.width-14*12)<.01&&std::abs(creditFrame.size.height-27)<.01,
+                     "website uses the adjacent creator row's original 24x12 font and underline spacing") ||
             !require(!CGRectIsEmpty(creditFrame) && CGRectContainsRect(CGRectMake(0,0,engine.logicalSize.width,engine.logicalSize.height),creditFrame),
                      "restoration link fits the original contact band") ||
             !require(!CGRectIntersectsRect(creditFrame,creditsBack.logicalFrame), "restoration link cannot intercept original EXIT")) return 1;

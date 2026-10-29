@@ -24,9 +24,9 @@
 namespace {
 constexpr uint32_t ExtendedTitle = 1000;
 constexpr uint32_t OriginalFont = 1, OriginalSmallFont = 2;
-constexpr uint32_t OriginalContactRow = 0x1482c, PreviousCreditRow = 0x147f0, CreditExitRow = 0x14868;
-constexpr const char *RestorationCreditLines[] = {"Restoration & modernization", "by cammalleri.dev"};
-constexpr float RestorationCreditGapFraction = 0.25f;
+constexpr uint32_t OriginalContactRow = 0x1482c, PreviousCreditRow = 0x147f0;
+constexpr const char *RestorationCreditParts[] = {"Modernization:", "cammalleri.dev"};
+constexpr uint32_t CreditLabelColor=0xffbfbfbf, CreditLinkColor=0xff80c0ff;
 using sdb::display::DisplayGeometry;
 constexpr uint32_t SilentOn=0x01d00000,SilentOff=0x01d00004,SilentOnDraw=0x01d00008,SilentOffDraw=0x01d0000c;
 constexpr uint32_t HapticsOn=0x01d00010,HapticsOff=0x01d00014,HapticsOnDraw=0x01d00018,HapticsOffDraw=0x01d0001c;
@@ -89,16 +89,17 @@ struct Runtime {
     bool touching=false,watchLayout=TARGET_OS_WATCH,steeringActive=false;
     double steeringY=.5;
     uint32_t restorationCreditScratch=0;
-    struct CreditLayout {float first, second, glyphHeight, glyphWidth;};
-    CreditLayout restorationCreditLayout() {
-        // Fit two lines into the old contact band, bounded by the unchanged
-        // Special Thanks and EXIT glyphs. Keep the original font proportions.
-        const float top=real(cpu.read32(PreviousCreditRow))+real(cpu.read32(PreviousCreditRow+52))/2;
-        const float bottom=real(cpu.read32(CreditExitRow))-real(cpu.read32(CreditExitRow+52))/2;
-        const float height=std::min(real(cpu.read32(OriginalContactRow+52)),std::max(0.f,(bottom-top)/(2+RestorationCreditGapFraction)));
-        const float aspect=real(cpu.read32(OriginalContactRow+56))/real(cpu.read32(OriginalContactRow+52));
-        const float width=std::min(height*aspect,float(geometry.safeUIRect.width)/float(strlen(RestorationCreditLines[0])));
-        return {top+height/2,bottom-height/2,height,width};
+    struct CreditLayout {float glyphHeight,glyphWidth,labelX,linkX,linkWidth,lineThickness;};
+    CreditLayout restorationCreditLayout(uint32_t button) {
+        // Match the adjacent 33-column creator row and its 24x12 glyphs.
+        // Use the live original scale so both parts and the underline follow
+        // the same entrance animation as the untouched credits.
+        const float height=real(cpu.read32(PreviousCreditRow+52))*real(cpu.read32(button+0x28))/real(cpu.read32(OriginalContactRow+8));
+        const float width=real(cpu.read32(PreviousCreditRow+56))*real(cpu.read32(button+0x34))/real(cpu.read32(OriginalContactRow+12));
+        const float columns=float(string(cpu.read32(PreviousCreditRow+36)).size());
+        const float labelWidth=float(strlen(RestorationCreditParts[0]))*width;
+        const float linkWidth=float(strlen(RestorationCreditParts[1]))*width;
+        return {height,width,(labelWidth-columns*width)/2,(columns*width-linkWidth)/2,linkWidth,height/24};
     }
 
     void invalidateMenuPacket() {menuPacketValid=false;menuVertices.clear();menuDraws.clear();}
@@ -454,8 +455,7 @@ struct Runtime {
 - (NSInteger)gameMenuType {auto &r=*_runtime;return r.game?r.cpu.read32(r.cpu.read32(r.game+4)+0x20):-1;}
 - (CGRect)restorationCreditFrame {
     if (_failure || _suspended || self.gameMenuType != 6) return CGRectZero;
-    Runtime &r=*_runtime;const auto layout=r.restorationCreditLayout();
-    const float width=float(strlen(RestorationCreditLines[0]))*layout.glyphWidth;
+    Runtime &r=*_runtime;
     GuestCPU &c=r.cpu;
     const uint32_t sentinel=c.read32(r.game+4)+0x24;
     uint32_t node=c.read32(sentinel),button=0;
@@ -469,11 +469,12 @@ struct Runtime {
         node=c.read32(node);
     }
     if(!button)return CGRectZero;
-    const float x=real(c.read32(button+0x1c));
-    const float y=real(c.read32(button+0x10))+layout.first-real(c.read32(OriginalContactRow));
-    return CGRectMake(r.geometry.logicalSize.width/2+x-width/2,
+    const auto layout=r.restorationCreditLayout(button);
+    const float x=real(c.read32(button+0x1c))+layout.linkX;
+    const float y=real(c.read32(button+0x10));
+    return CGRectMake(r.geometry.logicalSize.width/2+x-layout.linkWidth/2,
         r.geometry.logicalSize.height/2+y-layout.glyphHeight/2,
-        width,layout.second-layout.first+layout.glyphHeight);
+        layout.linkWidth,layout.glyphHeight+3*layout.lineThickness);
 }
 - (void)drawRestorationCredit:(uint32_t)button {
     Runtime &r=*_runtime;GuestCPU &c=r.cpu;
@@ -483,22 +484,37 @@ struct Runtime {
         if(!c.fault.empty())return;
         for(unsigned line=0;line<2;++line) {
             c.load(r.restorationCreditScratch+line*Stride+ButtonSize+DataSize,
-                RestorationCreditLines[line],strlen(RestorationCreditLines[line])+1);
+                RestorationCreditParts[line],strlen(RestorationCreditParts[line])+1);
         }
     }
-    const auto layout=r.restorationCreditLayout();
+    const auto layout=r.restorationCreditLayout(button);
     for(unsigned line=0;line<2;++line) {
         const uint32_t copy=r.restorationCreditScratch+line*Stride,data=copy+ButtonSize;
         memcpy(c.memory.data()+copy,c.memory.data()+button,ButtonSize);
         memcpy(c.memory.data()+data,c.memory.data()+OriginalContactRow,DataSize);
         c.write32(copy,data);
-        const float offset=(line?layout.second:layout.first)-real(c.read32(OriginalContactRow));
-        c.write32(copy+0x10,bits(real(c.read32(button+0x10))+offset));
+        c.write32(copy+0x1c,bits(real(c.read32(button+0x1c))+(line?layout.linkX:layout.labelX)));
         c.write32(data+36,data+DataSize);
-        c.write32(data+52,bits(layout.glyphHeight));c.write32(data+56,bits(layout.glyphWidth));
+        c.write32(data+52,c.read32(PreviousCreditRow+52));c.write32(data+56,c.read32(PreviousCreditRow+56));
         // Original font, color, drawing and entrance motion. A native Link
         // owns URL interaction; the guest contact row remains nonexecutable.
-        c.call(0x9b2f,{0xffbfbfbfu,copy,data});
+        c.call(0x9b2f,{line?CreditLinkColor:CreditLabelColor,copy,data});
+    }
+    // A one-logical-pixel underline at the original 24-pixel font size. Emit
+    // through the common renderer after coordinate conversion, retaining all
+    // guest GL state for the following original EXIT/Fade drawing.
+    if(layout.lineThickness>0&&layout.linkWidth>0) {
+        const auto frame=self.restorationCreditFrame;
+        const float y=float(CGRectGetMaxY(frame))-layout.lineThickness;
+        Vertex line[4];
+        for(auto &p:line)p={0,0,0,0,(CreditLinkColor&255)/255.f,((CreditLinkColor>>8)&255)/255.f,((CreditLinkColor>>16)&255)/255.f,1};
+        line[0].x=line[2].x=float(CGRectGetMinX(frame));line[1].x=line[3].x=float(CGRectGetMaxX(frame));
+        line[0].y=line[1].y=y;line[2].y=line[3].y=y+layout.lineThickness;
+        const bool textured=r.textured,blend=r.blend,colorArray=r.colorArray;
+        const auto source=r.sourceBlend,destination=r.destBlend;
+        r.textured=false;r.colorArray=false;r.blend=true;r.sourceBlend=0x302;r.destBlend=0x303;
+        r.emit(line,4,5);
+        r.textured=textured;r.colorArray=colorArray;r.blend=blend;r.sourceBlend=source;r.destBlend=destination;
     }
 }
 - (NSArray<SDBMenuAction *> *)menuActions {

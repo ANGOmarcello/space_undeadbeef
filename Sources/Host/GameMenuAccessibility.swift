@@ -100,7 +100,7 @@ struct GameRestorationCredit: View {
             .buttonStyle(.plain)
             .frame(width: frame.width, height: frame.height)
             .position(x: frame.midX, y: frame.midY)
-            .accessibilityLabel("Restoration & modernization by cammalleri.dev")
+            .accessibilityLabel("Modernization: cammalleri.dev")
             .accessibilityIdentifier("restoration-credit-link")
         }
         #endif

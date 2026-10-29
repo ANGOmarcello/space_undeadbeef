@@ -5,9 +5,13 @@ credits address, `space_deadbeef@yahoo.com`, and the message bounced. This repor
 bounce is the reason for replacing that address in the visible Credits screen.
 The historical address is retained here as part of the restoration record.
 
-The approved replacement wording is:
+The current approved replacement wording is:
 
-> Restoration & modernization by cammalleri.dev
+> Modernization:     cammalleri.dev
+
+The website is warm yellow and underlined. This single-row wording supersedes
+the initially approved two-line “Restoration & modernization by cammalleri.dev”
+notice, at the user's request on 29 October 2026.
 
 The website opens `https://cammalleri.dev` on platforms that support opening web
 links. The original creator, graphics, effects, sound and special-thanks credits
@@ -16,10 +20,13 @@ replace the original game's authorship.
 
 ## Implementation
 
-The visible wording wraps after “modernization” into two short lines in the
-former contact band. It is drawn through the original font helper using the
-original gray and animation. The seven creator/thanks rows and the original
-EXIT remain in place. The guard checks the exact historical contact string,
+The label and website occupy the former email row, at its original 30-unit
+distance from Special Thanks. Both use the adjacent credits' original 24×12
+font and 33-column alignment: label left, website right. The label retains the
+original gray; the website uses the original highlighted-choice yellow and a
+one-unit underline at the normal font size. All parts follow the live original
+animation. The seven creator/thanks rows and the original EXIT remain in place.
+The guard checks the exact historical contact string,
 font metrics and nonexecutable row before changing its rendering. Prepared
 original files and the supplied executable are unchanged.
 
@@ -31,9 +38,9 @@ without an external-browser control. No email is sent by the app.
 
 ## Verification — 29 October 2026
 
-- **96** sanitizer-backed menu/layout/save checks pass with optional captures
-  enabled (**93** without the three capture-write assertions). The real engine
-  renders the two-line notice, preserves EXIT, restores the title and original
+- **97** sanitizer-backed menu/layout/save checks pass with optional captures
+  enabled (**94** without the three capture-write assertions). The real engine
+  renders the single-row notice at the original glyph size, preserves EXIT, restores the title and original
   save behavior, and keeps link bounds separate through Watch-sized, portrait
   iPad and original-size layouts. Captures were visually reviewed.
 - **One iPhone 18 Pro, iOS 27.2 Simulator UI test passes**, with zero failures or
@@ -41,7 +48,8 @@ without an external-browser control. No email is sent by the app.
   EXIT bounds, taps the native link, verifies Safari receives `cammalleri.dev`,
   returns to Credits and exits through the original control. Its test save and
   muted audio are isolated. No system accessibility setting was changed.
-- Unsigned Debug builds pass for iOS, macOS, watchOS and tvOS as **1.1 (14)**.
+- The initial credit passed unsigned Debug builds for all four platforms as
+  **1.1 (14)**. The revised row is version **1.1 (16)**.
   This is compile and Simulator evidence; physical Watch/Mac link interaction
   was not exercised. The UI run reports the existing synchronous audio-session
   diagnostics; audio code was not changed by this work.
