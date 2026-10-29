@@ -24,6 +24,9 @@ final class HostUITests: XCTestCase {
         app.launchEnvironment["SDB_MUTE_AUDIO"] = "1"
         app.launchEnvironment["SDB_UI_TEST"] = "1"
         app.launchEnvironment["SDB_SAVE_DIRECTORY"] = "~/tmp/space-undeadbeef-ui-\(UUID().uuidString)"
+        #if os(tvOS)
+        app.launchEnvironment["SDB_TV_SAVE_SUITE"] = "dev.cammalleri.SpaceUndeadbeef.ui-tests.\(UUID().uuidString)"
+        #endif
         app.launch()
         #if os(tvOS)
         defer { if app.state != .notRunning { app.terminate() } }
@@ -53,30 +56,51 @@ final class HostUITests: XCTestCase {
         waitForExpectations(timeout: 10)
         app.activate()
         waitForMenu(1)
-        // Default virtual pointer is (240,160). Move it to the original Start row.
-        for _ in 0..<4 { XCUIRemote.shared.press(.left) }
-        for _ in 0..<5 { XCUIRemote.shared.press(.up) }
+        let start = app.buttons["Game Start"]
+        XCTAssertTrue(start.waitForExistence(timeout: 10))
+        func focus(_ label: String) {
+            let button = app.buttons[label]
+            XCTAssertTrue(button.waitForExistence(timeout: 10))
+            for _ in 0..<8 {
+                if button.hasFocus { return }
+                XCUIRemote.shared.press(.down)
+            }
+            XCTFail("Native focus did not reach \(label)")
+        }
+        focus("Options")
+        capture(app, "02-focused-options")
+        XCUIRemote.shared.press(.select)
+        waitForMenu(5)
+        focus("Save and Exit")
+        XCUIRemote.shared.press(.select)
+        waitForMenu(1)
+        XCTAssertFalse(app.alerts["Progress could not be saved"].exists)
+        // The title's first control is the original Start action, with native focus.
+        XCTAssertTrue(start.waitForExistence(timeout: 10))
+        XCTAssertTrue(start.hasFocus)
         XCUIRemote.shared.press(.select)
         waitForMenu(0)
         Thread.sleep(forTimeInterval: 5)
-        capture(app, "02-gameplay-remote-select")
-        let beforeBack = canvas.value as? String ?? ""
-        XCTAssertTrue(beforeBack.contains("hostActive true"), beforeBack)
-        XCTAssertTrue(beforeBack.contains("canPause true"), beforeBack)
-        XCTAssertTrue(beforeBack.contains("focused true"), "Remote surface lost focus: \(beforeBack)")
+        XCTAssertTrue((canvas.value as? String ?? "").contains("pointerVisible false"))
+        capture(app, "03-gameplay-without-pointer")
+        XCUIRemote.shared.press(.playPause)
+        let charging = NSPredicate(format: "value CONTAINS %@", "touching true")
+        expectation(for: charging, evaluatedWith: canvas)
+        waitForExpectations(timeout: 5)
+        XCUIRemote.shared.press(.right)
+        capture(app, "04-original-aiming")
+        XCTAssertTrue((canvas.value as? String ?? "").contains("pointerVisible false"))
+        XCUIRemote.shared.press(.playPause)
+        XCTAssertTrue((canvas.value as? String ?? "").contains("touching false"))
         XCUIRemote.shared.press(.menu)
-        XCTAssertEqual(app.state, .runningForeground, "Back should pause the active game within its host")
         waitForMenu(3)
-        capture(app, "02b-remote-back-pause")
-        // The pointer remains at Start. Move to the original Resume row.
-        for _ in 0..<4 { XCUIRemote.shared.press(.right) }
-        for _ in 0..<4 { XCUIRemote.shared.press(.down) }
+        capture(app, "05-focused-pause")
+        let resume = app.buttons["Resume"]
+        XCTAssertTrue(resume.waitForExistence(timeout: 10))
+        XCTAssertTrue(resume.hasFocus)
         XCUIRemote.shared.press(.select)
         waitForMenu(0)
-        XCUIRemote.shared.press(.playPause)
-        for _ in 0..<5 { XCUIRemote.shared.press(.right) }
-        XCUIRemote.shared.press(.playPause)
-        capture(app, "03-remote-target-and-release")
+        capture(app, "06-resumed-gameplay")
         #else
         func point(_ x: Double, _ y: Double) -> XCUICoordinate {
             let size = canvas.frame.size
@@ -131,6 +155,16 @@ final class HostUITests: XCTestCase {
         #endif
         XCTAssertTrue(canvas.exists)
         app.terminate()
+        #if os(tvOS)
+        app.launch()
+        waitForMenu(1)
+        XCTAssertFalse(app.alerts["Progress could not be saved"].exists)
+        app.terminate()
+        app.launchEnvironment["SDB_TV_CLEAR_SAVE_SUITE"] = "1"
+        app.launch()
+        waitForMenu(1)
+        app.terminate()
+        #endif
     }
 
     @MainActor

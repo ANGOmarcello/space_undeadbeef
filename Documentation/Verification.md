@@ -1,5 +1,44 @@
 # Verification record
 
+## Apple TV save and remote repair — 1.1 (21), 29 October 2026
+
+tvOS now uses a bounded local preferences transaction rather than attempting
+to write Application Support. Native UIKit focus targets reuse the original
+live menu actions. Gameplay forwards remote touch-down, movement and lift to
+the original input path, and the white host cursor is omitted on TV.
+
+- `script/test_save_store.sh`: **51 checks passed** with AddressSanitizer and
+  UndefinedBehaviorSanitizer. New private-domain cases cover empty first launch,
+  exact-byte reload, unchanged writes, the 4 KiB bound, checksum recovery, type
+  rejection and read-only legacy migration.
+- `HostUITests/testOriginalGameInteraction`: **1 passed, 0 failed** on Apple TV
+  4K Simulator `67C3FA69-FAD7-479A-A800-564910EEF3B4`. Native focus/Select opens
+  Options, saves and exits without an alert, starts gameplay, holds/aims/releases
+  through the click-only fallback, and pauses/resumes. Cold relaunch uses the
+  same production preferences backend in a private suite. Title, gameplay and
+  Pause captures were visually inspected; no white host cursor appears.
+- The existing iPhone interaction test also passed, **1 test, 0 failures**, on
+  iPhone 18 Pro `EBE372DC-9815-4E27-B0CD-C6D27EF5B789`. Both UI suites retain the
+  two existing synchronous AVAudioSession diagnostics.
+- Development-signed iOS/tvOS builds and unsigned macOS/Watch Simulator builds
+  pass. Strict signatures, requested-device provisioning membership and KVS
+  entitlement authorization pass for both signed products. The original guest
+  executable still matches its recorded SHA-256.
+
+| Requested device | Independent installed-app readback |
+| --- | --- |
+| iPhone 14 Pro | **Deadbeef 1.1 (21)**; normal launch and matching installed executable confirmed, PID 26102. |
+| Office Apple TV | **Space Deadbeef 1.1 (21)** |
+| Wintergarten Apple TV | **Space Deadbeef 1.1 (21)** |
+| Wohnzimmer Apple TV | **Space Deadbeef 1.1 (21)** |
+
+All updates were installed in place. No physical TV app was launched, no remote
+input was sent, and no idle assertion was requested. The raw touchpad gesture's
+feel and TV save behavior on real hardware remain for human confirmation;
+Simulator focus/click tests do not establish physical analog input quality.
+Neither Watch was contacted or updated. The README now records the restoration
+features, reason for version 1.1 and a new promotional banner with provenance.
+
 ## Platform names and requested installation — 1.1 (20), 29 October 2026
 
 The user-approved bundle display names are now **Deadbeef** on iPhone/iPad and

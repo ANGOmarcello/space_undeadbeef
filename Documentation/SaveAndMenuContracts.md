@@ -1,6 +1,8 @@
 # Save and menu contracts — 27 October 2026
 
-`SDBSaveStore` owns progress files only. It never reads or changes user defaults.
+`SDBSaveStore` owns progress storage only. The filesystem backend does not
+access user defaults; the tvOS backend owns only `progress.tvOS.v1` in its
+injected defaults domain.
 The engine still invokes the original guest packing/unpacking routines. Sound,
 Silent Mode and Haptics retain their separate host preferences.
 
@@ -66,6 +68,23 @@ engine thread, then gives them to the save coordinator's serial worker. The
 coordinator retains at most one running write and the latest pending checkpoint;
 completed explicit/lifecycle saves supersede stale queued checkpoints. Reading
 `lastSaveError` uses the cached result rather than waiting for disk work.
+
+## tvOS local storage — 1.1 (21)
+
+Apple TV cannot write the iOS Application Support path used by earlier builds.
+Its production coordinator now uses a local UserDefaults backend. One binary
+property-list value contains schema 1 and at most two original 256-byte records
+with individual SHA-256 digests. The entire value is capped at 4096 bytes;
+identical checkpoints skip replacement. Loading rejects oversized, malformed,
+future-schema and checksum-invalid input, and can recover the previous verified
+record. Readable legacy primary/recovery files are imported without being
+modified. Other platforms retain the existing file transaction.
+
+This works offline and requires no CloudKit deployment. UserDefaults persistence
+is managed by the OS; this is not a stronger crash/disk-durability claim than
+that API provides. Optional existing KVS exchange remains independent. Apple's
+[defaults size-limit documentation](https://developer.apple.com/documentation/foundation/userdefaults/sizelimitexceedednotification)
+sets a tvOS warning at 512 KiB; this transaction stays below 4 KiB.
 
 ## Portable progress
 

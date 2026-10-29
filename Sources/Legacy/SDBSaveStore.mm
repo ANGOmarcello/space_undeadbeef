@@ -11,6 +11,7 @@
 
 namespace {
 constexpr NSUInteger SaveBytes = 256, RecoveryLimit = 4096;
+NSString *const ProgressPreference = @"progress.tvOS.v1";
 uint32_t word(NSData *data, NSUInteger offset) {
     const auto *p = static_cast<const uint8_t *>(data.bytes) + offset;
     return uint32_t(p[0]) | uint32_t(p[1]) << 8 | uint32_t(p[2]) << 16 | uint32_t(p[3]) << 24;
@@ -103,11 +104,20 @@ NSData *verifiedRecord(id value) {
     NSString *_primary, *_recovery;
     NSData *_lastGood;
     BOOL _loaded, _hasRecovery, _primaryCurrent;
+    NSUserDefaults *_preferences;
+    NSString *_legacyDirectory;
 }
 - (instancetype)initWithDirectory:(NSString *)directory {
     if ((self = [super init])) {
         _primary = [directory stringByAppendingPathComponent:@"savedata.dat"];
         _recovery = [directory stringByAppendingPathComponent:@"savedata.recovery.plist"];
+    }
+    return self;
+}
+- (instancetype)initWithPreferences:(NSUserDefaults *)preferences legacyDirectory:(NSString *)directory {
+    if ((self = [super init])) {
+        _preferences = preferences;
+        _legacyDirectory = [directory copy];
     }
     return self;
 }
@@ -117,6 +127,54 @@ NSData *verifiedRecord(id value) {
 }
 - (NSData *)loadData {
     _loaded = YES; _lastError = nil; _recoveredFromBackup = NO; _primaryCurrent = NO;
+    if (_preferences) {
+        id stored = [_preferences objectForKey:ProgressPreference];
+        if (!stored) {
+            // Migrate readable older records without deleting or repairing the
+            // originals. The ordinary store validates both bounded inputs.
+            NSString *primary = [_legacyDirectory stringByAppendingPathComponent:@"savedata.dat"];
+            NSString *recovery = [_legacyDirectory stringByAppendingPathComponent:@"savedata.recovery.plist"];
+            if (primary && ([NSFileManager.defaultManager isReadableFileAtPath:primary] ||
+                            [NSFileManager.defaultManager isReadableFileAtPath:recovery])) {
+                NSError *ignored = nil;
+                NSData *data = readBounded(primary, SaveBytes, &ignored);
+                NSError *metadataError = nil;
+                NSData *metadata = readBounded(recovery, RecoveryLimit, &metadataError);
+                if (metadataError) data = nil;
+                if (metadata) {
+                    id plist = [NSPropertyListSerialization propertyListWithData:metadata options:NSPropertyListImmutable format:nil error:nil];
+                    NSArray *records = [plist isKindOfClass:NSDictionary.class] && [plist[@"schema"] isEqual:@1] &&
+                        [plist[@"records"] isKindOfClass:NSArray.class] ? plist[@"records"] : nil;
+                    data = nil;
+                    if (records.count <= 2) for (id value in records) {
+                        if ((data = verifiedRecord(value))) break;
+                    }
+                }
+                if ([SDBSaveStore isValidOriginalData:data]) {
+                    [self writeData:data];
+                    return data;
+                }
+            }
+            _lastGood = nil; _hasRecovery = NO; return nil;
+        }
+        if (![stored isKindOfClass:NSData.class] || [stored length] > RecoveryLimit) {
+            _lastError = @"Saved progress exceeds its size limit."; return nil;
+        }
+        NSDictionary *plist = [NSPropertyListSerialization propertyListWithData:stored options:NSPropertyListImmutable format:nil error:nil];
+        NSArray *records = [plist isKindOfClass:NSDictionary.class] && [plist[@"schema"] isEqual:@1] &&
+            [plist[@"records"] isKindOfClass:NSArray.class] ? plist[@"records"] : nil;
+        if (records.count && records.count <= 2) {
+            for (id value in records) {
+                NSData *data = verifiedRecord(value);
+                if (!data) continue;
+                _lastGood = data; _hasRecovery = _primaryCurrent = YES;
+                _recoveredFromBackup = value != records.firstObject;
+                return data;
+            }
+        }
+        _lastGood = nil; _hasRecovery = NO;
+        _lastError = @"Saved progress and its recovery records could not be validated."; return nil;
+    }
     NSError *readError = nil, *metadataError = nil;
     NSData *primary = readBounded(_primary, SaveBytes, &readError);
     NSData *metadata = readBounded(_recovery, RecoveryLimit, &metadataError);
@@ -159,8 +217,20 @@ NSData *verifiedRecord(id value) {
         format:NSPropertyListBinaryFormat_v1_0 options:0 error:&error];
     // Publish the bounded recovery transaction before replacing the primary.
     // Either old or new primary can match after an interrupted replacement.
-    if (!metadata || metadata.length > RecoveryLimit || !atomicWrite(metadata, _recovery, &error) ||
-        !atomicWrite(data, _primary, &error)) {
+    BOOL committed = NO;
+    if (metadata && metadata.length <= RecoveryLimit) {
+        if (_preferences) {
+            @try {
+                [_preferences setObject:metadata forKey:ProgressPreference];
+                committed = [[_preferences dataForKey:ProgressPreference] isEqual:metadata];
+            } @catch (NSException *exception) {
+                _lastError = exception.reason; return NO;
+            }
+        } else {
+            committed = atomicWrite(metadata, _recovery, &error) && atomicWrite(data, _primary, &error);
+        }
+    }
+    if (!committed) {
         _lastError = error.localizedDescription ?: @"Saved progress could not be written."; return NO;
     }
     _lastGood = [data copy]; _hasRecovery = _primaryCurrent = YES; _lastError = nil;
@@ -208,6 +278,9 @@ NSData *verifiedRecord(id value) {
 }
 - (instancetype)initWithDirectory:(NSString *)directory {
     return [self initWithStore:[[SDBSaveStore alloc] initWithDirectory:directory]];
+}
+- (instancetype)initWithPreferences:(NSUserDefaults *)preferences legacyDirectory:(NSString *)directory {
+    return [self initWithStore:[[SDBSaveStore alloc] initWithPreferences:preferences legacyDirectory:directory]];
 }
 - (instancetype)initWithStore:(SDBSaveStore *)store {
     if ((self = [super init])) {

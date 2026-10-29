@@ -3,10 +3,11 @@
 
 NS_ASSUME_NONNULL_BEGIN
 /// Bounded persistence for the untouched original 256-byte SaveData record.
-/// The recovery plist holds two individually checksummed records; no defaults
-/// or game memory are accessed by this class.
+/// Recovery holds two individually checksummed records. tvOS can use a bounded
+/// preferences record because Application Support is not writable there.
 @interface SDBSaveStore : NSObject
 - (instancetype)initWithDirectory:(NSString *)directory;
+- (instancetype)initWithPreferences:(NSUserDefaults *)preferences legacyDirectory:(nullable NSString *)directory;
 @property(nonatomic, readonly, nullable) NSString *lastError;
 @property(nonatomic, readonly) BOOL recoveredFromBackup;
 - (nullable NSData *)loadData;
@@ -25,6 +26,7 @@ NS_ASSUME_NONNULL_BEGIN
 /// at most one in-flight record and the latest pending record.
 @interface SDBSaveCoordinator : NSObject
 - (instancetype)initWithDirectory:(NSString *)directory;
+- (instancetype)initWithPreferences:(NSUserDefaults *)preferences legacyDirectory:(nullable NSString *)directory;
 @property(nonatomic, readonly, nullable) NSString *lastError;
 - (nullable NSData *)loadData;
 - (BOOL)writeData:(NSData *)data;

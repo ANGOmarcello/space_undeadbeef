@@ -130,6 +130,38 @@ int main(int argc, const char *argv[]) {
         if (!require([limitedStore loadData] == nil && limitedStore.lastError.length &&
                      [[NSData dataWithContentsOfFile:blocked] isEqual:first], "symlink rejected without touching target")) return 1;
 
+        // A private test suite never touches the real app's preferences.
+        NSString *suiteName = [@"dev.cammalleri.SpaceUndeadbeef.save-tests." stringByAppendingString:NSUUID.UUID.UUIDString];
+        NSUserDefaults *preferences = [[NSUserDefaults alloc] initWithSuiteName:suiteName];
+        @try {
+            NSString *key = @"progress.tvOS.v1";
+            SDBSaveStore *tv = [[SDBSaveStore alloc] initWithPreferences:preferences legacyDirectory:nil];
+            if (!require(![tv loadData] && !tv.lastError, "first TV launch needs no filesystem permission") ||
+                !require([tv writeData:first] && !tv.lastError, "TV preferences accept the original checkpoint") ||
+                !require([preferences dataForKey:key].length < 4096, "entire TV transaction stays below 4 KiB")) return 1;
+            NSData *unchanged = [preferences dataForKey:key];
+            if (!require([tv writeData:first] && [[preferences dataForKey:key] isEqual:unchanged], "unchanged TV saves do not replace the transaction") ||
+                !require([tv writeData:second], "next TV checkpoint writes")) return 1;
+            tv = [[SDBSaveStore alloc] initWithPreferences:preferences legacyDirectory:nil];
+            if (!require([[tv loadData] isEqual:second], "new TV store restores the exact checkpoint")) return 1;
+            NSMutableDictionary *transaction = [[NSPropertyListSerialization propertyListWithData:[preferences dataForKey:key] options:NSPropertyListMutableContainers format:nil error:nil] mutableCopy];
+            transaction[@"records"][0][@"sha256"] = @"broken";
+            [preferences setObject:[NSPropertyListSerialization dataWithPropertyList:transaction format:NSPropertyListBinaryFormat_v1_0 options:0 error:nil] forKey:key];
+            tv = [[SDBSaveStore alloc] initWithPreferences:preferences legacyDirectory:nil];
+            if (!require([[tv loadData] isEqual:first] && tv.recoveredFromBackup, "TV recovers previous verified checkpoint when newest checksum fails")) return 1;
+            [preferences setObject:[NSMutableData dataWithLength:4097] forKey:key];
+            tv = [[SDBSaveStore alloc] initWithPreferences:preferences legacyDirectory:nil];
+            if (!require(![tv loadData] && tv.lastError.length, "oversized TV record rejected")) return 1;
+            [preferences removeObjectForKey:key];
+            tv = [[SDBSaveStore alloc] initWithPreferences:preferences legacyDirectory:legacy];
+            if (!require([[tv loadData] isEqual:first] && [preferences dataForKey:key].length &&
+                         [[NSData dataWithContentsOfFile:[legacy stringByAppendingPathComponent:@"savedata.dat"]] isEqual:first],
+                         "TV migration validates readable legacy progress and preserves its file")) return 1;
+            [preferences setObject:@"wrong type" forKey:key];
+            tv = [[SDBSaveStore alloc] initWithPreferences:preferences legacyDirectory:nil];
+            if (!require(![tv loadData] && tv.lastError.length, "unexpected TV preferences type rejected")) return 1;
+        } @finally { [preferences removePersistentDomainForName:suiteName]; }
+
         NSDictionary *portable = [SDBSaveStore portableSnapshotForData:second];
         if (!require([[SDBSaveStore dataFromPortableSnapshot:portable] isEqual:second], "portable record round trip") ||
             !require([SDBSaveStore dataFromPortableSnapshot:@{@"schema":@2,@"saveData":second,@"sha256":portable[@"sha256"]}] == nil,

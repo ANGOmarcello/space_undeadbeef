@@ -21,10 +21,19 @@ cancels owned input without releasing a charged volley.
 
 Extended controllers use the left stick to steer through the original ship
 spring, the right stick or D-pad to aim, A or the right trigger to charge/release,
-and Menu to pause. Either stick addresses original menu rows. A held controller
+and Menu to pause. Either stick addresses original menu rows on iPhone/iPad/Mac;
+TV menus use system focus. A held controller
 button must be released before it can rearm after focus/controller changes.
-TV remote Back/Menu pauses gameplay; normal system navigation remains available
-in menus. Watch keeps the existing Crown and touch controls. Real controller
+TV menus now expose real UIKit focusable targets over the original live button
+frames, with an amber focus outline using the original selection color. The
+focus engine handles directions and Select; controller polling does not also
+inject a menu-pointer click. Gameplay owns a UIKit indirect-touch recognizer:
+touch-down/movement/lift invoke the same original touch path as the phone,
+without the white host cursor. Touch cancellation, focus loss and scene changes
+cancel held input without firing. Click-only remotes can hold Select or toggle
+a touch with Play/Pause; arrows aim while held, and Up/Down steer through the
+existing ship spring otherwise. Back/Menu pauses gameplay. Watch keeps the
+existing Crown and touch controls. Real controller
 feel and physical remote delivery are separate from policy/Simulator checks.
 
 The original live menu records supply semantic buttons and selected values for

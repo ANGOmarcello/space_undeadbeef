@@ -178,6 +178,11 @@ final class GameInputController {
     func tick(_ delta: TimeInterval, sample: GameControllerSample) {
         guard active, let session, session.isActive, session.failure == nil else { return }
         guard session.persistenceError == nil else { resetHeldInputs(); return }
+        #if os(tvOS)
+        // UIKit owns menu focus and Select for remotes and gamepads. Do not
+        // also send a pointer tap from the controller's A-button edge.
+        guard session.gameMenuType == 0 else { resetHeldInputs(); return }
+        #endif
         let frame = policy.frame(delta: delta, pointerUnitsPerSecond: Double(GameLayout.width),
                                  sample: sample, inMenu: session.gameMenuType != 0)
         if frame.pausePressed, pause() { return }

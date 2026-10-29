@@ -85,16 +85,11 @@ struct GameView: View {
             }
             #if os(watchOS)
             isFocused = phase == .active && session.canSteerShip
-            #elseif os(tvOS)
-            // The remote surface owns focus in both original menus and play.
-            // Reapply it after returning from the system Home screen.
-            isFocused = phase == .active
             #endif
         }
         .onDisappear { session.setSceneActive(false) }
         #if os(tvOS)
         .modifier(GameExitCommand(session: session))
-        .defaultFocus($isFocused, true)
         #endif
         .alert("Progress could not be saved", isPresented: Binding(
             get: { session.persistenceError != nil },
@@ -120,28 +115,10 @@ struct GameView: View {
     @ViewBuilder
     private func interactiveScreen(size: CGSize) -> some View {
         #if os(tvOS)
-        Button { session.tapPointer() } label: { screen(size: size) }
-            .buttonStyle(.plain)
-            .focusEffectDisabled()
-            .focused($isFocused)
-            .onAppear { isFocused = true }
-            .onMoveCommand { direction in
-                switch direction {
-                case .left: session.movePointer(dx: -GameLayout.pointerStep, dy: 0)
-                case .right: session.movePointer(dx: GameLayout.pointerStep, dy: 0)
-                case .up: session.movePointer(dx: 0, dy: -GameLayout.pointerStep)
-                case .down: session.movePointer(dx: 0, dy: GameLayout.pointerStep)
-                @unknown default: break
-                }
-            }
-            .onPlayPauseCommand { session.togglePointerTouch() }
-            .accessibilityElement(children: .contain)
-            .accessibilityHint("Move the target with the remote. Select taps; Play or Pause holds or releases a touch. With a controller, the left stick steers, the right stick aims, and A or the right trigger charges until released. Menu pauses.")
-            // A Button otherwise derives its identifier from the virtual menu
-            // children, changing its identity in AX snapshots between menus.
-            .accessibilityIdentifier("game-canvas")
-            .accessibilityLabel("SPACE UNDEADBEEF game")
-            .accessibilityValue(Text(verbatim: uiTestAccessibilityValue))
+        ZStack {
+            screen(size: size).accessibilityHidden(true)
+            GameTVInputSurface(session: session, size: size)
+        }
         #elseif os(watchOS)
         @Bindable var crownSession = session
         screen(size: size)
@@ -181,7 +158,7 @@ struct GameView: View {
             }
             #endif
             SoftwareGameSurface(session: session, size: size)
-            #if !os(watchOS)
+            #if !os(watchOS) && !os(tvOS)
             if session.showsPointer {
                 Circle()
                     .stroke(.white, lineWidth: GameLayout.pointerStroke)
@@ -203,9 +180,11 @@ struct GameView: View {
         .accessibilityIdentifier("game-canvas")
         .accessibilityValue(Text(verbatim: uiTestAccessibilityValue))
         #endif
+        #if !os(tvOS)
         .accessibilityChildren {
             GameMenuAccessibility(session: session, size: size)
         }
+        #endif
     }
 
     private var uiTestAccessibilityValue: String {
@@ -317,6 +296,204 @@ private struct WatchCornerControls: View {
                     .environment(\.layoutDirection, .leftToRight)
             }
         }
+    }
+}
+#endif
+
+// TV keeps the original renderer and delegates focus/touch routing to UIKit.
+// Created by Angelo Cammalleri on 29.10.2026.
+#if os(tvOS)
+import UIKit
+
+private struct GameTVInputSurface: UIViewRepresentable {
+    let session: GameSession
+    let size: CGSize
+    func makeUIView(context: Context) -> TVGameInputView { TVGameInputView(session: session) }
+    func updateUIView(_ view: TVGameInputView, context: Context) { view.update(size: size) }
+    static func dismantleUIView(_ view: TVGameInputView, coordinator: ()) { view.cancelInput() }
+}
+
+@MainActor
+private final class TVGameInputView: UIView {
+    private weak var session: GameSession?
+    private var buttons: [String: TVMenuButton] = [:]
+    private var actionIDs: [String] = []
+    private var clickOwnsTouch = false
+    private var gameplay = false
+    private lazy var remoteTouch = TVRemoteTouchRecognizer { [weak self] phase, location in
+        guard let self, self.gameplay, let session = self.session else { return }
+        switch phase {
+        case .began:
+            session.inputController.resetHeldInputs()
+            session.drag(to: session.point(inView: location))
+        case .changed: session.drag(to: session.point(inView: location))
+        case .ended: session.endTouch()
+        default: session.cancelTouch()
+        }
+    }
+
+    init(session: GameSession) {
+        self.session = session
+        super.init(frame: .zero)
+        backgroundColor = .clear
+        accessibilityIdentifier = "game-canvas"
+        accessibilityLabel = "SPACE UNDEADBEEF game"
+        remoteTouch.allowedTouchTypes = [NSNumber(value: UITouch.TouchType.indirect.rawValue),
+                                        NSNumber(value: UITouch.TouchType.direct.rawValue)]
+        addGestureRecognizer(remoteTouch)
+    }
+    required init?(coder: NSCoder) { fatalError("init(coder:) is unsupported") }
+    override var canBecomeFocused: Bool { gameplay }
+    override var preferredFocusEnvironments: [any UIFocusEnvironment] {
+        if gameplay { return [self] }
+        return buttons.values.filter { !$0.isHidden }.sorted {
+            $0.frame.minY == $1.frame.minY ? $0.frame.minX < $1.frame.minX : $0.frame.minY < $1.frame.minY
+        }.prefix(1).map { $0 }
+    }
+    override var accessibilityValue: String? {
+        get {
+            guard ProcessInfo.processInfo.environment["SDB_UI_TEST"] == "1", let session else { return nil }
+            let focused = isFocused || buttons.values.contains(where: \.isFocused)
+            return "hostActive \(session.isActive); canPause \(session.canPause); focused \(focused); pointerVisible \(session.showsPointer); touching \(session.isTouching); aiming \(session.engine?.shipAiming ?? false); menuType \(session.gameMenuType)"
+        }
+        set {}
+    }
+    func update(size: CGSize) {
+        guard let session else { return }
+        let previousGameplay = gameplay
+        gameplay = session.isActive && session.gameMenuType == 0 && session.persistenceError == nil
+        remoteTouch.isEnabled = gameplay
+        isAccessibilityElement = gameplay
+        let actions = session.isActive && session.persistenceError == nil ? session.menuActions : []
+        let ids = actions.map(\.identifier)
+        for id in actionIDs where !ids.contains(id) { buttons.removeValue(forKey: id)?.removeFromSuperview() }
+        for action in actions {
+            let button: TVMenuButton
+            if let existing = buttons[action.identifier] { button = existing }
+            else {
+                button = TVMenuButton(type: .custom)
+                button.accessibilityIdentifier = action.identifier
+                let id = action.identifier
+                button.addAction(UIAction { [weak self] _ in
+                    _ = self?.session?.activateMenuAction(id)
+                }, for: .primaryActionTriggered)
+                buttons[id] = button
+                addSubview(button)
+            }
+            button.accessibilityLabel = action.label
+            button.isSelected = action.selected
+            if let frame = action.viewFrame(in: size, logicalSize: session.logicalSize) {
+                button.frame = frame
+                button.focusLineWidth = frame.height / 12
+                button.isHidden = false
+            } else { button.isHidden = true }
+        }
+        let changed = ids != actionIDs || gameplay != previousGameplay
+        actionIDs = ids
+        if changed { setNeedsFocusUpdate(); updateFocusIfNeeded() }
+    }
+    override func didMoveToWindow() {
+        super.didMoveToWindow()
+        if window == nil { cancelInput() }
+        else { setNeedsFocusUpdate(); updateFocusIfNeeded() }
+    }
+    override func didUpdateFocus(in context: UIFocusUpdateContext, with coordinator: UIFocusAnimationCoordinator) {
+        super.didUpdateFocus(in: context, with: coordinator)
+        if context.previouslyFocusedView === self && context.nextFocusedView !== self { cancelInput() }
+    }
+    func cancelInput() {
+        clickOwnsTouch = false
+        session?.inputController.resetHeldInputs()
+        session?.cancelTouch()
+    }
+    override func pressesBegan(_ presses: Set<UIPress>, with event: UIPressesEvent?) {
+        guard gameplay, let session else { super.pressesBegan(presses, with: event); return }
+        var unhandled = Set<UIPress>()
+        for press in presses {
+            switch press.type {
+            case .select:
+                if !session.isTouching { session.drag(to: session.pointer); clickOwnsTouch = session.isTouching }
+            case .playPause:
+                if session.isTouching { session.endTouch() }
+                else { session.drag(to: session.pointer) }
+            case .upArrow, .downArrow, .leftArrow, .rightArrow:
+                let step = GameLayout.pointerStep
+                let dx = press.type == .leftArrow ? -step : press.type == .rightArrow ? step : 0
+                let dy = press.type == .upArrow ? -step : press.type == .downArrow ? step : 0
+                if session.isTouching {
+                    let point = CGPoint(x: min(session.logicalSize.width, max(0, session.pointer.x + dx)),
+                                        y: min(session.logicalSize.height, max(0, session.pointer.y + dy)))
+                    session.drag(to: point)
+                } else if dy != 0 {
+                    session.steerWithCrown(delta: Double(dy / session.logicalSize.height))
+                }
+            default: unhandled.insert(press)
+            }
+        }
+        if !unhandled.isEmpty { super.pressesBegan(unhandled, with: event) }
+    }
+    override func pressesEnded(_ presses: Set<UIPress>, with event: UIPressesEvent?) {
+        if presses.contains(where: { $0.type == .select }), clickOwnsTouch {
+            session?.endTouch(); clickOwnsTouch = false
+        }
+        super.pressesEnded(presses, with: event)
+    }
+    override func pressesCancelled(_ presses: Set<UIPress>, with event: UIPressesEvent?) {
+        cancelInput()
+        super.pressesCancelled(presses, with: event)
+    }
+}
+
+@MainActor
+private final class TVMenuButton: UIButton {
+    var focusLineWidth: CGFloat = 1 { didSet { updateDecoration() } }
+    override func didUpdateFocus(in context: UIFocusUpdateContext, with coordinator: UIFocusAnimationCoordinator) {
+        super.didUpdateFocus(in: context, with: coordinator)
+        updateDecoration()
+    }
+    private func updateDecoration() {
+        // The original Options selection/credit color; original glyphs stay drawn by the game.
+        let color = UIColor(red: 1, green: 192.0 / 255, blue: 128.0 / 255, alpha: 1)
+        layer.borderColor = color.cgColor
+        layer.borderWidth = isFocused ? focusLineWidth : 0
+        backgroundColor = isFocused ? color.withAlphaComponent(0.16) : .clear
+    }
+}
+
+/// Only gameplay owns this recognizer. Menus retain the native focus engine.
+@MainActor
+private final class TVRemoteTouchRecognizer: UIGestureRecognizer {
+    private var tracked: UITouch?
+    private let forward: (UIGestureRecognizer.State, CGPoint) -> Void
+    init(forward: @escaping (UIGestureRecognizer.State, CGPoint) -> Void) {
+        self.forward = forward
+        super.init(target: nil, action: nil)
+        cancelsTouchesInView = true
+    }
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
+        guard tracked == nil, let touch = touches.first else { return }
+        tracked = touch
+        state = .began
+        forward(.began, touch.location(in: view))
+    }
+    override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent) {
+        guard let tracked, touches.contains(tracked) else { return }
+        state = .changed
+        forward(.changed, tracked.location(in: view))
+    }
+    override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent) {
+        guard let tracked, touches.contains(tracked) else { return }
+        forward(.ended, tracked.location(in: view))
+        state = .ended
+    }
+    override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent) {
+        forward(.cancelled, .zero)
+        state = .cancelled
+    }
+    override func reset() {
+        if tracked != nil && state != .ended { forward(.cancelled, .zero) }
+        tracked = nil
+        super.reset()
     }
 }
 #endif

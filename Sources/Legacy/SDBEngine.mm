@@ -914,7 +914,26 @@ struct Runtime {
         NSString *override=[NSProcessInfo.processInfo.environment[@"SDB_SAVE_DIRECTORY"] stringByExpandingTildeInPath];
         NSURL *base=[NSFileManager.defaultManager URLsForDirectory:NSApplicationSupportDirectory inDomains:NSUserDomainMask].firstObject;
         _savePath=override?:[[base URLByAppendingPathComponent:NSBundle.mainBundle.bundleIdentifier?:@"dev.cammalleri.space-undeadbeef"] path];
+        #if TARGET_OS_TV
+        // tvOS forbids Application Support writes. The complete progress and
+        // recovery transaction is <4 KiB, suitable for its defaults database.
+        // Explicit test directories retain the isolated filesystem backend.
+        NSUserDefaults *progressPreferences = NSUserDefaults.standardUserDefaults;
+        NSString *testSuite = NSProcessInfo.processInfo.environment[@"SDB_TV_SAVE_SUITE"];
+        BOOL isolatedPreferences = override && [NSProcessInfo.processInfo.environment[@"SDB_UI_TEST"] isEqual:@"1"] &&
+            [testSuite hasPrefix:@"dev.cammalleri.SpaceUndeadbeef.ui-tests."];
+        if (isolatedPreferences) {
+            progressPreferences = [[NSUserDefaults alloc] initWithSuiteName:testSuite];
+            if (NSProcessInfo.processInfo.environment[@"SDB_TV_CLEAR_SAVE_SUITE"]) {
+                [progressPreferences removePersistentDomainForName:testSuite];
+                isolatedPreferences = NO;
+            }
+        }
+        _saveStore = override && !isolatedPreferences ? [[SDBSaveCoordinator alloc] initWithDirectory:_savePath] :
+            [[SDBSaveCoordinator alloc] initWithPreferences:progressPreferences legacyDirectory:_savePath];
+        #else
         _saveStore = [[SDBSaveCoordinator alloc] initWithDirectory:_savePath];
+        #endif
         if(override) {
             // Tests persist only inside their own temporary directory, never real user preferences.
             _testPreferencesPath=[override stringByAppendingPathComponent:@"audio-preferences.plist"];
