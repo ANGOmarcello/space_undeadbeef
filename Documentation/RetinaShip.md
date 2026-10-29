@@ -74,4 +74,6 @@ memory pressure and sustained frame times have not been measured for this build.
   during gameplay/targeting; title, Options, pause, resume and background recovery
   also remain usable. The existing audio-session main-thread warnings persist.
 - Debug builds pass for iOS, macOS, tvOS and watchOS; all bundles report **1.1 (15)**.
-  This work does not claim physical-device installation or hardware performance.
+  The subsequently requested physical iPhone installation, version readback and
+  normal launch are recorded in [Verification.md](Verification.md). Physical
+  gameplay quality and sustained hardware performance remain unmeasured.

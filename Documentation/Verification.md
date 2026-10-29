@@ -1,5 +1,17 @@
 # Verification record
 
+## iPhone delivery — 1.1 (15), 29 October 2026
+
+At the user's request, the Retina-ship source was development-signed and installed
+in place on the physical iPhone 14 Pro. Strict signature verification, exact
+device provisioning membership, KVS entitlement authorization and packaged hashes
+for all 25 full-density ship views pass. CoreDevice independently reports
+**1.1 (15)** installed. Normal launch succeeded with no test environment, and a
+separate process query confirmed the matching app executable at PID **25616**.
+A passive 2556×1179 screenshot shows the live Credits screen and restoration
+website credit. No gameplay inputs, uninstall, save reset or performance test
+were sent; no Watch, iPad or Apple TV was targeted by this installation request.
+
 ## Original ship at Retina density — 1.1 (15), 29 October 2026
 
 All 25 original player-ship views have conservative offline 4× renditions;
