@@ -1,5 +1,32 @@
 # Verification record
 
+## Platform names and requested installation — 1.1 (20), 29 October 2026
+
+The user-approved bundle display names are now **Deadbeef** on iPhone/iPad and
+**Space Deadbeef** on Apple TV. Watch/Mac retain `S.deadbeef`. The generator uses
+the same platform mapping. The installed iPhone 18 Pro Simulator Home Screen
+visibly shows `Deadbeef` in full without an ellipsis. iOS and TV simulator builds
+pass; the TV bundle independently reports `Space Deadbeef`, build 20. No physical
+Apple TV was contacted or awakened, and no App Store Connect metadata changed.
+
+The requested development-signed iOS and Watch builds pass strict signatures,
+exact device provisioning membership and KVS entitlement authorization. All
+prepared ship/sprite hashes match in both signed products. Watch contains
+`arm64` and `arm64_32`, minimum watchOS 10.0; its compiled icon includes the
+1088×1088 sky, earlier-OS raster and native layer stack.
+
+| Requested device | Result |
+| --- | --- |
+| iPhone 14 Pro | In-place installation succeeded after reconnecting to the unlocked phone. Independent app query reports **Deadbeef 1.1 (20)**. Normal launch succeeded; a separate process query confirms PID **25938** at the installed app path. |
+| Series 4 | Revalidating the existing Mac developer pairing allowed CoreDevice to acknowledge the in-place installation of the signed build **20** payload. Subsequent version readback and normal launch both failed while preparing the Bluetooth tunnel (RemotePairing 1007); running state and physical icon appearance remain unverified. |
+| Series 12 | Installation failed with Bluetooth tunnel errors 1007/1034, then device rejection 1035 after revalidating the stored Mac developer pairing. The user explicitly chose **skip**; further Series 12 work stopped. |
+
+No device was unpaired or erased. No save reset, preference override, gameplay
+input or performance workload was sent. Existing Xcode project-format edits
+remain outside this change. Signed products remain in standard DerivedData;
+task-owned captures, connection logs and temporary verification output are removed
+after recording this result.
+
 ## Remaining Retina sprites — 1.1 (19), 29 October 2026
 
 All 16 remaining gameplay textures now have prepared 2×/4× renditions, including

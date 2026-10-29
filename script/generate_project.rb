@@ -70,7 +70,7 @@ platforms.each do |name, options|
   plist_path = File.join(root, 'Config', "#{name}-Info.plist")
   plist = {
     'CFBundleDevelopmentRegion' => 'en',
-    'CFBundleDisplayName' => 'S.deadbeef',
+    'CFBundleDisplayName' => { 'iOS' => 'Deadbeef', 'tvOS' => 'Space Deadbeef' }.fetch(name, 'S.deadbeef'),
     'CFBundleExecutable' => '$(EXECUTABLE_NAME)',
     'CFBundleIdentifier' => '$(PRODUCT_BUNDLE_IDENTIFIER)',
     'CFBundleInfoDictionaryVersion' => '6.0',
