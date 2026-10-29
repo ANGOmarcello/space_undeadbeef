@@ -54,8 +54,22 @@ iOS compiled catalog contains Default, Dark and Tintable icon images and native
 layer/group records. Its generated iPhone/iPad dictionaries both identify
 `SpaceUndeadbeef`. Native previews were visually checked at full and small sizes,
 including the Watch circle and Mac composition. The new icon was also visible
-on the iPhone 18 Pro Simulator Home Screen. No physical device installation,
-App Store upload, icon picker or gameplay changes are included.
+on the iPhone 18 Pro Simulator Home Screen. The subsequent requested physical
+device rollout is recorded in [Verification.md](Verification.md). No App Store
+upload, icon picker or gameplay changes are included.
+
+### Older systems and tvOS
+
+The signed device builds retain the same deployment minimums: iOS 18, watchOS 10
+and tvOS 18. The compiled iOS and Watch catalogs include precomposed 1024×1024
+icon images alongside the modern layer stacks. Xcode generates the earlier-OS
+appearance from the current Composer document, rather than retaining the old
+57×57 enlargement. See Apple's workflow linked below for this automatic fallback.
+
+On 29 October 2026, the installed icon was requested directly from the physical
+Office Apple TV with placeholders disabled. Its returned 1280×768 image was
+visually checked and shows the new ship and sunset. The TV catalog also contains
+the matching front/back parallax layers and 1×/2× Top Shelf images.
 
 Apple's [Icon Composer workflow](https://developer.apple.com/documentation/xcode/creating-your-app-icon-using-icon-composer)
 and [app-icon platform specifications](https://developer.apple.com/design/human-interface-guidelines/app-icons)

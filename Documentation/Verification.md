@@ -1,5 +1,31 @@
 # Verification record
 
+## Requested device rollout — 1.1 (14), 29 October 2026
+
+The user requested installation on their iPhone, iPad, Series 4, Series 12 and
+all Apple TVs. Generic development-signed iOS, watchOS and tvOS builds succeeded
+in the existing standard DerivedData folders. Strict signatures, exact device
+membership and the shared KVS entitlement authorization passed. The Watch build
+contains `arm64` and `arm64_32`, with minimum watchOS 10.0.
+
+| Physical device | Installation and verification |
+| --- | --- |
+| iPhone 14 Pro | In-place installation succeeded; independent app query reports 1.1 (14). Normal launch succeeded after unlocking, and the matching process was 25544. |
+| iPad Air, fourth generation | In-place installation succeeded; independent app query reports 1.1 (14). Normal launch was refused because the iPad was locked. |
+| Series 4, watchOS 10.6.2 | CoreDevice acknowledged installation of the signed 1.1 (14) payload. Subsequent version/icon queries failed while establishing the Bluetooth tunnel, including after the user woke the Watch. A separate installed-version readback and classic-icon display remain unverified. |
+| Series 12 | Installation has not succeeded: the Watch rejects the Bluetooth developer connection with RemotePairing error 1035. The rejection repeated after the user unlocked the Watch/iPhone and after `manage pair` revalidated the stored developer pairing. The signed payload remains ready; the user was asked to connect the Watch directly to the Mac's Wi-Fi network. |
+| Apple TV Office | In-place installation succeeded; independent app query reports 1.1 (14). |
+| Apple TV Wintergarten | In-place installation succeeded; independent app query reports 1.1 (14). |
+| Apple TV Wohnzimmer | In-place installation succeeded; independent app query reports 1.1 (14). |
+
+The physical Office TV returned its installed icon with placeholders disabled.
+Its 1280×768 image was visually checked and contains the new ship/sunset artwork.
+The signed compiled catalogs include iOS/Watch precomposed icon images and TV
+parallax/Top Shelf resources; see [AppIcon.md](AppIcon.md). No Apple TV app was
+launched, no keep-awake assertion was acquired, and no gameplay/performance test,
+uninstall, save reset or Watch/iPhone unpairing was performed. Pre-existing Xcode
+project-format edits are excluded from this documentation update.
+
 ## Icon Composer and restoration credit — 1.1 (14), 29 October 2026
 
 The editable native icon replaces the enlarged 57×57 artwork, with separate
