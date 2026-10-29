@@ -1,5 +1,21 @@
 # Verification record
 
+## Icon Composer and restoration credit — 1.1 (14), 29 October 2026
+
+The editable native icon replaces the enlarged 57×57 artwork, with separate
+ship/sky layers and light, dark, clear and tinted appearances. The Watch circle
+and TV parallax exports retain the same composition. All four platform builds
+pass; native full/small previews, generated iPhone/iPad icon dictionaries and
+the iPhone 18 Pro Simulator Home Screen were checked. See [AppIcon.md](AppIcon.md)
+for source provenance and packaging boundaries.
+
+The obsolete visible email line is replaced by the approved restoration website
+credit, preserving original creator rows, font rendering and EXIT. The reported
+bounce and historical address are documented in [Credits.md](Credits.md).
+That record contains **96** sanitizer-backed menu/layout/save checks, the passing
+native-link Simulator UI test, cross-platform builds and the cached-shader
+verification limitation. No physical device installation or testing was done.
+
 ## Crown input correction — 1.1 (13), 27 October 2026
 
 The Watch host now handles each native scaled Crown binding write directly,

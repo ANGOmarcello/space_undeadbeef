@@ -55,6 +55,7 @@ final class GameSession {
     private(set) var gameMenuType = 0
     private(set) var failure: String?
     private(set) var menuActions: [GameMenuAction] = []
+    private(set) var restorationCreditFrame: CGRect?
     private(set) var persistenceError: String?
     private(set) var pointer = CGPoint(x: GameLayout.width / 2, y: GameLayout.height / 2)
     private(set) var showsPointer = false
@@ -214,6 +215,7 @@ final class GameSession {
             #endif
             canPause = false
             canSteerShip = false
+            restorationCreditFrame = nil
             softwareTimer?.invalidate()
             softwareTimer = nil
             softwareMetrics = GameFrameMetrics(renderer: .software)
@@ -334,6 +336,8 @@ final class GameSession {
                            logicalFrame: $0.logicalFrame, selected: $0.selected)
         }
         if menuActions != actions { menuActions = actions }
+        let credit = menu == 6 && !actions.isEmpty ? engine.restorationCreditFrame : nil
+        if restorationCreditFrame != credit { restorationCreditFrame = credit }
         updatePersistenceError(from: engine)
         if failure != engine.failure { failure = engine.failure }
         refreshUserResumeAvailability()

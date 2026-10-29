@@ -39,6 +39,9 @@ NS_ASSUME_NONNULL_BEGIN
 @property(nonatomic, readonly) CGSize rasterViewSize;
 @property(nonatomic, readonly) BOOL usesMetalRenderer;
 @property(nonatomic, readonly) NSString *menuVersion;
+/// Native link target over the two-line contact replacement, in logical space.
+/// Zero outside Credits. Original creator rows and EXIT keep their positions.
+@property(nonatomic, readonly) CGRect restorationCreditFrame;
 @property(nonatomic, readonly) BOOL canPause;
 @property(nonatomic, readonly) NSInteger gameMenuType;
 @property(nonatomic, readonly) NSArray<SDBMenuAction *> *menuActions;

@@ -1,6 +1,7 @@
 // Created by Angelo Cammalleri on 27.10.2026.
 #import "SDBEngine.h"
 #import "SDBSaveStore.h"
+#import <ImageIO/ImageIO.h>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -12,6 +13,18 @@ bool advance(SDBEngine *engine, unsigned count = 120) {
     for (unsigned frame = 0; frame < count; ++frame) [engine advanceSimulation:1.0 / 60];
     if (engine.failure) fprintf(stderr, "Guest fault: %s\n", engine.failure.UTF8String);
     return require(!engine.failure, "original simulation remains healthy");
+}
+bool capture(SDBEngine *engine, NSString *name) {
+    const char *directory=getenv("SDB_MENU_CAPTURE_DIRECTORY");
+    if(!directory)return true;
+    NSString *folder=[NSString stringWithUTF8String:directory];
+    [NSFileManager.defaultManager createDirectoryAtPath:folder withIntermediateDirectories:YES attributes:nil error:nil];
+    NSURL *url=[NSURL fileURLWithPath:[folder stringByAppendingPathComponent:[name stringByAppendingString:@".png"]]];
+    CGImageDestinationRef output=CGImageDestinationCreateWithURL((__bridge CFURLRef)url,CFSTR("public.png"),1,nil);
+    if(!output)return require(false,"create task-owned Credits capture");
+    CGImageDestinationAddImage(output,engine.frame,nil);
+    const bool saved=CGImageDestinationFinalize(output);CFRelease(output);
+    return require(saved,"save task-owned Credits capture");
 }
 SDBMenuAction *action(SDBEngine *engine, NSString *label) {
     for (SDBMenuAction *candidate in engine.menuActions) if ([candidate.label isEqual:label]) return candidate;
@@ -47,6 +60,27 @@ int main(int argc, const char *argv[]) {
         if (!require([SDBSaveStore isValidOriginalData:[NSData dataWithContentsOfFile:saveFile]], "engine retains original 256-byte save format") ||
             !activate(engine, @"Credits") || !require(engine.gameMenuType == 6 && engine.menuActions.count == 1, "credits exposes original exit")) return 1;
         SDBMenuAction *creditsBack = action(engine, @"Back");
+        CGRect creditFrame=engine.restorationCreditFrame;
+        [engine renderFrame];
+        if (!require(!engine.failure, "two-line restoration credit renders through the original font") ||
+            !require(!CGRectIsEmpty(creditFrame) && CGRectContainsRect(CGRectMake(0,0,engine.logicalSize.width,engine.logicalSize.height),creditFrame),
+                     "restoration link fits the original contact band") ||
+            !require(!CGRectIntersectsRect(creditFrame,creditsBack.logicalFrame), "restoration link cannot intercept original EXIT")) return 1;
+        for (NSValue *sizeValue in @[[NSValue valueWithSize:CGSizeMake(184,224)],
+                                      [NSValue valueWithSize:CGSizeMake(1032,1376)],
+                                      [NSValue valueWithSize:CGSizeMake(480,320)]]) {
+            const CGSize size=sizeValue.sizeValue;
+            engine.watchLayout=size.width==184;
+            [engine configureViewport:size displayScale:1 safeArea:CGRectMake(0,0,size.width,size.height)];
+            if(!advance(engine))return 1;
+            [engine renderFrame];creditsBack=action(engine,@"Back");
+            if(!require(!engine.failure,"resized Credits draws through original font without a fault")||
+               !require(CGRectContainsRect(CGRectMake(0,0,engine.logicalSize.width,engine.logicalSize.height),engine.restorationCreditFrame),
+                        "resized restoration link remains in the filled viewport")||
+               !require(!CGRectIntersectsRect(engine.restorationCreditFrame,creditsBack.logicalFrame),
+                        "resized link and EXIT have separate hit targets")||
+               !capture(engine,[NSString stringWithFormat:@"credits-%.0fx%.0f",size.width,size.height]))return 1;
+        }
         const CGPoint creditsCenter = CGPointMake(CGRectGetMidX(creditsBack.logicalFrame), CGRectGetMidY(creditsBack.logicalFrame));
         [engine touchPhase:0 x:creditsCenter.x y:creditsCenter.y];
         if (!advance(engine, 12)) return 1;
@@ -58,6 +92,8 @@ int main(int argc, const char *argv[]) {
         if (!activate(engine, @"Credits")) return 1;
         [engine renderFrame];
         creditsBack = action(engine, @"Back");
+        if (!require(!CGRectIntersectsRect(engine.restorationCreditFrame,creditsBack.logicalFrame),
+                     "wide layout keeps restoration link separate from original EXIT")) return 1;
         const CGPoint wideCenter = CGPointMake(CGRectGetMidX(creditsBack.logicalFrame), CGRectGetMidY(creditsBack.logicalFrame));
         const CGPoint canvasCenter=CGPointMake(engine.logicalSize.width/2,engine.logicalSize.height/2);
         if (!require(!CGRectContainsPoint(creditsBack.logicalFrame,canvasCenter),
@@ -73,6 +109,7 @@ int main(int argc, const char *argv[]) {
         [engine touchPhase:2 x:wideCenter.x+.1 y:wideCenter.y];
         if (!advance(engine) || !require(engine.gameMenuType == 1, "wide iPhone Back-row press follows original input despite small finger movement")) return 1;
         [engine configureViewport:CGSizeMake(480,320) displayScale:1 safeArea:CGRectMake(0,0,480,320)];
+        if (!require(CGRectIsEmpty(engine.restorationCreditFrame), "restoration link is absent outside Credits")) return 1;
         NSDictionary *snapshot = engine.progressPortableSnapshot;
         if (!require(snapshot && [engine importValidatedProgress:snapshot], "title accepts validated unchanged portable record") ||
             !require(![engine importValidatedProgress:@{@"schema":@999}], "future progress schema rejected") ||

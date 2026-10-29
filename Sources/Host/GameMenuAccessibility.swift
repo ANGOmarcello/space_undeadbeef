@@ -21,6 +21,10 @@ struct GameMenuAction: Equatable, Identifiable {
     var id: String { identifier }
 
     func viewFrame(in size: CGSize, logicalSize: CGSize) -> CGRect? {
+        Self.viewFrame(logicalFrame, in: size, logicalSize: logicalSize)
+    }
+
+    static func viewFrame(_ logicalFrame: CGRect, in size: CGSize, logicalSize: CGSize) -> CGRect? {
         let values = [size.width, size.height, logicalSize.width, logicalSize.height,
                       logicalFrame.minX, logicalFrame.minY, logicalFrame.width, logicalFrame.height]
         guard values.allSatisfy(\.isFinite), size.width > 0, size.height > 0,
@@ -74,6 +78,32 @@ struct GameMenuAccessibility: View {
         // Preserve a single Credits/Back row as a child rather than promoting
         // that button to the full virtual container's bounds.
         .accessibilityElement(children: .contain)
+    }
+}
+
+/// The engine renders the original font; this native layer supplies only the
+/// semantic web link and hit target, outside the game's drag gesture.
+@MainActor
+struct GameRestorationCredit: View {
+    let session: GameSession
+    let size: CGSize
+    private static let destination = URL(string: "https://cammalleri.dev")!
+
+    var body: some View {
+        #if !os(tvOS)
+        if let logicalFrame = session.restorationCreditFrame,
+           let frame = GameMenuAction.viewFrame(logicalFrame, in: size, logicalSize: session.logicalSize) {
+            Link(destination: Self.destination) {
+                Color.clear
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .frame(width: frame.width, height: frame.height)
+            .position(x: frame.midX, y: frame.midY)
+            .accessibilityLabel("Restoration & modernization by cammalleri.dev")
+            .accessibilityIdentifier("restoration-credit-link")
+        }
+        #endif
     }
 }
 #endif

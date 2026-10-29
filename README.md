@@ -48,6 +48,9 @@ layers in its parallax icon and Top Shelf assets; regenerate those with
 `xcrun swift script/prepare_icons.swift`. See [AppIcon.md](Documentation/AppIcon.md)
 for provenance, editable sources and verification.
 
+The [credits restoration record](Documentation/Credits.md) documents the reported
+bounce of the original contact address and the replacement website credit.
+
 ## Controls
 
 The game retains its original touch controls: hold and sweep over enemies to

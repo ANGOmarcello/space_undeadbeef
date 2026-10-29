@@ -25,6 +25,9 @@ struct GameView: View {
                 Color.black
                 interactiveScreen(size: size)
                     .frame(width: size.width, height: size.height)
+                    .overlay {
+                        GameRestorationCredit(session: session, size: size)
+                    }
                 if let failure = session.failure {
                     Text(failure)
                         .font(.callout)

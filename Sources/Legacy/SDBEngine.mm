@@ -24,6 +24,9 @@
 namespace {
 constexpr uint32_t ExtendedTitle = 1000;
 constexpr uint32_t OriginalFont = 1, OriginalSmallFont = 2;
+constexpr uint32_t OriginalContactRow = 0x1482c, PreviousCreditRow = 0x147f0, CreditExitRow = 0x14868;
+constexpr const char *RestorationCreditLines[] = {"Restoration & modernization", "by cammalleri.dev"};
+constexpr float RestorationCreditGapFraction = 0.25f;
 using sdb::display::DisplayGeometry;
 constexpr uint32_t SilentOn=0x01d00000,SilentOff=0x01d00004,SilentOnDraw=0x01d00008,SilentOffDraw=0x01d0000c;
 constexpr uint32_t HapticsOn=0x01d00010,HapticsOff=0x01d00014,HapticsOnDraw=0x01d00018,HapticsOffDraw=0x01d0001c;
@@ -85,6 +88,18 @@ struct Runtime {
     float lastX=0,lastY=0;
     bool touching=false,watchLayout=TARGET_OS_WATCH,steeringActive=false;
     double steeringY=.5;
+    uint32_t restorationCreditScratch=0;
+    struct CreditLayout {float first, second, glyphHeight, glyphWidth;};
+    CreditLayout restorationCreditLayout() {
+        // Fit two lines into the old contact band, bounded by the unchanged
+        // Special Thanks and EXIT glyphs. Keep the original font proportions.
+        const float top=real(cpu.read32(PreviousCreditRow))+real(cpu.read32(PreviousCreditRow+52))/2;
+        const float bottom=real(cpu.read32(CreditExitRow))-real(cpu.read32(CreditExitRow+52))/2;
+        const float height=std::min(real(cpu.read32(OriginalContactRow+52)),std::max(0.f,(bottom-top)/(2+RestorationCreditGapFraction)));
+        const float aspect=real(cpu.read32(OriginalContactRow+56))/real(cpu.read32(OriginalContactRow+52));
+        const float width=std::min(height*aspect,float(geometry.safeUIRect.width)/float(strlen(RestorationCreditLines[0])));
+        return {top+height/2,bottom-height/2,height,width};
+    }
 
     void invalidateMenuPacket() {menuPacketValid=false;menuVertices.clear();menuDraws.clear();}
     bool sameMenuPacket(uint32_t type) const {
@@ -437,6 +452,55 @@ struct Runtime {
 - (BOOL)usesMetalRenderer {return _runtime->metal;}
 - (NSString *)menuVersion {return _menuVersion;}
 - (NSInteger)gameMenuType {auto &r=*_runtime;return r.game?r.cpu.read32(r.cpu.read32(r.game+4)+0x20):-1;}
+- (CGRect)restorationCreditFrame {
+    if (_failure || _suspended || self.gameMenuType != 6) return CGRectZero;
+    Runtime &r=*_runtime;const auto layout=r.restorationCreditLayout();
+    const float width=float(strlen(RestorationCreditLines[0]))*layout.glyphWidth;
+    GuestCPU &c=r.cpu;
+    const uint32_t sentinel=c.read32(r.game+4)+0x24;
+    uint32_t node=c.read32(sentinel),button=0;
+    for(unsigned count=0;node!=sentinel&&count<64;++count) {
+        auto entry=r.allocations.find(node);
+        if(entry==r.allocations.end()||entry->second<12)return CGRectZero;
+        const uint32_t candidate=c.read32(node+8);
+        auto item=r.allocations.find(candidate);
+        if(item==r.allocations.end()||item->second<80)return CGRectZero;
+        if(c.read32(candidate)==OriginalContactRow) {button=candidate;break;}
+        node=c.read32(node);
+    }
+    if(!button)return CGRectZero;
+    const float x=real(c.read32(button+0x1c));
+    const float y=real(c.read32(button+0x10))+layout.first-real(c.read32(OriginalContactRow));
+    return CGRectMake(r.geometry.logicalSize.width/2+x-width/2,
+        r.geometry.logicalSize.height/2+y-layout.glyphHeight/2,
+        width,layout.second-layout.first+layout.glyphHeight);
+}
+- (void)drawRestorationCredit:(uint32_t)button {
+    Runtime &r=*_runtime;GuestCPU &c=r.cpu;
+    constexpr uint32_t ButtonSize=80,DataSize=60,TextCapacity=64,Stride=ButtonSize+DataSize+TextCapacity;
+    if (!r.restorationCreditScratch) {
+        r.restorationCreditScratch=r.allocate(2*Stride);
+        if(!c.fault.empty())return;
+        for(unsigned line=0;line<2;++line) {
+            c.load(r.restorationCreditScratch+line*Stride+ButtonSize+DataSize,
+                RestorationCreditLines[line],strlen(RestorationCreditLines[line])+1);
+        }
+    }
+    const auto layout=r.restorationCreditLayout();
+    for(unsigned line=0;line<2;++line) {
+        const uint32_t copy=r.restorationCreditScratch+line*Stride,data=copy+ButtonSize;
+        memcpy(c.memory.data()+copy,c.memory.data()+button,ButtonSize);
+        memcpy(c.memory.data()+data,c.memory.data()+OriginalContactRow,DataSize);
+        c.write32(copy,data);
+        const float offset=(line?layout.second:layout.first)-real(c.read32(OriginalContactRow));
+        c.write32(copy+0x10,bits(real(c.read32(button+0x10))+offset));
+        c.write32(data+36,data+DataSize);
+        c.write32(data+52,bits(layout.glyphHeight));c.write32(data+56,bits(layout.glyphWidth));
+        // Original font, color, drawing and entrance motion. A native Link
+        // owns URL interaction; the guest contact row remains nonexecutable.
+        c.call(0x9b2f,{0xffbfbfbfu,copy,data});
+    }
+}
 - (NSArray<SDBMenuAction *> *)menuActions {
     if (_failure || _suspended || !_runtime->game || self.gameMenuType < 1 || self.gameMenuType > 6) return @[];
     Runtime &r = *_runtime; GuestCPU &c = r.cpu;
@@ -853,6 +917,10 @@ struct Runtime {
         __unsafe_unretained SDBEngine *owner=self;
         _runtime->cpu.hook=[owner](GuestCPU &cpu,uint32_t pc) -> bool {
             if (pc == 0x97ac) ++owner->_menuGeneration;
+            if(pc==0xa282&&cpu.read32(cpu.r[0])==OriginalContactRow) {
+                [owner drawRestorationCredit:cpu.r[0]];
+                cpu.returnFromHook();return true;
+            }
             if(sdb::display::GameDisplayPatch::handlesPc(pc))return owner->_runtime->displayPatch.handleInstruction(cpu,pc);
             // Observe the original effect request before its Sound-OFF guard.
             // The guest method still executes unchanged after this hook.
@@ -925,6 +993,11 @@ struct Runtime {
         r.imports[stubAddress+i*stubWidth]=std::string((const char*)data.bytes+str,strnlen((const char*)data.bytes+str,data.length-str));
     }
     if(!r.displayPatch.initialize(c))return;
+    if(r.string(c.read32(OriginalContactRow+36))!="e-mail:  space_deadbeef@yahoo.com"||
+       c.read32(OriginalContactRow+40)!=0||c.read32(OriginalContactRow+32)!=62||
+       c.read32(OriginalContactRow+52)!=bits(24.f)||c.read32(OriginalContactRow+56)!=bits(12.f)) {
+        c.fail("Unsupported original Credits contact row");return;
+    }
     c.call(0x421d);if(!c.fault.empty())return;uint32_t records=c.read32(0x15744);
     for(NSDictionary *entry in manifest[@"textures"]) {
         uint32_t index=[entry[@"entry"] unsignedIntValue];if(index>=62)continue;

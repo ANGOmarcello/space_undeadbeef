@@ -133,6 +133,38 @@ final class HostUITests: XCTestCase {
         app.terminate()
     }
 
+    @MainActor
+    func testRestorationCreditLink() throws {
+        #if os(iOS)
+        let app = XCUIApplication()
+        let save = "~/tmp/space-restoration-credit-\(UUID().uuidString)"
+        app.launchEnvironment = ["SDB_UI_TEST": "1", "SDB_MUTE_AUDIO": "1", "SDB_SAVE_DIRECTORY": save]
+        app.launch()
+        defer { app.terminate() }
+        let credits = app.buttons.matching(NSPredicate(format: "label == %@", "Credits")).firstMatch
+        XCTAssertTrue(credits.waitForExistence(timeout: 15))
+        credits.press(forDuration: 0.2)
+        let link = app.descendants(matching: .any).matching(identifier: "restoration-credit-link").firstMatch
+        XCTAssertTrue(link.waitForExistence(timeout: 10))
+        XCTAssertEqual(link.label, "Restoration & modernization by cammalleri.dev")
+        let back = app.buttons.matching(NSPredicate(format: "label == %@", "Back")).firstMatch
+        XCTAssertTrue(back.waitForExistence(timeout: 10))
+        XCTAssertFalse(link.frame.intersects(back.frame), "Link must preserve the original EXIT hit area")
+        capture(app, "restoration-credit-before-opening")
+        link.tap()
+        let safari = XCUIApplication(bundleIdentifier: "com.apple.mobilesafari")
+        XCTAssertTrue(safari.wait(for: .runningForeground, timeout: 15), "Native credit link should open the system browser")
+        let address = safari.descendants(matching: .any).matching(NSPredicate(
+            format: "label CONTAINS[c] %@ OR value CONTAINS[c] %@", "cammalleri.dev", "cammalleri.dev")).firstMatch
+        XCTAssertTrue(address.waitForExistence(timeout: 15), "The browser should receive the approved website address")
+        capture(safari, "restoration-credit-website")
+        app.activate()
+        XCTAssertTrue(link.waitForExistence(timeout: 15), "Returning from the website retains Credits")
+        back.press(forDuration: 0.2)
+        XCTAssertTrue(credits.waitForExistence(timeout: 10), "Original EXIT still returns to the title")
+        #endif
+    }
+
     /// Read the semantic children without changing system VoiceOver settings.
     /// Ordinary taps still follow the original game menu hit-test path.
     @MainActor
