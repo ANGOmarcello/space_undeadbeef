@@ -999,6 +999,13 @@ struct Runtime {
         c.fail("Unsupported original Credits contact row");return;
     }
     c.call(0x421d);if(!c.fault.empty())return;uint32_t records=c.read32(0x15744);
+    // Prepared, matching views only: keep the guest's original size, padding
+    // and UV contract independent from the native texture's pixel density.
+    // Watch needs a smaller resident set; no scaling work runs during a frame.
+    constexpr unsigned ShipScale=TARGET_OS_WATCH?2:4;
+    NSString *shipDirectory=[[_resourcePath stringByDeletingLastPathComponent]
+        stringByAppendingPathComponent:[NSString stringWithFormat:@"Modern/PlayerShip/%ux",ShipScale]];
+    const bool retinaShips=[[NSFileManager defaultManager] fileExistsAtPath:shipDirectory];
     for(NSDictionary *entry in manifest[@"textures"]) {
         uint32_t index=[entry[@"entry"] unsignedIntValue];if(index>=62)continue;
         NSURL *url=[NSURL fileURLWithPath:[_resourcePath stringByAppendingPathComponent:entry[@"name"]]];
@@ -1006,6 +1013,26 @@ struct Runtime {
         CGImageRef image=source?CGImageSourceCreateImageAtIndex(source,0,nullptr):nullptr;
         if(source)CFRelease(source);
         if(!image) {c.fail("Original texture could not be decoded");return;}
+        const unsigned logicalWidth=(unsigned)CGImageGetWidth(image),logicalHeight=(unsigned)CGImageGetHeight(image);
+        unsigned logicalPaddedWidth=1,logicalPaddedHeight=1;
+        while(logicalPaddedWidth<logicalWidth)logicalPaddedWidth*=2;
+        while(logicalPaddedHeight<logicalHeight)logicalPaddedHeight*=2;
+        if(retinaShips&&index>=12&&index<=36) {
+            NSString *expected=[NSString stringWithFormat:@"playerShip_%02u.png",index-11];
+            if(![entry[@"name"] isEqualToString:expected]||logicalWidth!=128||logicalHeight!=128) {
+                CGImageRelease(image);c.fail("Unsupported original player-ship texture layout");return;
+            }
+            NSURL *retinaURL=[NSURL fileURLWithPath:[shipDirectory stringByAppendingPathComponent:expected]];
+            CGImageSourceRef retinaSource=CGImageSourceCreateWithURL((__bridge CFURLRef)retinaURL,nullptr);
+            CGImageRef retinaImage=retinaSource?CGImageSourceCreateImageAtIndex(retinaSource,0,nullptr):nullptr;
+            if(retinaSource)CFRelease(retinaSource);
+            if(!retinaImage||CGImageGetWidth(retinaImage)!=logicalWidth*ShipScale||
+               CGImageGetHeight(retinaImage)!=logicalHeight*ShipScale) {
+                if(retinaImage)CGImageRelease(retinaImage);
+                CGImageRelease(image);c.fail("Retina player-ship texture is missing or has invalid dimensions");return;
+            }
+            CGImageRelease(image);image=retinaImage;
+        }
         unsigned w=(unsigned)CGImageGetWidth(image),h=(unsigned)CGImageGetHeight(image),pw=1,ph=1;
         while(pw<w)pw*=2;while(ph<h)ph*=2;
         Texture t;t.width=pw;t.height=ph;t.contentWidth=w;t.contentHeight=h;t.pixels.resize(pw*ph*4);
@@ -1067,8 +1094,9 @@ struct Runtime {
         if(r.metal&&![_metalRenderer setTexture:index+1 rgba:t.pixels.data() byteLength:t.pixels.size() width:pw height:ph]) {c.fail(_metalRenderer.failure.UTF8String?:"Texture upload failed");return;}
         r.textures[index+1]=std::move(t);
         ++r.textureGeneration;
-        uint32_t p=records+32*index;c.write32(p,index+1);c.write32(p+4,bits(w));c.write32(p+8,bits(h));
-        c.write32(p+12,pw);c.write32(p+16,ph);c.write32(p+20,0);c.write32(p+24,bits(float(w)/pw));c.write32(p+28,bits(float(h)/ph));
+        uint32_t p=records+32*index;c.write32(p,index+1);c.write32(p+4,bits(logicalWidth));c.write32(p+8,bits(logicalHeight));
+        c.write32(p+12,logicalPaddedWidth);c.write32(p+16,logicalPaddedHeight);c.write32(p+20,0);
+        c.write32(p+24,bits(float(logicalWidth)/logicalPaddedWidth));c.write32(p+28,bits(float(logicalHeight)/logicalPaddedHeight));
     }
     if(!c.fault.empty())return;
     [self loadExtendedTitle];

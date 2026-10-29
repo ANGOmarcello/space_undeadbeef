@@ -1,5 +1,30 @@
 # Verification record
 
+## Original ship at Retina density — 1.1 (15), 29 October 2026
+
+All 25 original player-ship views have conservative offline 4× renditions;
+Watch loads the matching 2× set to limit decoded storage. Native pixel density
+is independent from the unchanged original guest dimensions and UVs. The original
+resources and executable remain byte-identical. See [RetinaShip.md](RetinaShip.md)
+for the same-frame visual comparison, reproducible exports, provenance and memory
+tradeoff.
+
+**205** sanitizer-backed actual texture/guest-metric/coverage/fallback checks
+pass. Across 50 silhouettes, maximum area change is 0.0857% and maximum centroid
+drift is 0.0098 original pixels. A second export is byte-identical. Baseline and
+current engines match every guest/register/draw/audio/save fingerprint over 600
+identical fixed steps; image changes are intentional. CPU entrance captures and
+all 25 views were inspected, together with Metal screenshots from the iPhone 18
+Pro Simulator's passing original-game interaction test (1 pass, 0 failures).
+Debug builds pass on all four platforms and report 1.1 (15).
+
+The first baseline command under the restricted shell sandbox could not create
+Apple's AVAudioSourceNode component and terminated during audio initialization.
+The unchanged baseline and updated checks succeed with normal framework access,
+muted audio and temporary saves. No application audio change was necessary.
+There was no physical-device discovery, installation, launch or performance test
+in this sprite pass. Existing unrelated Xcode project-format edits are preserved.
+
 ## Requested device rollout — 1.1 (14), 29 October 2026
 
 The user requested installation on their iPhone, iPad, Series 4, Series 12 and

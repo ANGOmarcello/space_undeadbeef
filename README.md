@@ -51,6 +51,10 @@ for provenance, editable sources and verification.
 The [credits restoration record](Documentation/Credits.md) documents the reported
 bounce of the original contact address and the replacement website credit.
 
+The [Retina ship record](Documentation/RetinaShip.md) describes the faithful,
+offline-prepared higher-density renditions of all 25 original player-ship views,
+with a same-frame comparison and unchanged original animation/geometry.
+
 ## Controls
 
 The game retains its original touch controls: hold and sweep over enemies to
