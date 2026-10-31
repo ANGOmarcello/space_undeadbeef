@@ -344,7 +344,7 @@ struct Runtime {
     void draw(uint32_t mode,unsigned first,unsigned count) {
         if(count>4096) {cpu.fail("GL draw count exceeds limit");return;}
         ++draws;
-        if((TARGET_OS_IOS||watchLayout)&&textured&&texture==12)return; // Native pause control owns this affordance.
+        if((TARGET_OS_IOS||TARGET_OS_TV||watchLayout)&&textured&&texture==12)return; // Native controls or the TV remote own pause.
         const auto validFactor=[](uint32_t factor) {return factor==0||factor==1||factor==0x302||factor==0x303;};
         if(collectSoftwareDraws&&blend&&(!validFactor(sourceBlend)||!validFactor(destBlend))) {
             // Preserve the original fault boundary: invalid factors only fault
@@ -789,9 +789,9 @@ struct Runtime {
 }
 - (void)applyViewportPatch {
     auto &r=*_runtime;r.displayPatch.apply(r.cpu,r.geometry,r.watchLayout);
-    // Move the guest hit target with its replaced drawing. The native corner
-    // button invokes the same original pause routine directly.
-    if(TARGET_OS_IOS||r.watchLayout) {
+    // Disable the hidden guest hit target. Native corner controls and the TV
+    // remote invoke the same original pause routine directly.
+    if(TARGET_OS_IOS||TARGET_OS_TV||r.watchLayout) {
         r.cpu.write32(0x14ef8,bits(float(r.geometry.logicalSize.height*2)));
         r.cpu.write32(0x14ef8+4,bits(float(r.geometry.logicalSize.width*2)));
     }

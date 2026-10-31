@@ -30,9 +30,11 @@ focus engine handles directions and Select; controller polling does not also
 inject a menu-pointer click. Gameplay owns a UIKit indirect-touch recognizer:
 touch-down/movement/lift invoke the same original touch path as the phone,
 without the white host cursor. Touch cancellation, focus loss and scene changes
-cancel held input without firing. Click-only remotes can hold Select or toggle
-a touch with Play/Pause; arrows aim while held, and Up/Down steer through the
-existing ship spring otherwise. Back/Menu pauses gameplay. Watch keeps the
+cancel held input without firing. Click-only remotes can hold Select; arrows aim
+while held, and Up/Down steer through the existing ship spring otherwise.
+Play/Pause opens the original pause menu, cancelling held input, and Back/Menu
+remains a pause shortcut. TV omits the original P graphic and disables its hidden
+touch target; Resume/Select returns to play. Watch keeps the
 existing Crown and touch controls. Real controller
 feel and physical remote delivery are separate from policy/Simulator checks.
 

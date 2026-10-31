@@ -1,5 +1,33 @@
 # Verification record
 
+## Remote-only TV pause — 1.1 (22), 31 October 2026
+
+Apple TV omits the original P-button drawing and moves its hidden guest hit
+target outside the arena. Play/Pause now cancels held input and invokes the
+existing original pause callback, opening Continue/Quit. Select activates the
+focused Continue action to resume; Back/Menu remains a pause shortcut.
+
+The touchpad recognizer explicitly excludes button presses. The regression
+check exposed a held Select whose release was intercepted by that recognizer;
+restricting it to touches restores release-to-fire independently of pause.
+The TV performance workload also uses Select rather than the retired
+Play/Pause charge toggle.
+
+`HostUITests/testOriginalGameInteraction` passed **1 test, 0 failures** on Apple
+TV 4K Simulator `67C3FA69-FAD7-479A-A800-564910EEF3B4`. It exercises native menu
+focus, Select hold/release, Play/Pause → Pause → Continue/Select, Back/Menu →
+Pause → Continue/Select, and isolated save/relaunch. Captures before pause and
+after resume visibly have no P graphic; the Play/Pause capture shows the original
+Continue/Quit menu with native focus. Two existing AVAudioSession main-thread
+diagnostics remain. The original executable SHA-256 is unchanged.
+
+The signed tvOS Debug build passes strict signature, exact three-device
+provisioning membership and KVS entitlement checks. In-place installations and
+independent installed-app readbacks confirm **Space Deadbeef 1.1 (22)** on
+Office, Wintergarten and Wohnzimmer. No physical TV app was launched, no remote
+input was sent and no idle assertion was requested. Physical remote feel remains
+separate from the successful Simulator interaction check.
+
 ## Apple TV save and remote repair — 1.1 (21), 29 October 2026
 
 tvOS now uses a bounded local preferences transaction rather than attempting

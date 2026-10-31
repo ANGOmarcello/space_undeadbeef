@@ -82,25 +82,29 @@ final class HostUITests: XCTestCase {
         waitForMenu(0)
         Thread.sleep(forTimeInterval: 5)
         XCTAssertTrue((canvas.value as? String ?? "").contains("pointerVisible false"))
-        capture(app, "03-gameplay-without-pointer")
+        capture(app, "03-gameplay-without-pointer-or-pause-graphic")
+        XCUIRemote.shared.press(.select, forDuration: 0.8)
+        waitForMenu(0)
+        let released = NSPredicate(format: "value CONTAINS %@", "touching false")
+        XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: released, object: canvas)], timeout: 5),
+                       .completed, "Select release state: \(canvas.value as? String ?? "missing")")
         XCUIRemote.shared.press(.playPause)
-        let charging = NSPredicate(format: "value CONTAINS %@", "touching true")
-        expectation(for: charging, evaluatedWith: canvas)
-        waitForExpectations(timeout: 5)
-        XCUIRemote.shared.press(.right)
-        capture(app, "04-original-aiming")
-        XCTAssertTrue((canvas.value as? String ?? "").contains("pointerVisible false"))
-        XCUIRemote.shared.press(.playPause)
-        XCTAssertTrue((canvas.value as? String ?? "").contains("touching false"))
-        XCUIRemote.shared.press(.menu)
         waitForMenu(3)
-        capture(app, "05-focused-pause")
+        XCTAssertTrue((canvas.value as? String ?? "").contains("touching false"))
+        capture(app, "04-play-pause-menu")
         let resume = app.buttons["Resume"]
         XCTAssertTrue(resume.waitForExistence(timeout: 10))
         XCTAssertTrue(resume.hasFocus)
         XCUIRemote.shared.press(.select)
         waitForMenu(0)
-        capture(app, "06-resumed-gameplay")
+        capture(app, "05-resumed-gameplay")
+        // Back/Menu remains a pause shortcut; Select must still resume after it.
+        XCUIRemote.shared.press(.menu)
+        waitForMenu(3)
+        XCTAssertTrue(resume.waitForExistence(timeout: 10))
+        XCTAssertTrue(resume.hasFocus)
+        XCUIRemote.shared.press(.select)
+        waitForMenu(0)
         #else
         func point(_ x: Double, _ y: Double) -> XCUICoordinate {
             let size = canvas.frame.size
@@ -408,14 +412,9 @@ final class HostUITests: XCTestCase {
             }
             if menuType() == 0 {
                 #if os(tvOS)
-                XCUIRemote.shared.press(.playPause)
-                Thread.sleep(forTimeInterval: 0.6)
+                XCUIRemote.shared.press(.select, forDuration: 0.6)
                 for _ in 0..<3 { XCUIRemote.shared.press(.right) }
                 for _ in 0..<3 { XCUIRemote.shared.press(.down) }
-                XCUIRemote.shared.press(.playPause)
-                // Return to Start's pointer position for a possible title return.
-                for _ in 0..<3 { XCUIRemote.shared.press(.left) }
-                for _ in 0..<3 { XCUIRemote.shared.press(.up) }
                 #else
                 point(100, 160).press(forDuration: 0.6, thenDragTo: point(350, 80))
                 point(350, 80).press(forDuration: 0.4, thenDragTo: point(100, 240))

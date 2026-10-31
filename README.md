@@ -90,7 +90,7 @@ inverse input mapping.
 
 - iPhone/iPad: touch and drag.
 - Mac / attached keyboard: mouse and drag, or arrows to aim; hold Space to charge and release to fire. Escape or P pauses.
-- Apple TV: swipe or press directions to focus original menu choices, then Select. During play, touch and sweep to aim/charge and lift to fire. Click-only remotes can hold Select or toggle a hold with Play/Pause; arrows move the target while held, and Up/Down steer otherwise. Back/Menu pauses gameplay.
+- Apple TV: swipe or press directions to focus original menu choices, then Select. During play, touch and sweep to aim/charge and lift to fire. Click-only remotes can hold Select; arrows move the target while held, and Up/Down steer otherwise. Play/Pause or Back/Menu opens the original pause menu; choose Resume to continue. TV has no on-screen pause graphic.
 - Apple Watch: touch and drag; the Digital Crown steers the ship vertically without holding an aiming touch.
 - Extended controllers on iPhone/iPad, Mac and TV: left stick steers, right stick or D-pad aims, A/right trigger charges until released, and Menu pauses. Either stick addresses menu rows on iPhone/iPad/Mac; TV menus use system focus.
 

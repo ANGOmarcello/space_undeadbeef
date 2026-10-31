@@ -321,7 +321,7 @@ private final class TVGameInputView: UIView {
     private var clickOwnsTouch = false
     private var gameplay = false
     private lazy var remoteTouch = TVRemoteTouchRecognizer { [weak self] phase, location in
-        guard let self, self.gameplay, let session = self.session else { return }
+        guard let self, self.gameplay, let session = self.session, session.gameMenuType == 0 else { return }
         switch phase {
         case .began:
             session.inputController.resetHeldInputs()
@@ -340,6 +340,8 @@ private final class TVGameInputView: UIView {
         accessibilityLabel = "SPACE UNDEADBEEF game"
         remoteTouch.allowedTouchTypes = [NSNumber(value: UITouch.TouchType.indirect.rawValue),
                                         NSNumber(value: UITouch.TouchType.direct.rawValue)]
+        // This recognizer owns touchpad contacts, not Select/Play/Pause presses.
+        remoteTouch.allowedPressTypes = []
         addGestureRecognizer(remoteTouch)
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) is unsupported") }
@@ -414,8 +416,8 @@ private final class TVGameInputView: UIView {
             case .select:
                 if !session.isTouching { session.drag(to: session.pointer); clickOwnsTouch = session.isTouching }
             case .playPause:
-                if session.isTouching { session.endTouch() }
-                else { session.drag(to: session.pointer) }
+                cancelInput()
+                session.pauseGame()
             case .upArrow, .downArrow, .leftArrow, .rightArrow:
                 let step = GameLayout.pointerStep
                 let dx = press.type == .leftArrow ? -step : press.type == .rightArrow ? step : 0
