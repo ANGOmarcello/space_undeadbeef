@@ -2,6 +2,14 @@
 
 # SPACE UNDEADBEEF
 
+**[iPhone and iPad downloads](https://github.com/ANGOmarcello/space_undeadbeef/releases)** · [Build from source](BUILDING.md) · [iCloud progress](Documentation/ICLOUD.md)
+
+Download `SpaceDeadbeef.ipa` from Releases when available. It is an unsigned
+ARM64 device build for iOS/iPadOS 18 or later. Sign it with your own account
+using a sideloading tool such as [Sideloadly](https://sideloadly.io/), then install
+it on your iPhone or iPad. The release includes matching source and `SHA256SUMS`.
+Mac, Apple TV and Watch use their separate Xcode schemes.
+
 ## What changed in version 1.1
 
 We raised the displayed version from the original **1.01** to **1.1** to mark
@@ -16,7 +24,7 @@ these additions make it usable on today's Apple platforms.
 - **Sound preferences:** sound enabled by default, respecting Silent Mode by default where supported, with persistent Options choices.
 - **Optional haptics:** iPhone and Watch feedback for menus, weapons, hits and explosions, controlled through the original Options screen.
 - **Interruption recovery:** noninterruptive iPhone banners keep gameplay running; real interruptions use the original resumable Pause flow and recoverable native audio.
-- **Safer progress storage:** bounded, validated checkpoints and recovery records; a small tvOS preferences transaction; optional provisioned iCloud key-value progress exchange without a CloudKit deployment.
+- **Safer progress storage:** validated checkpoints and recovery records, local TV saves, and optional progress sharing. The sideloaded iPhone/iPad build uses a folder chosen in iCloud Drive; personal builds retain provisioned key-value sync.
 - **Updated icons:** editable Icon Composer appearances, earlier-system fallbacks, a full circular Watch background and TV parallax/Top Shelf artwork.
 - **Accessibility and credits:** semantic original menu actions and an original-style, tappable modernization credit linking to cammalleri.dev.
 
@@ -123,4 +131,6 @@ The game pauses its host updates and audio while inactive. Diagnostic runs may s
 
 ## Original material
 
-The original executable and audiovisual material retain their original ownership. Local preparation does not grant redistribution rights. This repository is a local restoration workbench; it is not published or submitted to App Store Connect.
+The original executable and audiovisual material retain their original ownership.
+This is an independent restoration. See [third-party notices](THIRD_PARTY_NOTICES.md)
+for original game ownership and tooling credits.

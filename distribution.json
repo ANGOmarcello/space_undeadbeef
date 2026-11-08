@@ -1,0 +1,10 @@
+{
+  "name": "Space Deadbeef",
+  "product": "SpaceUndeadbeef",
+  "repository": "space_undeadbeef",
+  "guest_version": "1.01",
+  "guest_executable": "Original/psh",
+  "asset_stem": "SpaceDeadbeef",
+  "bundle_identifier": "dev.cammalleri.SpaceUndeadbeef",
+  "minimum_ios": "18.0"
+}

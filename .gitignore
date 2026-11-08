@@ -1,4 +1,5 @@
 *.ipa
+/Releases/
 .DS_Store
 xcuserdata/
 *.xcuserstate

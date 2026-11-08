@@ -1,0 +1,3 @@
+# Release source bundles replace private device receipts with a portable record.
+/.codex export-ignore
+/Documentation/Verification.md export-ignore
