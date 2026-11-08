@@ -102,7 +102,7 @@ def main() -> int:
             # These independently test host lifecycle/controller policy and
             # isolated persistence. Missing expected suites are failures.
             for suite in ["lifecycle_policy", "native_controls_policy", "haptic_attachment", "engine_audio_gate", "save_store", "save_coordinator", "menu_actions",
-                          "session_lifecycle", "progress_sync", "memory_soak", "scenario_resume"]:
+                          "session_lifecycle", "progress_sync", "folder_progress", "memory_soak", "scenario_resume"]:
                 suites.append((suite, []))
             for suite, arguments in suites:
                 label = "test " + suite + (" " + " ".join(arguments) if arguments else "")

@@ -13,11 +13,15 @@
 		07BD2A533F830B7099308186C5C25B66 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4CA7DE72F41A7CDD7070B949D8BD89AA /* Foundation.framework */; };
 		08BBF4153C38FBFBB0FF1867A74F5A58 /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6DCAB9E2A6C84F0D59093758853B2C96 /* Metal.framework */; };
 		093900F072875B718CE438560E369F81 /* GameProgressSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E820AC358959556196287BC2918D530 /* GameProgressSync.swift */; };
+		972D46B9E606A76703359E22981FB500 /* GameFolderProgressControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA14419F0BDF70AC591737D35445985C /* GameFolderProgressControls.swift */; };
+		A538D94A984F05CB8145A9EBBCD9D724 /* GameFolderProgress.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27FD30C7C94C5CD1C8E47F9BDE9058C2 /* GameFolderProgress.swift */; };
 		0B8B4EC11D6F80E764C5F145AE5A69B8 /* SDBAudioMixer.mm in Sources */ = {isa = PBXBuildFile; fileRef = 6A9B7F7DA43BAED04A71C7D28534E47F /* SDBAudioMixer.mm */; };
 		0C83F2D7B9851CFA154C9C54AC312BBA /* Original in Resources */ = {isa = PBXBuildFile; fileRef = A0ED89B192DB6FB4B51C8FED4ECCE924 /* Original */; };
 		0CB6A63355813403D5672320A470E6A5 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 21F5A0ABD1F2D4CD3C2B7C71C3E66054 /* Foundation.framework */; };
 		0F1BA68D69DFD1ABCB43572F /* GameHapticsSurface.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3DA6F9BA1B7540F28086973 /* GameHapticsSurface.swift */; };
 		110D0D1C6193F37F750965C5C1B83773 /* GameProgressSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E820AC358959556196287BC2918D530 /* GameProgressSync.swift */; };
+		A864E18F3B46952FE9EE7659D08D1426 /* GameFolderProgressControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA14419F0BDF70AC591737D35445985C /* GameFolderProgressControls.swift */; };
+		122EAFFEF516DE9290AB404BFFC2D3A2 /* GameFolderProgress.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27FD30C7C94C5CD1C8E47F9BDE9058C2 /* GameFolderProgress.swift */; };
 		163AFFB90F8BACACF83F123336BE53A2 /* GameView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EEED9D843E04C8D2795E3A8EC73A1CC6 /* GameView.swift */; };
 		1CA7198C8C1AA69EABEA3EB6 /* SpaceUndeadbeef.icon in Resources */ = {isa = PBXBuildFile; fileRef = ED484689BC8A5EF68F3F8B08 /* SpaceUndeadbeef.icon */; };
 		1D6D9D63C9659974ACCDF268CEE1AA87 /* GameMenuAccessibility.swift in Sources */ = {isa = PBXBuildFile; fileRef = A089A6E5869C0BA2184B522D3E4BB8CA /* GameMenuAccessibility.swift */; };
@@ -29,6 +33,8 @@
 		281B4958D5794C70CEF74CBEC02B04AE /* GameController.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1D4DE1723884B4F610949D9E9164E3D4 /* GameController.framework */; };
 		2BB93E4B2BD518B34AFB40B8 /* GameHapticsSurface.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3DA6F9BA1B7540F28086973 /* GameHapticsSurface.swift */; };
 		2BD84A523FC1986BD7BE328391EF5DA9 /* GameProgressSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E820AC358959556196287BC2918D530 /* GameProgressSync.swift */; };
+		F6D4F542A048A65661BFF50B592EEDE8 /* GameFolderProgressControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA14419F0BDF70AC591737D35445985C /* GameFolderProgressControls.swift */; };
+		99D1DDD2032954AC9DEFB39F150A1E7E /* GameFolderProgress.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27FD30C7C94C5CD1C8E47F9BDE9058C2 /* GameFolderProgress.swift */; };
 		2C9476DA3D91769F28F9C92222521ED6 /* Original in Resources */ = {isa = PBXBuildFile; fileRef = A0ED89B192DB6FB4B51C8FED4ECCE924 /* Original */; };
 		387D27703E89C2DC3A87003A007C958C /* CornerPauseButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6152BBBBA067273069AB9132B83E950 /* CornerPauseButton.swift */; };
 		3887AD8B34D8820E5CBBA351B94DFBD8 /* GameHaptics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 828B96E70B867C646D7C5D243FA11986 /* GameHaptics.swift */; };
@@ -110,6 +116,8 @@
 		C1953F3465BAF6F24AD81CA68BF70361 /* GameFrameClock.swift in Sources */ = {isa = PBXBuildFile; fileRef = D966874B5E09CAFDA3504F66DD317142 /* GameFrameClock.swift */; };
 		C202F860F7CE40E761DACF57B60F9BE2 /* Original in Resources */ = {isa = PBXBuildFile; fileRef = A0ED89B192DB6FB4B51C8FED4ECCE924 /* Original */; };
 		C3E93935D5AA17EB154BBB1E69C8523F /* GameProgressSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E820AC358959556196287BC2918D530 /* GameProgressSync.swift */; };
+		6E9361690205860CFB491B0E41DA22C2 /* GameFolderProgressControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA14419F0BDF70AC591737D35445985C /* GameFolderProgressControls.swift */; };
+		F3597CC0244C27CEA5612136F684F34F /* GameFolderProgress.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27FD30C7C94C5CD1C8E47F9BDE9058C2 /* GameFolderProgress.swift */; };
 		C566540685894DA33362BD2C8C1A6CD7 /* GameController.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 648C53B95167D2BA49975C7112711BF3 /* GameController.framework */; };
 		C618922B5AB4CF4501B2C51AC8B20CF8 /* SpaceUndeadbeefApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 898918F102A66EDF34AC9C9407CD4DF8 /* SpaceUndeadbeefApp.swift */; };
 		C7754178252DA26E5A06C28E9DA28AB5 /* MetalGameSurface.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29F674EE880775372FAD885238EF78DA /* MetalGameSurface.swift */; };
@@ -168,9 +176,12 @@
 		29F674EE880775372FAD885238EF78DA /* MetalGameSurface.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MetalGameSurface.swift; sourceTree = "<group>"; };
 		2E09E6DE7B46ADBBB2D2DDCD1603095D /* macOS-Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = "macOS-Info.plist"; sourceTree = "<group>"; };
 		30188BDDC05765D80B73EAA833FFC838 /* App.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; path = App.xcconfig; sourceTree = "<group>"; };
+		A4A5F16E34BFC0E6F9E06305F9D2BBD7 /* Sideload.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; path = Sideload.xcconfig; sourceTree = "<group>"; };
 		3612F5FCB6D108E77E7B43B961E97182 /* SDBAudioMixer.h */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.h; path = SDBAudioMixer.h; sourceTree = "<group>"; };
 		37274FC7861608113BBDBA91932F012C /* GuestCPU.cpp */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.cpp.cpp; path = GuestCPU.cpp; sourceTree = "<group>"; };
 		3E820AC358959556196287BC2918D530 /* GameProgressSync.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GameProgressSync.swift; sourceTree = "<group>"; };
+		CA14419F0BDF70AC591737D35445985C /* GameFolderProgressControls.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GameFolderProgressControls.swift; sourceTree = "<group>"; };
+		27FD30C7C94C5CD1C8E47F9BDE9058C2 /* GameFolderProgress.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GameFolderProgress.swift; sourceTree = "<group>"; };
 		3EDD7A97D74E28152480975809E0DF66 /* SDBEngine.mm */ = {isa = PBXFileReference; includeInIndex = 1; path = SDBEngine.mm; sourceTree = "<group>"; };
 		3FBBD0C8E79B648D97DF4AA607248AD0 /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = Platforms/AppleTVOS.platform/Developer/SDKs/AppleTVOS26.0.sdk/System/Library/Frameworks/CoreGraphics.framework; sourceTree = DEVELOPER_DIR; };
 		4213A5FB753EBD044EE268CFF2E2DE7B /* watchOS-Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = "watchOS-Info.plist"; sourceTree = "<group>"; };
@@ -447,6 +458,8 @@
 				9BCA048583479435F160724EC791FC6B /* GameLifecycle.swift */,
 				A089A6E5869C0BA2184B522D3E4BB8CA /* GameMenuAccessibility.swift */,
 				3E820AC358959556196287BC2918D530 /* GameProgressSync.swift */,
+				CA14419F0BDF70AC591737D35445985C /* GameFolderProgressControls.swift */,
+				27FD30C7C94C5CD1C8E47F9BDE9058C2 /* GameFolderProgress.swift */,
 				5C9FE3BD8A5DEC6F778C516AD952521B /* GameSession.swift */,
 				EEED9D843E04C8D2795E3A8EC73A1CC6 /* GameView.swift */,
 				29F674EE880775372FAD885238EF78DA /* MetalGameSurface.swift */,
@@ -461,6 +474,7 @@
 			isa = PBXGroup;
 			children = (
 				30188BDDC05765D80B73EAA833FFC838 /* App.xcconfig */,
+				A4A5F16E34BFC0E6F9E06305F9D2BBD7 /* Sideload.xcconfig */,
 				BEF65330563405DBA4D1099A9921FC47 /* SpaceUndeadbeef-Bridging-Header.h */,
 				D6AD0CCE13353A757BAA4F84CC133EE3 /* ProgressSync.entitlements */,
 				A88A829321C7C9B720859D141D6A9CDF /* iOS-Info.plist */,
@@ -730,6 +744,8 @@
 				E885402711341BF115A617496605ED91 /* GameLifecycle.swift in Sources */,
 				A5A09089A1927FB5B300090FA646CDD3 /* GameMenuAccessibility.swift in Sources */,
 				C3E93935D5AA17EB154BBB1E69C8523F /* GameProgressSync.swift in Sources */,
+				6E9361690205860CFB491B0E41DA22C2 /* GameFolderProgressControls.swift in Sources */,
+				F3597CC0244C27CEA5612136F684F34F /* GameFolderProgress.swift in Sources */,
 				B57D49990C26F53F806A99E9F0136775 /* GameSession.swift in Sources */,
 				7BCBBCF699305DC299EC640E764801D5 /* GameView.swift in Sources */,
 				E4DD482424102DDA3181A4857DDB83B2 /* MetalGameSurface.swift in Sources */,
@@ -764,6 +780,8 @@
 				CC868A8227AC0B270636369F60B0470B /* GameLifecycle.swift in Sources */,
 				7B9D93EE1ADF36EC3A5480126F5545D5 /* GameMenuAccessibility.swift in Sources */,
 				093900F072875B718CE438560E369F81 /* GameProgressSync.swift in Sources */,
+				972D46B9E606A76703359E22981FB500 /* GameFolderProgressControls.swift in Sources */,
+				A538D94A984F05CB8145A9EBBCD9D724 /* GameFolderProgress.swift in Sources */,
 				24BC70AA50D911F80FBE723562C03758 /* GameSession.swift in Sources */,
 				163AFFB90F8BACACF83F123336BE53A2 /* GameView.swift in Sources */,
 				C7754178252DA26E5A06C28E9DA28AB5 /* MetalGameSurface.swift in Sources */,
@@ -799,6 +817,8 @@
 				3FE43B2035D4128C28BF4A371F96F9B6 /* GameLifecycle.swift in Sources */,
 				1D6D9D63C9659974ACCDF268CEE1AA87 /* GameMenuAccessibility.swift in Sources */,
 				110D0D1C6193F37F750965C5C1B83773 /* GameProgressSync.swift in Sources */,
+				A864E18F3B46952FE9EE7659D08D1426 /* GameFolderProgressControls.swift in Sources */,
+				122EAFFEF516DE9290AB404BFFC2D3A2 /* GameFolderProgress.swift in Sources */,
 				F2DC92D54E9FCE85A44B24C10A90B997 /* GameSession.swift in Sources */,
 				C021A5A786D0774096747E5417417593 /* GameView.swift in Sources */,
 				5A7E369FFB52ECEBEC45498C6EB2F632 /* MetalGameSurface.swift in Sources */,
@@ -826,6 +846,8 @@
 				9A31B0EED75D08FD18F254FF09387C1D /* GameLifecycle.swift in Sources */,
 				65F17AB3379E1A9454EE11DD367CD9A1 /* GameMenuAccessibility.swift in Sources */,
 				2BD84A523FC1986BD7BE328391EF5DA9 /* GameProgressSync.swift in Sources */,
+				F6D4F542A048A65661BFF50B592EEDE8 /* GameFolderProgressControls.swift in Sources */,
+				99D1DDD2032954AC9DEFB39F150A1E7E /* GameFolderProgress.swift in Sources */,
 				3CDD67A765E29D1C46B2DB6D637AC672 /* GameSession.swift in Sources */,
 				95AF500991443B83AEB9797CB3555613 /* GameView.swift in Sources */,
 				566637ACBEC32329F8D8CF41CE411907 /* MetalGameSurface.swift in Sources */,

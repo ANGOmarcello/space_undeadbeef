@@ -25,6 +25,7 @@ end
 legacy_sources = legacy_files.reject { |file| file.path.end_with?('.h') }
 config_group = project.main_group.new_group('Config', 'Config')
 config = config_group.new_file('App.xcconfig')
+config_group.new_file('Sideload.xcconfig')
 config_group.new_file('SpaceUndeadbeef-Bridging-Header.h')
 config_group.new_file('ProgressSync.entitlements')
 resources_group = project.main_group.new_group('Resources', 'Resources')
@@ -83,6 +84,8 @@ platforms.each do |name, options|
   }
   case name
   when 'iOS'
+    plist['SDBProgressSyncMode'] = '$(SDB_PROGRESS_SYNC_MODE)'
+    plist['SDBReleaseSourceCommit'] = '$(SDB_RELEASE_SOURCE_COMMIT)'
     plist['LSRequiresIPhoneOS'] = true
     plist['UIApplicationSceneManifest'] = { 'UIApplicationSupportsMultipleScenes' => false }
     plist['UILaunchScreen'] = {}

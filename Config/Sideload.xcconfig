@@ -1,0 +1,7 @@
+// Created by Angelo Cammalleri on 08.11.2026.
+// Apply to the iOS scheme with xcodebuild -xcconfig. The recipient signs the IPA.
+SDB_PROGRESS_SYNC_MODE = folder
+CODE_SIGNING_ALLOWED = NO
+CODE_SIGNING_REQUIRED = NO
+CODE_SIGN_ENTITLEMENTS =
+DEVELOPMENT_TEAM =

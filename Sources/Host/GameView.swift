@@ -39,6 +39,11 @@ struct GameView: View {
             }
             .frame(width: size.width, height: size.height)
             #if os(iOS)
+            .overlay {
+                if GameProgressBuild.usesFolder {
+                    GameFolderProgressControls(session: session, safeArea: viewport.safeArea)
+                }
+            }
             .overlay(alignment: .topTrailing) {
                 if session.canPause {
                     CornerPauseButton(viewScale: size.width / session.logicalSize.width,

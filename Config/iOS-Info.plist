@@ -33,6 +33,10 @@
 	<true/>
 	<key>SDBProgressSyncEnabled</key>
 	<true/>
+	<key>SDBProgressSyncMode</key>
+	<string>$(SDB_PROGRESS_SYNC_MODE)</string>
+	<key>SDBReleaseSourceCommit</key>
+	<string>$(SDB_RELEASE_SOURCE_COMMIT)</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

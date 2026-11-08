@@ -247,6 +247,21 @@ NSData *verifiedRecord(id value) {
     NSData *data = verifiedRecord(snapshot);
     return portableFields(data) ? [data copy] : nil;
 }
++ (NSDictionary<NSString *,id> *)sharedProgressSnapshot:(NSDictionary<NSString *,id> *)snapshot {
+    NSData *source = [self dataFromPortableSnapshot:snapshot];
+    if (!source) return nil;
+    NSMutableData *shared = [NSMutableData dataWithLength:SaveBytes];
+    putWord(shared, 0, word(source, 0));
+    putWord(shared, 8, SaveBytes);
+    for (NSUInteger offset = 0x20; offset <= 0x38; offset += 4) putWord(shared, offset, word(source, offset));
+    return [self portableSnapshotForData:shared];
+}
++ (NSDictionary<NSString *,id> *)mergeProgressSnapshot:(NSDictionary<NSString *,id> *)local
+    remote:(NSDictionary<NSString *,id> *)remote {
+    NSData *a = [self dataFromPortableSnapshot:local], *b = [self dataFromPortableSnapshot:remote];
+    NSData *merged = a && b ? [self mergeLocalData:a remoteData:b] : nil;
+    return merged ? [self portableSnapshotForData:merged] : nil;
+}
 + (NSData *)mergeLocalData:(NSData *)local remoteData:(NSData *)remote {
     if (!portableFields(local) || !portableFields(remote)) return nil;
     NSMutableData *merged = [local mutableCopy];

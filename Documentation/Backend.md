@@ -20,6 +20,12 @@ required. Local saves operate independently; signed cross-device delivery has
 not been verified. See [ModernHosts.md](ModernHosts.md) for the sync, lifecycle,
 controls and compatibility contracts.
 
+Version 1.1 (23) adds a separate Files-based transport for unsigned iPhone/iPad
+releases. It uses a player-selected iCloud Drive folder and starts only after
+the player links it. It needs no app-owned iCloud container or iCloud entitlement.
+Personal builds retain the key-value path. See [ICLOUD.md](ICLOUD.md) for the
+shared record format, scope and verification boundary.
+
 ## Local state
 
 | State | Storage | Behavior |

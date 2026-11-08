@@ -18,6 +18,43 @@ final class HostUITests: XCTestCase {
         add(attachment)
     }
 
+    #if os(iOS)
+    @MainActor
+    func testSideloadProgressOptions() throws {
+        // The workflow runs this against Config/Sideload.xcconfig. Never select
+        // a real folder or use normal save/preferences storage in a UI test.
+        guard ProcessInfo.processInfo.environment["SDB_TEST_SIDELOAD"] == "1" else {
+            throw XCTSkip("Run against the sideload configuration")
+        }
+        let app = XCUIApplication()
+        app.launchEnvironment["SDB_MUTE_AUDIO"] = "1"
+        app.launchEnvironment["SDB_UI_TEST"] = "1"
+        app.launchEnvironment["SDB_SAVE_DIRECTORY"] = "~/tmp/space-undeadbeef-ui-\(UUID().uuidString)"
+        app.launch()
+        defer { app.terminate() }
+        let options = app.buttons["Options"]
+        XCTAssertTrue(options.waitForExistence(timeout: 15))
+        XCTAssertFalse(app.buttons["icloud-progress"].exists)
+        options.tap()
+        let cloud = app.buttons["icloud-progress"]
+        XCTAssertTrue(cloud.waitForExistence(timeout: 10))
+        capture(app, "sideload-options")
+        cloud.tap()
+        let choose = app.buttons["choose-progress-folder"]
+        XCTAssertTrue(choose.waitForExistence(timeout: 10))
+        capture(app, "sideload-progress-settings")
+        choose.tap()
+        let cancel = app.buttons["Cancel"].firstMatch
+        XCTAssertTrue(cancel.waitForExistence(timeout: 10), "The native folder picker opens")
+        capture(app, "sideload-folder-picker")
+        cancel.tap()
+        XCTAssertTrue(choose.waitForExistence(timeout: 10))
+        XCTAssertFalse(app.buttons["Sync Now"].exists, "Cancelling the picker does not connect a folder")
+        app.buttons["close-progress-settings"].tap()
+        XCTAssertTrue(cloud.waitForExistence(timeout: 10))
+    }
+    #endif
+
     @MainActor
     func testOriginalGameInteraction() throws {
         let app = XCUIApplication()

@@ -83,6 +83,10 @@ final class GameSession {
     @ObservationIgnored private var checkpointSteps = 0
     @ObservationIgnored private var reportedSaveError: String?
     @ObservationIgnored private let progressSync = GameProgressSync()
+    @ObservationIgnored private var progressControlsOpen = false
+    #if os(iOS)
+    @ObservationIgnored let folderProgress = GameFolderProgressSync()
+    #endif
     @ObservationIgnored private let resumeAudio: @MainActor (SDBEngine) -> Bool
 
     init(engine: SDBEngine? = nil, lifecycle: GameLifecyclePolicy = GameLifecyclePolicy(),
@@ -133,12 +137,13 @@ final class GameSession {
         // Initial engine creation can encounter an audio failure before any OS
         // interruption notification arrives. Keep that gate independent too.
         if engine?.audioSuspended == true && !animatesPause { setActive(false) }
-        inputController.setActive(isActive && lifecycle.shouldRun && lifecycle.sceneAllowsInteraction && engine?.audioSuspended != true)
+        inputController.setActive(!progressControlsOpen && isActive && lifecycle.shouldRun &&
+                                  lifecycle.sceneAllowsInteraction && engine?.audioSuspended != true)
     }
 
     private func prepareForUserInteraction() -> Bool {
         defer { refreshUserResumeAvailability() }
-        guard persistenceError == nil, failure == nil, lifecycle.canAttemptUserResume else { return false }
+        guard !progressControlsOpen, persistenceError == nil, failure == nil, lifecycle.canAttemptUserResume else { return false }
         if isActive && lifecycle.shouldRun && engine?.audioSuspended != true { return true }
         if lifecycle.needsAudioRebuild {
             guard engine?.recoverAudioAfterMediaServicesReset() == true else { return false }
@@ -178,11 +183,34 @@ final class GameSession {
         refreshUserResumeAvailability()
     }
 
+    #if os(iOS)
+    func setProgressControlsOpen(_ open: Bool) {
+        progressControlsOpen = open
+        inputController.resetHeldInputs()
+        cancelTouch()
+        updateScheduling()
+    }
+
+    func checkFolderProgress() {
+        if isActive, let engine { folderProgress.check(with: engine) }
+    }
+    #endif
+
+    private func exchangeProgress(with engine: SDBEngine, foreground: Bool = false) {
+        #if os(iOS)
+        if GameProgressBuild.usesFolder {
+            folderProgress.check(with: engine)
+            return
+        }
+        #endif
+        progressSync.exchange(with: engine, foreground: foreground)
+    }
+
     private func saveCheckpoint(completed: Bool = false) {
         guard let engine, failure == nil else { return }
         if completed { _ = engine.saveProgress() }
         else { engine.checkpointProgress() }
-        progressSync.exchange(with: engine)
+        exchangeProgress(with: engine)
         updatePersistenceError(from: engine)
     }
 
@@ -244,8 +272,8 @@ final class GameSession {
         // steps keep the same bounded catch-up and scheduling-time debt.
         clock.reset(at: usesMetalRenderer ? ProcessInfo.processInfo.systemUptime : nil)
         isActive = true
-        inputController.setActive(true)
-        if let engine { progressSync.exchange(with: engine, foreground: true) }
+        inputController.setActive(!progressControlsOpen)
+        if let engine { exchangeProgress(with: engine, foreground: true) }
         // MetalKit drives supported views directly. Watch and other software
         // fallbacks still need a timer to publish their CPU-rendered CGImage.
         guard !usesMetalRenderer else { return }
@@ -329,8 +357,17 @@ final class GameSession {
         let steering = engine.canSteerShip
         if canSteerShip != steering { canSteerShip = steering }
         let menu = Int(engine.gameMenuType)
-        if gameMenuType != menu { gameMenuType = menu }
-        if menu == 1, isActive, progressSync.needsExchange { progressSync.exchange(with: engine) }
+        let menuChanged = gameMenuType != menu
+        if menuChanged { gameMenuType = menu }
+        if menu == 1, isActive {
+            #if os(iOS)
+            if GameProgressBuild.usesFolder, !isTouching, !progressControlsOpen {
+                folderProgress.applyPending(to: engine)
+                if menuChanged { folderProgress.check(with: engine) }
+            }
+            #endif
+            if !GameProgressBuild.usesFolder, progressSync.needsExchange { progressSync.exchange(with: engine) }
+        }
         let actions = engine.menuActions.map {
             GameMenuAction(identifier: $0.identifier, label: $0.label,
                            logicalFrame: $0.logicalFrame, selected: $0.selected)

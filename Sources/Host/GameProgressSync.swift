@@ -7,6 +7,13 @@
 
 import Foundation
 
+enum GameProgressBuild {
+    static let mode = Bundle.main.object(forInfoDictionaryKey: "SDBProgressSyncMode") as? String ?? "key-value"
+    static let usesFolder = mode == "folder"
+    static let allowsLiveStorage = ProcessInfo.processInfo.environment["SDB_SAVE_DIRECTORY"] == nil &&
+        ProcessInfo.processInfo.environment["SDB_UI_TEST"] == nil
+}
+
 /// One record per installation prevents an offline device from replacing an
 /// unseen writer's better progress. Only understood, bounded records are merged.
 enum GameProgressExchange {
@@ -105,9 +112,8 @@ final class GameProgressSync {
     }
 
     private static func productionEnabled() -> Bool {
-        Bundle.main.object(forInfoDictionaryKey: "SDBProgressSyncEnabled") as? Bool == true &&
-            ProcessInfo.processInfo.environment["SDB_SAVE_DIRECTORY"] == nil &&
-            ProcessInfo.processInfo.environment["SDB_UI_TEST"] == nil
+        GameProgressBuild.mode == "key-value" && GameProgressBuild.allowsLiveStorage &&
+            Bundle.main.object(forInfoDictionaryKey: "SDBProgressSyncEnabled") as? Bool == true
     }
 
     func exchange(with engine: SDBEngine, foreground: Bool = false) {

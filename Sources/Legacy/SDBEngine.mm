@@ -620,9 +620,7 @@ struct Runtime {
     return data ? [SDBSaveStore portableSnapshotForData:data] : nil;
 }
 + (NSDictionary<NSString *,id> *)mergedPortableSnapshot:(NSDictionary<NSString *,id> *)local remote:(NSDictionary<NSString *,id> *)remote {
-    NSData *localData = [SDBSaveStore dataFromPortableSnapshot:local], *remoteData = [SDBSaveStore dataFromPortableSnapshot:remote];
-    NSData *merged = localData && remoteData ? [SDBSaveStore mergeLocalData:localData remoteData:remoteData] : nil;
-    return merged ? [SDBSaveStore portableSnapshotForData:merged] : nil;
+    return [SDBSaveStore mergeProgressSnapshot:local remote:remote];
 }
 - (BOOL)importValidatedProgress:(NSDictionary<NSString *,id> *)snapshot {
     if (_failure || _suspended || _runtime->touching || self.gameMenuType != 1) return NO;

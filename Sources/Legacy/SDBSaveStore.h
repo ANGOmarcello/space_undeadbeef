@@ -14,8 +14,13 @@ NS_ASSUME_NONNULL_BEGIN
 - (BOOL)writeData:(NSData *)data;
 /// Exactly the checks in original SaveData::load (0xe788): length, PSH0, size.
 + (BOOL)isValidOriginalData:(NSData *)data;
-+ (nullable NSDictionary<NSString *, id> *)portableSnapshotForData:(NSData *)data;
++ (nullable NSDictionary<NSString *, id> *)portableSnapshotForData:(NSData *)data NS_SWIFT_NAME(portableSnapshot(_:));
 + (nullable NSData *)dataFromPortableSnapshot:(NSDictionary<NSString *, id> *)snapshot;
+/// Files exchange only the known progression fields, with all local bytes cleared.
++ (nullable NSDictionary<NSString *, id> *)sharedProgressSnapshot:(NSDictionary<NSString *, id> *)snapshot
+    NS_SWIFT_NAME(sharedProgress(_:));
++ (nullable NSDictionary<NSString *, id> *)mergeProgressSnapshot:(NSDictionary<NSString *, id> *)local
+    remote:(NSDictionary<NSString *, id> *)remote NS_SWIFT_NAME(mergeSnapshots(_:remote:));
 /// Furthest verified checkpoint wins; high score never decreases. Local audio,
 /// game speed and unknown bytes survive. Returns nil for unsafe portable data.
 + (nullable NSData *)mergeLocalData:(NSData *)local remoteData:(NSData *)remote;

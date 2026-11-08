@@ -1,5 +1,24 @@
 # Verification record
 
+## Files progress for sideloaded iPhone/iPad — 1.1 (23), 8 November 2026
+
+The public build selects Files-based progress with `Config/Sideload.xcconfig`.
+Its normal local saves remain available without connecting iCloud Drive.
+Personal configurations still select the existing provisioned key-value path.
+
+- `script/test_folder_progress.sh`: **16 checks passed** using two distinct
+  writers, coordinated temporary files and the real PSH0 validator. The merge
+  keeps the farther checkpoint and higher score, preserves local settings,
+  and rejects unsafe records without overwriting existing files.
+- Save-store and personal progress adapter tests passed **51** and **46** checks.
+- The sideload configuration passed the original game interaction test and the
+  new Options → iCloud Progress → Files → Cancel test on iPhone 18 Pro Simulator.
+  The new flow also passed on iPad Pro 11-inch (M5) Simulator in portrait. The
+  Options entry, settings and native Files picker were visually inspected.
+
+These checks use isolated progress and no linked iCloud folder. Actual signed
+sideload installation and two-device iCloud Drive delivery are separate checks.
+
 ## Remote-only TV pause — 1.1 (22), 31 October 2026
 
 Apple TV omits the original P-button drawing and moves its hidden guest hit
