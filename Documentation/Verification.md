@@ -10,11 +10,25 @@ Personal configurations still select the existing provisioned key-value path.
   writers, coordinated temporary files and the real PSH0 validator. The merge
   keeps the farther checkpoint and higher score, preserves local settings,
   and rejects unsafe records without overwriting existing files.
-- Save-store and personal progress adapter tests passed **51** and **46** checks.
+- Save-store, personal progress adapter, original menu/save, and lifecycle tests
+  passed **51**, **46**, **94**, and **2,549** checks respectively. The two Metal
+  harnesses used Xcode's installed compiler after standalone `xcrun` failed to
+  resolve it; no toolchain settings were changed.
 - The sideload configuration passed the original game interaction test and the
   new Options → iCloud Progress → Files → Cancel test on iPhone 18 Pro Simulator.
   The new flow also passed on iPad Pro 11-inch (M5) Simulator in portrait. The
   Options entry, settings and native Files picker were visually inspected.
+- macOS, tvOS Simulator and watchOS Simulator builds passed without launching
+  an app or contacting physical devices.
+
+The local release at `Releases/SpaceDeadbeef-1.1-build23` was built from the
+committed snapshot `429100c0897c79bf6230118c1915179d597a5bbc`. Both `SHA256SUMS`
+entries and the audit against the extracted source ZIP pass. The IPA contains
+the unsigned ARM64 iPhoneOS host, iOS 18.0 deployment target, compiled icon and
+Metal library, the folder sync mode, all 98 original input files, and matching
+modern resources. The audit also rejected a real simulator executable and a
+staged provisioning sidecar. Private device receipts were excluded from the
+source archive. No remote workflow, upload or publication was performed.
 
 These checks use isolated progress and no linked iCloud folder. Actual signed
 sideload installation and two-device iCloud Drive delivery are separate checks.
